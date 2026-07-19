@@ -24,7 +24,7 @@ this repository contains the artifact as evaluated (release `v1.0-thesis`).
 - `/src` — dashboard source code
 - `/analysis` — sensitivity analysis script (`sensitivity_analysis_v3.py`,
   thesis Chapter 5) and its output files
-- `/scenario` — the Westmaas Water Treatment assessment data used for the
+- `/scenarios` — the Westmaas Water Treatment assessment data used for the
   demonstration and evaluation (thesis Chapter 6): baseline and follow-up
   assessment files
 
