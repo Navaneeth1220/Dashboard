@@ -1,0 +1,9 @@
+indicator,name,dimension,aggregation_coefficient,maximum_snapshot_ablation_impact,maximum_longitudinal_ablation_impact
+IH-06,Mean Time to Detect (MTTD),IH,0.16666666666666666,0.6666666666666666,1.3333333333333333
+IH-07,Mean Time to Respond (MTTR),IH,0.16666666666666666,0.6666666666666666,1.3333333333333333
+IH-08,Mean Time to Contain (MTTC),IH,0.16666666666666666,0.6666666666666666,1.3333333333333333
+BC-01,Network Operability Under Disruption,BC,0.1,0.4,0.8
+BC-02,Zone Availability Rate,BC,0.1,0.4,0.8
+BC-04,Operational Threshold Adherence Rate,BC,0.1,0.4,0.8
+BC-08-RTO,RTO Achievement Rate,BC,0.1,0.4,0.8
+BC-09-RPO,RPO Achievement Rate,BC,0.1,0.4,0.8

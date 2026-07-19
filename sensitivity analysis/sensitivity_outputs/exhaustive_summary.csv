@@ -1,0 +1,9 @@
+indicator,dimension,mean_abs_delta,median_abs_delta,p95_abs_delta,max_abs_delta,zero_delta_pct,normalized_mean_sensitivity,profiles_evaluated,interpretation
+IH-06,IH,0.23733333333333334,0.25,0.5000000000000002,0.666666666666667,10.4,0.35600000000000004,390625,Uniform mathematical score-space enumeration; not an empirical distribution of OT organisations.
+IH-07,IH,0.23733333333333334,0.25,0.5000000000000002,0.666666666666667,10.4,0.35600000000000004,390625,Uniform mathematical score-space enumeration; not an empirical distribution of OT organisations.
+IH-08,IH,0.23733333333333334,0.25,0.5000000000000002,0.666666666666667,10.4,0.35600000000000004,390625,Uniform mathematical score-space enumeration; not an empirical distribution of OT organisations.
+BC-01,BC,0.13312,0.125,0.27500000000000013,0.40000000000000036,5.024,0.33279999999999993,390625,Uniform mathematical score-space enumeration; not an empirical distribution of OT organisations.
+BC-02,BC,0.13312,0.125,0.27500000000000013,0.40000000000000036,5.024,0.33279999999999993,390625,Uniform mathematical score-space enumeration; not an empirical distribution of OT organisations.
+BC-04,BC,0.13312,0.125,0.27500000000000013,0.40000000000000036,5.024,0.33279999999999993,390625,Uniform mathematical score-space enumeration; not an empirical distribution of OT organisations.
+BC-08-RTO,BC,0.13312,0.125,0.27500000000000013,0.40000000000000036,5.024,0.33279999999999993,390625,Uniform mathematical score-space enumeration; not an empirical distribution of OT organisations.
+BC-09-RPO,BC,0.13312,0.125,0.27500000000000013,0.40000000000000036,5.024,0.33279999999999993,390625,Uniform mathematical score-space enumeration; not an empirical distribution of OT organisations.

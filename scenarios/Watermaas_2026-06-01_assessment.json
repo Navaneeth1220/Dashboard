@@ -1,0 +1,92 @@
+{
+  "kind": "nis2-ot-assessment",
+  "schemaVersion": 1,
+  "exportedAt": "2026-07-02T08:33:37.076Z",
+  "assessment": {
+    "meta": {
+      "clientId": "Watermaas",
+      "assessmentDate": "2026-01-06"
+    },
+    "indicators": {
+      "IH-06": {
+        "state": "measured",
+        "value": "18"
+      },
+      "IH-07": {
+        "state": "measured",
+        "value": "30"
+      },
+      "IH-08": {
+        "state": "measured",
+        "value": "20"
+      },
+      "BC-01": {
+        "state": "measured",
+        "value": "85"
+      },
+      "BC-02": {
+        "state": "measured",
+        "numerator": "4",
+        "denominator": "5",
+        "value": "82"
+      },
+      "BC-04": {
+        "state": "measured",
+        "numerator": "2",
+        "denominator": "16"
+      },
+      "BC-08": {
+        "state": "measured",
+        "numerator": "1",
+        "denominator": "2"
+      },
+      "BC-09": {
+        "state": "measured",
+        "numerator": "2",
+        "denominator": "2"
+      }
+    },
+    "layer0": {
+      "L0-asset-inventory": {
+        "state": "present"
+      },
+      "L0-risk-assessment": {
+        "state": "present"
+      },
+      "L0-interdependency": {
+        "state": "incomplete_outdated"
+      },
+      "L0-it-ot-boundary": {
+        "state": "present"
+      },
+      "L0-multi-homed": {
+        "state": "requirement_satisfied"
+      },
+      "L0-bc-plan-doc": {
+        "state": "present"
+      },
+      "RM-04": {
+        "state": "measured",
+        "numerator": "6",
+        "denominator": "10"
+      },
+      "RM-05": {
+        "state": "measured",
+        "value": "75"
+      },
+      "L0-bc-plan-tested": {
+        "state": "qualifying_test_performed"
+      }
+    }
+  },
+  "targets": {
+    "IH-06": 4,
+    "IH-07": 3
+  },
+  "derived": {
+    "_note": "Derived snapshot for human readability only — recomputed from inputs on import; never trusted as authoritative.",
+    "ih": 2.6666666666666665,
+    "bc": 2.8,
+    "overall": 2.7333333333333334
+  }
+}
