@@ -86,7 +86,9 @@ describe('Westmaas baseline', () => {
       { id: 'C1', kind: 'context', refs: [],
         text: 'Assessment of "Westmaas", dated 2026-01-01.' },
       { id: 'C2', kind: 'context', refs: [],
-        text: 'The 8 effectiveness indicators are each scored 0–4, where 4 is best. A dimension score is the mean of its indicators. If any indicator in a dimension has no score, the dimension is incomplete and has no score.' },
+        text: '8 effectiveness indicators in 2 dimensions: Incident Handling (3 indicators) and Business Continuity (5 indicators).' },
+      { id: 'C3', kind: 'scale', refs: [],
+        text: 'Each indicator is scored 0–4, where 4 is best. A dimension score is the mean of its indicators. If any indicator in a dimension has no score, the dimension is incomplete and has no score.' },
       { id: 'F1', kind: 'dim_incomplete', refs: ['IH', 'IH-08'],
         text: 'Incident Handling: incomplete. Mean Time to Contain has no score, so no Incident Handling score is available.' },
       { id: 'F2', kind: 'dim_complete', refs: ['BC', 'BC-09'],
@@ -479,8 +481,10 @@ describe('property-based tests (fast-check)', () => {
   it('ids are unique, contiguous, and there is exactly one priority fact', () => {
     fc.assert(fc.property(assessmentArb, rec => {
       const facts = buildAssessmentFacts(rec);
-      const c = facts.filter(f => f.kind === 'context').map(f => f.id);
-      const other = facts.filter(f => f.kind !== 'context').map(f => f.id);
+      const isC = f => f.kind === 'context' || f.kind === 'scale';
+      const c = facts.filter(isC).map(f => f.id);
+      const other = facts.filter(f => !isC(f)).map(f => f.id);
+      expect(c).toEqual(['C1', 'C2', 'C3']);
       expect(c).toEqual(c.map((_, i) => `C${i + 1}`));
       expect(other).toEqual(other.map((_, i) => `F${i + 1}`));
       expect(factsOf(facts, 'priority')).toHaveLength(1);

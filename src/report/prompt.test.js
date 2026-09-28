@@ -71,7 +71,8 @@ describe('buildUserMessage', () => {
     const message = buildUserMessage(buildAssessmentFacts(loadScenario(baselineJson)));
     expect(message).toBe([
       'C1: Assessment of "Westmaas", dated 2026-01-01.',
-      'C2: The 8 effectiveness indicators are each scored 0–4, where 4 is best. A dimension score is the mean of its indicators. If any indicator in a dimension has no score, the dimension is incomplete and has no score.',
+      'C2: 8 effectiveness indicators in 2 dimensions: Incident Handling (3 indicators) and Business Continuity (5 indicators).',
+      'C3: Each indicator is scored 0–4, where 4 is best. A dimension score is the mean of its indicators. If any indicator in a dimension has no score, the dimension is incomplete and has no score.',
       'F1: Incident Handling: incomplete. Mean Time to Contain has no score, so no Incident Handling score is available.',
       'F2: Business Continuity: complete, score 1.80 out of 4 (5 indicators). This includes the programme-gap 0 for RPO Achievement Rate.',
       'F3: Overall score: not available, because Incident Handling is incomplete.',

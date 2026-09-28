@@ -47,7 +47,7 @@ describe('buildOutputSchema', () => {
   });
 
   it('every section: factIds enum equals the fact IDs, minItems 1; text minLength 1; nothing else', () => {
-    expect(factIds).toHaveLength(22);
+    expect(factIds).toHaveLength(23);
     for (const [name, section] of allSections(schema)) {
       expect(section.properties.factIds, name).toEqual({
         type: 'array', items: { type: 'string', enum: factIds }, minItems: 1,

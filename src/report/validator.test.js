@@ -24,7 +24,7 @@ import { displayName, DIMENSION_NAMES } from '../data/displayNames.js';
 
 const FACTS = buildAssessmentFacts(loadScenario(baselineJson));
 
-const OVERVIEW = ['C1', 'C2', 'F1', 'F2', 'F3'];
+const OVERVIEW = ['C1', 'C2', 'C3', 'F1', 'F2', 'F3'];
 const MEASURED = ['F4', 'F5', 'F7', 'F8', 'F9', 'F10'];
 const GAPS = ['F6', 'F11'];
 const FOUNDATIONS = ['F12', 'F13', 'F14', 'F15', 'F16', 'F17', 'F18', 'F19'];
@@ -188,10 +188,11 @@ describe('numbers', () => {
     expect(rulesOf(overview('Business Continuity is complete at 2.5.'))).toEqual(['numbers']);
   });
 
-  it('"two of the five indicators": only "two" fails (F2 has "5 indicators")', () => {
-    const result = overview('Two of the five Business Continuity indicators are below target.');
+  it('"six of the eight indicators": only "six" fails (8 is in C2)', () => {
+    // The spec's original "two of the five" no longer fails: 2 and 5 are in C2.
+    const result = overview('Six of the eight effectiveness indicators are below target.');
     expect(result.errors).toEqual([expect.objectContaining({
-      rule: 'numbers', detail: 'The number "Two" does not appear in any fact cited by this section.',
+      rule: 'numbers', detail: 'The number "Six" does not appear in any fact cited by this section.',
     })]);
   });
 
@@ -503,8 +504,27 @@ describe('manual check 1: context facts count as cited (numbers)', () => {
     expect(validate(withPart('overview', ['F1', 'F2', 'F3'], 'The assessment covered 8 effectiveness indicators.')).ok).toBe(true);
   });
 
-  it('"Zone Availability Rate scored 4" still fails: 4 is in C2, not in its own fact', () => {
-    expect(rulesOf(validate(withPart('measuredPerformance', MEASURED, 'Zone Availability Rate scored 4.')))).toEqual(['attribution']);
+  it('"Zone Availability Rate scored 4" still fails: not in its own fact (and 4 is in C3, not cited here)', () => {
+    expect(rulesOf(validate(withPart('measuredPerformance', MEASURED, 'Zone Availability Rate scored 4.')))).toEqual(['numbers', 'attribution']);
+  });
+});
+
+describe('manual check 2: C2 counts, C3 scale', () => {
+  it('"across two dimensions" passes (2 is in C2, always counted as cited)', () => {
+    expect(validate(withPart('overview', ['F1', 'F2', 'F3'], 'The assessment covered 8 effectiveness indicators across two dimensions.')).ok).toBe(true);
+  });
+
+  it('"four dimensions" fails where no cited fact contains 4', () => {
+    expect(rulesOf(gaps('Westmaas was assessed across four dimensions.'))).toEqual(['numbers']);
+  });
+
+  it('"scores range from 1.80 to 4" fails where no cited fact contains them', () => {
+    expect(rulesOf(gaps('Scores range from 1.80 to 4.'))).toEqual(['numbers']);
+  });
+
+  it('the 0–4 scale needs C3 cited', () => {
+    expect(rulesOf(gaps('Indicators are scored from 0 to 4.'))).toEqual(['numbers']);
+    expect(validate(withPart('gapsAndMissingEvidence', [...GAPS, 'C3'], 'Indicators are scored from 0 to 4.')).ok).toBe(true);
   });
 });
 

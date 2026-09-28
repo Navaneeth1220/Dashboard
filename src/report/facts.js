@@ -36,7 +36,7 @@ import {
 import { displayName, formatScore, DIMENSION_NAMES } from '../data/displayNames.js';
 
 export const FACT_KINDS = [
-  'context', 'dim_complete', 'dim_incomplete', 'scored', 'gap_zero', 'no_score',
+  'context', 'scale', 'dim_complete', 'dim_incomplete', 'scored', 'gap_zero', 'no_score',
   'l0_ok', 'l0_flag', 'process', 'l0_unset', 'advisory', 'priority',
 ];
 
@@ -141,12 +141,17 @@ function contextFacts(meta) {
   const assessmentDate = oneLine(meta?.assessmentDate);
   const client = clientId ? `"${clientId}"` : 'an unnamed client';
   const date = assessmentDate ? `dated ${assessmentDate}` : 'undated';
+  const dimensions = [['IH', IH_INDICATOR_IDS], ['BC', BC_INDICATOR_IDS]];
   return [
     fact('context', `Assessment of ${client}, ${date}.`, []),
+    // Counts only: the validator counts `context` facts as cited for every section.
     fact('context',
-      `The ${ALL_INDICATOR_IDS.length} effectiveness indicators are each scored 0–4, where 4 is best. ` +
-      'A dimension score is the mean of its indicators. If any indicator in a dimension has no score, ' +
-      'the dimension is incomplete and has no score.',
+      `${ALL_INDICATOR_IDS.length} effectiveness indicators in ${dimensions.length} dimensions: ` +
+      `${joinNames(dimensions.map(([dim, ids]) => `${DIMENSION_NAMES[dim]} (${ids.length} indicators)`))}.`,
+      []),
+    fact('scale',
+      'Each indicator is scored 0–4, where 4 is best. A dimension score is the mean of its indicators. ' +
+      'If any indicator in a dimension has no score, the dimension is incomplete and has no score.',
       []),
   ];
 }
@@ -360,7 +365,7 @@ function priorityFact(priority) {
 function assignIds(facts) {
   let c = 0;
   let f = 0;
-  return facts.map(x => ({ id: x.kind === 'context' ? `C${++c}` : `F${++f}`, ...x }));
+  return facts.map(x => ({ id: x.kind === 'context' || x.kind === 'scale' ? `C${++c}` : `F${++f}`, ...x }));
 }
 
 // ---------------------------------------------------------------------------
