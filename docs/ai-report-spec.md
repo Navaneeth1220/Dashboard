@@ -384,8 +384,8 @@ the model on retry and shown in the UI on failure).
    `no_score` indicator, an `l0_unset` item, or a `dim_incomplete`
    dimension fails if it contains a performance word (`poor`, `weak`,
    `bad`, `failing`, `failed`, `good`, `strong`, `underperform*`, `low`,
-   `high`). "high priority", "high-priority", "high severity" and
-   "high-severity" are not performance words. A clause whose subject is a
+   `high`). "high priority", "high severity" and "high risk" (also
+   hyphenated) are not performance words. A clause whose subject is a
    `no_score` indicator also fails if it contains "measured", unless
    negated as in check 6 ("could not be measured" passes).
 5. **No score for unscored things**: a clause whose subject is a

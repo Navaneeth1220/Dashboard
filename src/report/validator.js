@@ -145,7 +145,7 @@ const INTERNAL_ID = /\b(?:IH|BC|RM)-\d+\b|\bL0-[\w-]*\w/g;
 const RAW_ENUM = /\b\w*_\w*\b/g;
 
 const PERFORMANCE_WORD = /\b(?:poor|weak|bad|failing|failed|good|strong|underperform\w*|low|high)\b/i;
-const NOT_PERFORMANCE = /\bhigh(?:-|\s+)(?:priority|severity)\b/gi;
+const NOT_PERFORMANCE = /\bhigh(?:-|\s+)(?:priority|severity|risk)\b/gi;
 
 const NUM = `(?:\\d+(?:\\.\\d+)?|${NUMBER_WORD_ALT})`;
 const SCORE_CLAIM = new RegExp(

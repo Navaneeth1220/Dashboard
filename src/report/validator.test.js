@@ -307,6 +307,12 @@ describe('noScoreWording', () => {
     expect(gaps('Mean Time to Contain is a high severity evidence gap.').ok).toBe(true);
   });
 
+  it('"high-risk" / "high risk" are not performance words (run set 3, run 2)', () => {
+    expect(gaps('Mean Time to Contain is a high-risk evidence gap.').ok).toBe(true);
+    expect(gaps('Mean Time to Contain is a high risk evidence gap.').ok).toBe(true);
+    expect(overview('The overall score is not available, and high-risk process issues remain.').ok).toBe(true);
+  });
+
   it('whole words only: "highlights" is not "high"', () => {
     expect(gaps('Mean Time to Contain highlights an evidence gap.').ok).toBe(true);
   });
