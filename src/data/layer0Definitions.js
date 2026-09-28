@@ -83,6 +83,14 @@ export const L0_SEVERITY = {
   MONITOR:     'monitor',   // not emitted in action flags; only shown in reference view
 };
 
+// Human-readable severity labels (same wording as the Layer 0 panels)
+export const L0_SEVERITY_LABELS = {
+  [L0_SEVERITY.CRITICAL]:    'Critical',
+  [L0_SEVERITY.HIGH]:        'High',
+  [L0_SEVERITY.MEDIUM_NOTE]: 'Medium note',
+  [L0_SEVERITY.MONITOR]:     'Monitor',
+};
+
 // ---------------------------------------------------------------------------
 // Item definitions
 // ---------------------------------------------------------------------------
@@ -239,6 +247,7 @@ export const LAYER0_ITEMS = {
     inputType:      'ratio',
     numeratorLabel: 'Vulnerabilities remediated (or compensating controls applied)',
     denominatorLabel:'Total critical/high vulnerabilities identified in period',
+    valueUnit:      '%',   // unit of the derived percentage
     baseTag:        L0_TAG.PROCESS_EVIDENCE,
     baseDisplayGroup: 4,   // process evidence
     contextualNote: null,
