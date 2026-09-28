@@ -428,9 +428,15 @@ The proxy only exists under `npm run dev`. That is fine for this project.
 ### Provider
 
 `POST /ollama/api/chat` with
-`{ model, messages: [system, user], format: schema, stream: false, options: { temperature: 0.2, num_ctx: 8192 } }`.
+`{ model, messages: [system, user], format: schema, stream: false, options: { temperature: 0.2, num_ctx: 4096 } }`.
 `num_ctx` is set explicitly because Ollama's default context window can
-silently truncate the system prompt when the fact list is long.
+silently truncate the system prompt when the fact list is long. 4096, not
+8192: the GPU has 6 GB, and at 4096 `ollama ps` shows qwen2.5:7b at 5.1 GB
+with a 16%/84% CPU/GPU split; 8192 would push more of the model onto the
+CPU.
+The provider returns `prompt_eval_count` and `eval_count` from the Ollama
+response, and logs a warning when `prompt_eval_count` exceeds 3000 (the
+signal to raise `num_ctx` to 6144).
 Parse `message.content` as JSON. Keep the provider behind one function so a
 different backend can be added later without touching anything else.
 
