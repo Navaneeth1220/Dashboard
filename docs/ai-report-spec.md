@@ -18,6 +18,14 @@ pre-rounded facts built from engine output, and may only rephrase and connect
 them. A validator checks the output before it is shown. All invariants in
 `CLAUDE.md` apply to generated text exactly as they apply to the UI.
 
+The report is a hybrid (decided after three manual checks, where the model's
+errors were mostly in sections that restate facts): measuredPerformance,
+gapsAndMissingEvidence, foundationsAndFlags and priorities are written
+deterministically from the facts by templates, using the dashboard's own
+labels and wording; the model writes only the headline and the overview,
+from a reduced fact set. The validator, section repair and retries apply to
+those two parts.
+
 ## Scope and order
 
 1. Single-assessment report (this spec).
@@ -33,9 +41,11 @@ cloud provider.
 
 ```
 src/report/facts.js            buildAssessmentFacts(assessment) → facts
-src/report/prompt.js           SYSTEM_PROMPT, buildUserMessage(facts)
-src/report/schema.js           buildOutputSchema(factIds)
-src/report/validator.js        validateNarrative(narrative, facts) → { ok, errors }
+src/report/templates.js        buildGeneratedSections(facts) → the four generated sections
+src/report/prompt.js           SYSTEM_PROMPT, selectModelFacts(facts), buildUserMessage(facts)
+src/report/schema.js           buildOutputSchema(factIds)  (headline + overview)
+src/report/validator.js        validateNarrative(narrative, facts, { parts }) → { ok, errors }
+src/data/reportWording.js      wording shared by the dashboard and the generated sections
 src/report/providers/ollama.js callOllama({ model, system, user, schema })
 src/report/generate.js         generateNarrative(assessment, options)
 src/components/NarrativePanel.jsx
@@ -71,7 +81,10 @@ Acceptance: `npm test` still green.
 [{ id: 'F1', kind: 'dim_incomplete', text: '...', refs: ['IH-08'] }, ...]
 ```
 
-`refs` holds the internal IDs the fact is about (validator use only; never
+`data` holds the fact's structured content (names, values with units,
+scores and level labels, state labels, severities, process bands,
+advisory parts, priority tiers) for the templates; like `refs`, it is never
+sent to the model. `refs` holds the internal IDs the fact is about (validator use only; never
 shown to the model). Dimension facts use the pseudo-IDs `IH`, `BC`, `OVERALL`
 plus the indicators involved. IDs are assigned in a stable order: C-facts
 (`context` C1–C2, then `scale` C3), then dimensions, indicators (canonical order), Layer 0 (`l0_ok`, `l0_flag`,
@@ -226,8 +239,9 @@ Tests (Step 1):
 ### System prompt
 
 ```
-You write a short management summary of an OT cybersecurity assessment,
-for a manager who does not know the scoring system.
+You write the headline and the overview of a short management summary of an
+OT cybersecurity assessment, for a manager who does not know the scoring
+system. The rest of the report is generated from the assessment.
 You will receive a numbered list of facts. They are complete and correct.
 
 Rules:
@@ -262,55 +276,52 @@ Rules:
 
 Sections:
 - headline: one sentence with the most important point.
-- overview: what was assessed and the dimension results.
-- measuredPerformance: indicators that were measured and scored.
-- gapsAndMissingEvidence: programme gaps, items with no score, and
-  incomplete dimensions.
-- foundationsAndFlags: foundational controls, process evidence, action
-  flags, and advisories.
-- priorities: the lowest results, as the priority fact lists them.
+- overview: what was assessed, the dimension results, and the critical and
+  high flags.
 ```
 
 The Sections block exists because Ollama turns the schema into a grammar:
 the grammar fixes the key names but never tells the model what each section
-is for.
+is for. `SECTION_DESCRIPTIONS` (the same text as data, for section repair)
+covers the two model parts.
 
-User message: the fact list as `ID: text` lines, one per line, in fact
-order. Kinds and refs are not sent. Fact text is sent unmodified, so the
-validator's "verbatim in a cited fact" checks match.
+User message: `selectModelFacts(facts)` as `ID: text` lines, one per line,
+in fact order: the `context` and `scale` facts, the dimension facts, the
+`l0_flag` and `process` facts marked CRITICAL or HIGH, and the priority
+fact. Fact IDs keep their numbers from the full list. Kinds, refs and data
+are not sent. Fact text is sent unmodified, so the validator's "verbatim in
+a cited fact" checks match. Westmaas: C1, C2, C3, F1, F2, F3, F13, F14, F15,
+F20.
 
 ### Output schema
 
 JSON Schema passed to Ollama's `format` field. `factIds` is an enum of the
-actual fact IDs for this assessment, so invented IDs are impossible.
+model's fact IDs (the reduced set), so invented IDs are impossible.
 `factIds` comes BEFORE `text` in every object (the model generates in field
 order: it selects facts first, then writes).
 
 ```json
 {
   "headline": { "factIds": [], "text": "one sentence" },
-  "sections": {
-    "overview":               { "factIds": [], "text": "" },
-    "measuredPerformance":    { "factIds": [], "text": "" },
-    "gapsAndMissingEvidence": { "factIds": [], "text": "" },
-    "foundationsAndFlags":    { "factIds": [], "text": "" },
-    "priorities":             { "factIds": [], "text": "" }
-  }
+  "overview": { "factIds": [], "text": "" }
 }
 ```
 
 All fields required; `factIds` `minItems: 1`; `text` `minLength: 1`;
 `additionalProperties: false` on every object. `factIds` comes first in both
 `properties` and `required`. No `uniqueItems`: llama.cpp grammars do not
-enforce it, so duplicates are caught by the validator instead. The section
-keys are exported as `SECTION_KEYS` (shared with the validator and the UI).
+enforce it, so duplicates are caught by the validator instead. Exported:
+`MODEL_PARTS` (`headline`, `overview`), `GENERATED_KEYS` (the four generated
+sections) and `SECTION_KEYS` (all five sections of the assembled report,
+shared with the validator and the UI).
 
-Tests: schema enum equals the fact IDs; field order is `factIds`, `text`;
-every section required; the schema does not alias its input; the system
-prompt and the Westmaas user message are pinned as exact strings; user
-message has one `ID: text` line per fact and contains no kinds, refs,
-pseudo-IDs, or internal IDs (outside quoted client name and assessor notes);
-a client name with a line break still gives a one-line C1.
+Tests: schema enum equals the model's fact IDs; field order is `factIds`,
+`text`; both parts required; the schema does not alias its input; the
+system prompt and the Westmaas reduced user message are pinned as exact
+strings; `selectModelFacts` keeps exactly the listed kinds; user message has
+one `ID: text` line per fact and contains no kinds, refs, pseudo-IDs, or
+internal IDs (outside quoted client name and assessor notes); a client name
+with a line break still gives a one-line C1.
 
 ---
 
@@ -323,7 +334,10 @@ section-level checks); `rule` is one of `shape`, `factIds`, `numbers`,
 `leakedIds`, `noScoreWording`, `unscoredScore`, `programmeGap`, `causal`,
 `attribution`, `severity`, `respectively`, `dimensionCount`;
 `detail` is plain English with descriptive names only (it is sent back to
-the model on retry and shown in the UI on failure).
+the model on retry and shown in the UI on failure). The optional `parts`
+(default: `headline` and all of `SECTION_KEYS`) limits which parts are
+checked; generation checks only `MODEL_PARTS`, the name index and
+categories still come from all facts.
 
 ### Text preparation
 
@@ -490,6 +504,104 @@ violation of checks 3–6 is always caught; malformed input never throws.
 
 ---
 
+## Step 3b: Generated sections (`templates.js`, `reportWording.js`)
+
+`buildGeneratedSections(facts)` → `{ measuredPerformance, gapsAndMissingEvidence,
+foundationsAndFlags, priorities }`, each `{ factIds, text }` (paragraphs
+separated by a blank line). Pure; written from the facts' `data` only.
+
+Wording sources, so the report and the dashboard never disagree:
+`SCORE_LEVEL_LABELS` (score badges), `STATE_PRIORITY_LABELS` (state chips
+and details), `L0_SEVERITY_LABELS` (action panel badges), the flag
+messages, the process bands (`processBands` in `layer0Definitions.js`,
+verdict / band / advice, kept consistent with `processMessages` by a test),
+and `reportWording.js`: phrases shared with dashboard components (the
+priority view's "Nothing occurred to assess this indicator." and "not yet
+assessed") plus the report's own lead-ins, gap sentences and advisory
+wording.
+
+Rules:
+- Plain prose for a manager, no fact dump, no counts (a template's numbers
+  must pass the numbers check like the model's).
+- Scores as "score N, Level" (level from `SCORE_LEVEL_LABELS`; a measured 0
+  is "score 0, measured failure"); never "poor" for a score.
+- Advisories are rendered from structured data in plain wording, with
+  level labels and item aliases; "may be related" kept exactly; no other
+  causal wording. Order: "may be related" advisories, then measurement-
+  readiness advisories, then detection/response and containment notes.
+- Every variant has its own sentence: measured failure, not measurable
+  (no reason, linked root cause, assessor note), no qualifying event or
+  disruption, not yet assessed, invalid value, each programme-gap state,
+  unassessed foundational items, flagged and non-measured process
+  evidence, each advisory rule and variant, each priority fallback.
+- The generated sections always pass the validator (property test over
+  random assessments; the check script also asserts it on every run).
+
+Target for the Westmaas baseline:
+
+measuredPerformance (C3, F4, F5, F7, F8, F9, F10):
+> Each effectiveness indicator is scored from 0 to 4, where 4 is best. In
+> Incident Handling, Mean Time to Detect was 18 hours (score 3, Good) and
+> Mean Time to Respond was 30 hours (score 2, Developing). In Business
+> Continuity, Network Operability Under Disruption was 85% (score 3, Good),
+> Zone Availability Rate was 40% (score 2, Developing), Operational
+> Threshold Violation Rate was 12.5% (score 2, Developing) and RTO
+> Achievement Rate was 50% (score 2, Developing). For Mean Time to Detect,
+> Mean Time to Respond and Operational Threshold Violation Rate, lower
+> values are better.
+
+gapsAndMissingEvidence (F1, F3, F6, F11):
+> Mean Time to Contain is not measurable: evidence to compute the value is
+> absent or unreliable, and no reason was recorded. This says nothing about
+> how Mean Time to Contain performs, but without it Incident Handling has no
+> score, so there is no overall score either.
+>
+> No recovery point objective has been established for RPO Achievement
+> Rate, so it scores 0 as a programme gap; this is not a measured failure.
+
+foundationsAndFlags (F12–F19):
+> In place: Asset inventory maintained, Risk assessment per zone,
+> Controlled IT/OT boundary separation and BC plan documented for critical
+> processes.
+>
+> The following issues were flagged (listed by severity; this is not an
+> order of action). Critical: uncontrolled inter-zone multi-homed devices
+> were identified. High: asset interdependency documentation is incomplete
+> or outdated, and no BC plan test was performed during the assessment
+> period — a scheduled action was not completed.
+>
+> Process evidence is reported without a score. Vulnerability Remediation
+> Rate is 60%, in the 50–69% band, which is below target — moderate
+> programme improvement warranted (medium note). Mean Time to Remediate is
+> 75 days, in the 31–90 days band, which is satisfactory — continue
+> monitoring.
+>
+> Read together (advisory only; no scores change): the uncontrolled
+> multi-homed devices and Zone Availability Rate (score 2, Developing) may
+> be related, because a segmentation bypass can affect zone availability;
+> review them together. Removing the multi-homed devices and establishing
+> the evidence to measure Mean Time to Contain are both
+> measurement-readiness actions; address them together.
+
+priorities (F6, F20):
+> Ranked by score, where a lower score is more urgent: the lowest
+> effectiveness result is RPO Achievement Rate, a programme gap at score 0.
+> Next, at score 2 and of equal priority, are Mean Time to Respond, Zone
+> Availability Rate, Operational Threshold Violation Rate and RTO
+> Achievement Rate, listed in catalogue order. Mean Time to Contain is not
+> ranked because it has no score.
+
+("Process evidence is reported without a score." is its own sentence: a
+lead-in ending "…without a score:" before "Vulnerability Remediation Rate
+is 60%" would itself be a score claim for check 5.)
+
+Tests: the Westmaas text above pinned exactly; every variant; the property
+test; no internal IDs, raw enums or "poor"; `processBands` consistent with
+`processMessages`; the dashboard components use the shared wording and
+render unchanged.
+
+---
+
 ## Step 4: Ollama provider and generation (`ollama.js`, `generate.js`)
 
 ### Setup (local machine)
@@ -563,15 +675,19 @@ Options: `{ model = 'qwen2.5:7b', provider = callOllama, maxAttempts = 3, timeou
 `provider` swaps the backend, `signal` lets the UI cancel, `onAttempt({ attempt, maxAttempts })`
 reports progress (an exception it throws is logged as a warning and ignored).
 
-1. `facts = buildAssessmentFacts(assessment)`
-2. Attempt 1: call the provider for the whole narrative (temperature 0.2);
+1. `facts = buildAssessmentFacts(assessment)`; `generated =
+   buildGeneratedSections(facts)`; `modelFacts = selectModelFacts(facts)`.
+   Everything below concerns only the model parts (`headline`,
+   `overview`), built from `modelFacts` and validated with
+   `{ parts: MODEL_PARTS }` against all facts.
+2. Attempt 1: call the provider for both model parts (temperature 0.2);
    parse `message.content` as JSON; validate. Content that is not valid
    JSON, not an object, or `done_reason: 'length'` is a failed attempt with
    one `shape` error ("The response was cut off or was not valid JSON.").
 3. Attempts 2 and 3 (retry temperature 0.5):
-   - If there is no usable draft (step 2's `shape` error), regenerate the
-     whole narrative: the unchanged fact list plus the latest errors (at
-     most 10, then "…and N more"), without the previous draft:
+   - If there is no usable draft (step 2's `shape` error), ask for both
+     model parts again: the unchanged model fact list plus the latest
+     errors (at most 10, then "…and N more"), without the previous draft:
 
      ```
      Your previous draft broke these rules:
@@ -579,12 +695,12 @@ reports progress (an exception it throws is logged as a warning and ignored).
      - <section>: <detail>
      Write the whole summary again from the facts above, following every rule.
      ```
-   - Otherwise repair section by section (second manual check: runs failed
-     on one section whose text the model repeated word for word). Sections
-     that passed are kept exactly as they are. Each failing section, in
-     order (headline, then `SECTION_KEYS`), gets its own call with only
-     that section's facts (the facts its failed version cited; all facts if
-     it cited none), its errors (at most 10), and its description from the
+   - Otherwise repair part by part (second manual check: runs failed on one
+     section whose text the model repeated word for word). Parts that
+     passed are kept exactly as they are. Each failing model part, in order
+     (headline, then overview), gets its own call with only that part's
+     facts (the model facts its failed version cited; all model facts if it
+     cited none), its errors (at most 10), and its description from the
      Sections block, with a one-part schema (`{ factIds, text }`, `factIds`
      an enum of those facts):
 
@@ -599,32 +715,40 @@ reports progress (an exception it throws is logged as a warning and ignored).
      ```
 
      A reply that is not valid JSON, not an object, or cut off leaves the
-     section as it was, with the `shape` error. After each attempt the
-     assembled narrative is validated as a whole.
-4. Returns `{ status: 'ok' | 'failed' | 'unavailable', reason?, message?, narrative, errors, facts, attempts, model }`.
+     part as it was, with the `shape` error. After each attempt both model
+     parts are validated.
+4. Returns `{ status: 'ok' | 'failed' | 'unavailable', reason?, message?, narrative, generated, origin, errors, facts, attempts, model }`.
+   - `narrative` (only on `ok`): `{ headline, sections: { overview,
+     ...generated } }`, the assembled report.
+   - `generated`: the four generated sections, always present (also on
+     `failed` and `unavailable`), so the report stays useful when the model
+     part fails. `origin`: `{ headline: 'ai', overview: 'ai',
+     measuredPerformance: 'generated', … }`.
    - `attempts`: one record per provider call
      `{ attempt, section, errors, promptEvalCount, evalCount, doneReason, durationMs }`,
-     `section` null for a whole-narrative call; `errors` are the whole
-     narrative's (whole call) or that section's (section call) after the
-     attempt. Never the draft text.
+     `section` null for a call for both model parts; `errors` are both
+     parts' (whole call) or that part's (part call) after the attempt.
+     Never the draft text.
    - `onAttempt({ attempt, maxAttempts })` once per attempt.
    - `failed` = still invalid after 3 attempts: `narrative` is null and the
-     text is never shown as a report; `errors` are the last attempt's.
+     model text is never shown; `errors` are the last attempt's.
    - `unavailable` = the provider threw: `reason` and `message` from the
      table above, no retry, earlier drafts discarded. Timeout is 300 s per
      call.
    - Never throws.
 
-Section descriptions are exported from `prompt.js` (`SECTION_DESCRIPTIONS`)
-and must match the Sections block of `SYSTEM_PROMPT`.
+Section descriptions are exported from `prompt.js` (`SECTION_DESCRIPTIONS`,
+the two model parts) and must match the Sections block of `SYSTEM_PROMPT`.
 
-Tests: mock the provider (valid first try; invalid then repaired: passed
-sections kept exactly, the section call's facts, schema, temperature 0.5 and
-message pinned; several failing sections repaired in order in one attempt;
-always invalid; invalid JSON and cut-off output get a whole-narrative retry
-at 0.5; an unusable section reply keeps the section; error list capped;
-only the latest errors; each unavailable reason with no retry; `onAttempt`
-once per attempt; `failed` never carries draft text). Mock `fetch` for the
+Tests: mock the provider (valid first try: the call gets only the model
+facts and the two-part schema, and the result assembles the generated
+sections with `origin`; invalid then repaired: passed parts kept exactly,
+the part call's facts, schema, temperature 0.5 and message pinned; both
+parts repaired in order in one attempt; always invalid; invalid JSON and
+cut-off output get a whole retry at 0.5; an unusable part reply keeps the
+part; error list capped; only the latest errors; each unavailable reason
+with no retry and `generated` still returned; `onAttempt` once per attempt;
+`failed` never carries model text). Mock `fetch` for the
 provider (exact request URL and body including `num_predict`; temperature
 override; token counts; warning at 3001 but not 3000; cut-off warning;
 every row of the unavailable table).
@@ -641,7 +765,9 @@ Recorded: Ollama version and `/api/ps` before and after (size, VRAM share,
 context length); per run: status, attempts, total time; per provider call
 (whole narrative or one section): `prompt_eval_count`, `eval_count`,
 tokens/s (from `eval_duration`), `done_reason`, time, every validator error,
-the raw reply; the final narrative for accepted runs. Summary: ok count,
+the raw reply; the final model parts for accepted runs. The generated
+sections are printed once per run set; on every run the script asserts they
+are identical to that copy and pass the validator. Summary: ok count,
 attempts per run, errors by rule, maximum `prompt_eval_count` against 3000,
 tokens/s (first, last, min, max).
 
@@ -671,13 +797,15 @@ Acting on results:
 - Placed in the dashboard view (`view === 'dashboard'` in `App.jsx`), below
   the existing panels.
 - "Generate narrative" button, a loading state, and a model name shown.
-- On `ok`: headline + five sections in an editable text area, a visible
-  label "AI-drafted — review before use", and a copy button.
+- On `ok`: headline + five sections in an editable text area, and a copy
+  button. The headline and overview carry a visible label "AI-drafted —
+  review before use"; the four generated sections carry "Generated from the
+  assessment" (from `origin`).
 - Collapsible "Based on facts" list showing each section's cited facts.
-- On `failed`: no narrative text; show "The draft did not pass validation"
-  and the error list.
+- On `failed`: no model text; show "The draft did not pass validation" and
+  the error list, plus the generated sections with their label.
 - On `unavailable`: "Ollama is not running at localhost:11434" plus the
-  start command.
+  start command (or the reason's own message), plus the generated sections.
 - The panel is a pure renderer of `generateNarrative` output; it computes
   nothing.
 
