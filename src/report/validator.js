@@ -14,6 +14,10 @@
  * pattern checks, and rules 4–6 run per clause, where a clause that names no
  * item inherits the last item named earlier in the same sentence. The
  * verbatim exemption applies only to clauses that name an item themselves.
+ * Rule 8 (attribution) ties a number next to one item to that item's own
+ * fact, which is what makes counting the context facts (C1, C2) as cited for
+ * every section safe in the numbers check. Rule 9 (severity) keeps
+ * "critical" on items whose fact is CRITICAL.
  */
 
 import { INDICATORS, ALL_INDICATOR_IDS } from '../data/indicatorDefinitions.js';
@@ -24,7 +28,7 @@ import { quotedUserText } from './facts.js';
 
 export const VALIDATOR_RULES = [
   'shape', 'factIds', 'numbers', 'leakedIds',
-  'noScoreWording', 'unscoredScore', 'programmeGap', 'causal',
+  'noScoreWording', 'unscoredScore', 'programmeGap', 'causal', 'attribution', 'severity',
 ];
 
 // ---------------------------------------------------------------------------
@@ -33,10 +37,10 @@ export const VALIDATOR_RULES = [
 
 const DIMENSION_IDS = Object.keys(DIMENSION_NAMES);
 
-/** id → every name it may be written as (descriptive name first). */
+/** id → every name it may be written as (descriptive name first, then short name / aliases). */
 const ITEM_NAMES = Object.fromEntries([
   ...ALL_INDICATOR_IDS.map(id => [id, [INDICATORS[id].name, INDICATORS[id].shortName]]),
-  ...LAYER0_ALL_IDS.map(id => [id, [LAYER0_ITEMS[id].name]]),
+  ...LAYER0_ALL_IDS.map(id => [id, [LAYER0_ITEMS[id].name, ...(LAYER0_ITEMS[id].aliases ?? [])]]),
   ...DIMENSION_IDS.map(id => [id, [DIMENSION_NAMES[id]]]),
 ]);
 
@@ -47,8 +51,9 @@ const NAME_TO_ID = new Map(
 const escapeRegExp = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Longest first, so "Zone Availability Rate" wins over "Zone Availability".
+// An optional plural "s" ("documented BC plans") still names the item.
 const NAME_PATTERN = new RegExp(
-  `(?<![\\w-])(?:${[...NAME_TO_ID.keys()].sort((a, b) => b.length - a.length).map(escapeRegExp).join('|')})(?![\\w-])`,
+  `(?<![\\w-])(${[...NAME_TO_ID.keys()].sort((a, b) => b.length - a.length).map(escapeRegExp).join('|')})s?(?![\\w-])`,
   'gi'
 );
 
@@ -60,21 +65,25 @@ function maskNames(text) {
 
 /** Item ids named in the text, in order of appearance. */
 function namesIn(text) {
-  return [...text.matchAll(NAME_PATTERN)].map(m => NAME_TO_ID.get(m[0].toLowerCase()));
+  return [...text.matchAll(NAME_PATTERN)].map(m => NAME_TO_ID.get(m[1].toLowerCase()));
 }
 
 function nameOf(id) {
   return DIMENSION_NAMES[id] ?? displayName(id);
 }
 
-// A bare dimension code is not a leak when followed by the same word as in a
-// known item name ("BC plan", from "BC plan documented for critical processes").
+// A bare dimension code is not a leak when followed by a word that starts
+// with the word after it in a known item name: "BC plan", "BC plans",
+// "BC planning" (from "BC plan documented for critical processes").
 const BARE_CODE = /\b(IH|BC)\b(?:\s+(\w+))?/g;
-const ALLOWED_CODE_PHRASES = new Set(
-  Object.values(ITEM_NAMES).flat()
-    .flatMap(name => [...name.matchAll(/\b(IH|BC)\s+(\w+)/g)])
-    .map(m => `${m[1]} ${m[2].toLowerCase()}`)
-);
+const ALLOWED_CODE_NEXT_WORDS = Object.values(ITEM_NAMES).flat()
+  .flatMap(name => [...name.matchAll(/\b(IH|BC)\s+(\w+)/g)])
+  .map(m => ({ code: m[1], next: m[2].toLowerCase() }));
+
+function isAllowedCodePhrase(code, nextWord) {
+  const next = nextWord?.toLowerCase();
+  return !!next && ALLOWED_CODE_NEXT_WORDS.some(a => a.code === code && next.startsWith(a.next));
+}
 
 // ---------------------------------------------------------------------------
 // Numbers
@@ -147,8 +156,16 @@ const DIMENSION_VALUE = Object.fromEntries(DIMENSION_IDS.map(id => [
 ]));
 
 const FAIL_WORD = /\b(?:fail\w*|missed|poor)\b/gi;
+const MEASURED_WORD = /\bmeasured\b/gi;
 const NEGATION = /\b(?:not|no|never)\b|\brather than\b|\binstead of\b/i;
 
+/** Negated when not / no / never / "rather than" / "instead of" is among the three words before it. */
+function isNegated(text, index) {
+  return NEGATION.test(text.slice(0, index).trim().split(/\s+/).slice(-3).join(' '));
+}
+
+// "critical process(es)" is part of the BC plan item's name, not a severity claim.
+const CRITICAL_WORD = /\bcritical\b(?!\s+process)/i;
 const MAY_BE_RELATED = /may be related/i;
 const CAUSAL = /\b(?:caused|causes|because of|due to|led to|results from|resulted in)\b/i;
 
@@ -158,16 +175,28 @@ const QUOTED = /"([^"]*)"|“([^”]*)”/g;
 // Fact-derived categories (from ALL facts, not only cited ones)
 // ---------------------------------------------------------------------------
 
+const OWN_FACT_KINDS = new Set(['scored', 'gap_zero', 'no_score', 'process']);
+
 function categorize(facts) {
   const noJudgement = new Map();   // rule 4: id → why it cannot be judged
+  const noScore = new Set();       // rule 4 "measured": no-score indicators
   const unscored = new Map();      // rule 5: id → why it has no score
   const gaps = new Set();          // rule 6
+  const ownFacts = new Map();      // rule 8: id → the item's own fact
+  const criticalItems = new Set(); // rule 9: items whose flag / process fact is CRITICAL
 
   for (const id of LAYER0_ALL_IDS) unscored.set(id, 'is not scored');
   for (const f of facts) {
+    if (OWN_FACT_KINDS.has(f.kind)) {
+      for (const id of f.refs) ownFacts.set(id, f);
+    }
+    if ((f.kind === 'l0_flag' || f.kind === 'process') && f.text.includes('CRITICAL')) {
+      for (const id of f.refs) criticalItems.add(id);
+    }
     if (f.kind === 'no_score') {
       for (const id of f.refs) {
         noJudgement.set(id, 'has no score');
+        noScore.add(id);
         unscored.set(id, 'has no score');
       }
     } else if (f.kind === 'l0_unset') {
@@ -179,7 +208,7 @@ function categorize(facts) {
       for (const id of f.refs) gaps.add(id);
     }
   }
-  return { noJudgement, unscored, gaps };
+  return { noJudgement, noScore, unscored, gaps, ownFacts, criticalItems };
 }
 
 // ---------------------------------------------------------------------------
@@ -219,10 +248,14 @@ function removeExemptQuotes(text, cited) {
   });
 }
 
+/** Masked text with fact IDs, internal IDs and raw enums blanked (their digits are not numbers). */
+function stripLeakTokens(masked) {
+  return masked.replace(FACT_ID, ' ').replace(INTERNAL_ID, ' ').replace(RAW_ENUM, ' ');
+}
+
 /** Leaked tokens in masked text → { details, cleaned } (cleaned has them blanked). */
 function checkLeaks(masked) {
   const details = [];
-  let cleaned = masked;
 
   for (const m of masked.matchAll(FACT_ID)) details.push(`Fact ID "${m[0]}" appears in the text. Never write fact IDs.`);
   for (const m of masked.matchAll(INTERNAL_ID)) {
@@ -231,14 +264,13 @@ function checkLeaks(masked) {
       ? `An internal code appears in the text. Write "${name}" instead.`
       : 'An internal code appears in the text. Use descriptive names only.');
   }
-  cleaned = cleaned.replace(FACT_ID, ' ').replace(INTERNAL_ID, ' ');
+  if (masked.replace(FACT_ID, ' ').replace(INTERNAL_ID, ' ').match(RAW_ENUM)) {
+    details.push('A code-style word with an underscore appears in the text. Use plain words.');
+  }
 
-  if (cleaned.match(RAW_ENUM)) details.push('A code-style word with an underscore appears in the text. Use plain words.');
-  cleaned = cleaned.replace(RAW_ENUM, ' ');
-
+  const cleaned = stripLeakTokens(masked);
   for (const m of cleaned.matchAll(BARE_CODE)) {
-    const next = m[2]?.toLowerCase();
-    if (next && ALLOWED_CODE_PHRASES.has(`${m[1]} ${next}`)) continue;
+    if (isAllowedCodePhrase(m[1], m[2])) continue;
     details.push(`The abbreviation "${m[1]}" appears in the text. Write "${DIMENSION_NAMES[m[1]]}" instead.`);
   }
 
@@ -257,6 +289,13 @@ function checkClause(clause, subjects, categories) {
     }
   }
 
+  const measured = [...masked.matchAll(MEASURED_WORD)].find(m => !isNegated(masked, m.index));
+  if (measured) {
+    for (const id of subjects.filter(s => categories.noScore.has(s))) {
+      errors.push(['noScoreWording', `${nameOf(id)} has no score; do not describe it as "${measured[0]}".`]);
+    }
+  }
+
   for (const id of subjects.filter(s => categories.unscored.has(s))) {
     const dimensionValue = DIMENSION_IDS.includes(id) && DIMENSION_VALUE[id].test(clause);
     if (SCORE_CLAIM.test(masked) || dimensionValue) {
@@ -267,8 +306,7 @@ function checkClause(clause, subjects, categories) {
   const gapSubjects = subjects.filter(s => categories.gaps.has(s));
   if (gapSubjects.length > 0) {
     for (const m of masked.matchAll(FAIL_WORD)) {
-      const preceding = masked.slice(0, m.index).trim().split(/\s+/).slice(-3).join(' ');
-      if (NEGATION.test(preceding)) continue;
+      if (isNegated(masked, m.index)) continue;
       for (const id of gapSubjects) {
         errors.push(['programmeGap',
           `${nameOf(id)} is a programme gap, not a measured failure; do not describe it as "${m[0]}".`]);
@@ -277,6 +315,40 @@ function checkClause(clause, subjects, categories) {
   }
 
   return errors;
+}
+
+/**
+ * Check 8: a clause about exactly one item with an own fact (named, or
+ * inherited within the same semicolon segment) may only use numbers from
+ * that fact, not from another fact that refs the item.
+ */
+function checkAttribution(clause, subjects, categories) {
+  const items = [...new Set(subjects)];
+  if (items.length !== 1 || !categories.ownFacts.has(items[0])) return [];
+
+  const [id] = items;
+  const own = new Set(extractNumbers(maskNames(categories.ownFacts.get(id).text)));
+  const seen = new Set();
+  const details = [];
+  for (const { raw, value } of numberTokens(stripLeakTokens(maskNames(clause)))) {
+    if (own.has(value) || seen.has(value)) continue;
+    seen.add(value);
+    details.push(`The number "${raw}" is not in the fact about ${nameOf(id)}.`);
+  }
+  return details;
+}
+
+/**
+ * Check 9: a clause that itself names exactly one item and says "critical"
+ * (after masking names such as "BC plan documented for critical processes")
+ * fails unless that item's flag or process fact carries CRITICAL.
+ */
+function checkSeverity(clause, named, categories) {
+  const items = [...new Set(named)];
+  if (items.length !== 1 || !CRITICAL_WORD.test(maskNames(clause))) return [];
+  const [id] = items;
+  if (categories.criticalItems.has(id)) return [];
+  return [`${nameOf(id)} is not marked CRITICAL in its fact; do not call it critical.`];
 }
 
 function checkSection(section, part, ctx) {
@@ -293,7 +365,8 @@ function checkSection(section, part, ctx) {
 
   const cited = [...new Set(part.factIds)].filter(id => ctx.byId.has(id)).map(id => ctx.byId.get(id));
   const citedTexts = cited.map(f => normalize(f.text));
-  const allowedNumbers = new Set(cited.flatMap(f => extractNumbers(maskNames(f.text))));
+  // Context facts (C1, C2) count as cited everywhere; safe only with check 8.
+  const allowedNumbers = new Set([...cited, ...ctx.contextFacts].flatMap(f => extractNumbers(maskNames(f.text))));
   const mayBeRelated = cited.some(f => MAY_BE_RELATED.test(f.text));
 
   const text = removeExemptQuotes(part.text.replace(/\s+/g, ' ').trim(), cited);
@@ -311,19 +384,31 @@ function checkSection(section, part, ctx) {
       }
     }
 
-    // Checks 4–6 per clause, with inheritance and the verbatim exemption
+    // Checks 4–6 and 8–9 per clause, with inheritance and the verbatim
+    // exemption. For check 8, inheritance stops at a semicolon: in the
+    // priority fact's "…(programme gap, 0); then, at score 2" the score
+    // belongs to the items that follow, not to the item before.
     let lastNamed = null;
-    for (const clause of splitClauses(sentence)) {
-      const named = namesIn(clause);
-      const subjects = named.length > 0 ? named : (lastNamed ? [lastNamed] : []);
-      if (named.length > 0) lastNamed = named[named.length - 1];
-      if (subjects.length === 0) continue;
+    for (const segment of sentence.split(/\s*;\s*/)) {
+      let lastNamedInSegment = null;
+      for (const clause of splitClauses(segment)) {
+        const named = namesIn(clause);
+        const subjects = named.length > 0 ? named : (lastNamed ? [lastNamed] : []);
+        const attributed = named.length > 0 ? named : (lastNamedInSegment ? [lastNamedInSegment] : []);
+        if (named.length > 0) {
+          lastNamed = named[named.length - 1];
+          lastNamedInSegment = lastNamed;
+        }
+        if (subjects.length === 0) continue;
 
-      // Verbatim exemption only for a clause that names an item itself. An
-      // inherited clause ("poor") is short enough to match almost any fact.
-      if (named.length > 0 && citedTexts.some(t => t.includes(normalize(clause)))) continue;
+        // Verbatim exemption only for a clause that names an item itself. An
+        // inherited clause ("poor") is short enough to match almost any fact.
+        if (named.length > 0 && citedTexts.some(t => t.includes(normalize(clause)))) continue;
 
-      for (const [rule, detail] of checkClause(clause, subjects, ctx.categories)) add(rule, detail, sentence);
+        for (const [rule, detail] of checkClause(clause, subjects, ctx.categories)) add(rule, detail, sentence);
+        for (const detail of checkAttribution(clause, attributed, ctx.categories)) add('attribution', detail, sentence);
+        for (const detail of checkSeverity(clause, named, ctx.categories)) add('severity', detail, sentence);
+      }
     }
 
     // Check 7
@@ -342,6 +427,7 @@ export function validateNarrative(narrative, facts) {
   const factList = Array.isArray(facts) ? facts : [];
   const ctx = {
     byId: new Map(factList.map(f => [f.id, f])),
+    contextFacts: factList.filter(f => f.kind === 'context'),
     categories: categorize(factList),
   };
 

@@ -205,15 +205,15 @@ describe('numbers', () => {
     expect(foundations('Vulnerability Remediation Rate is below target (50–69%).').ok).toBe(true);
   });
 
-  it('ISO dates are one token and need their fact', () => {
+  it('ISO dates are one token; the context date counts as cited everywhere', () => {
     expect(overview('The assessment is dated 2026-01-01.').ok).toBe(true);
-    expect(rulesOf(validate(withPart('measuredPerformance', MEASURED, 'On 2026-01-01 Mean Time to Detect was 18 hours.')))).toEqual(['numbers']);
+    expect(validate(withPart('measuredPerformance', MEASURED, 'The assessment is dated 2026-01-01.')).ok).toBe(true);
     expect(rulesOf(overview('This is the 2026 assessment.'))).toEqual(['numbers']);
   });
 
   it('number words count, including "one" and "zero"', () => {
     expect(rulesOf(overview('One indicator in Incident Handling has no score.'))).toEqual(['numbers']);
-    expect(rulesOf(gaps('Mean Time to Contain is one of the missing results.'))).toEqual(['numbers']);
+    expect(rulesOf(gaps('Mean Time to Contain is one of the missing results.'))).toContain('numbers');
   });
 
   it('item names are masked: "Zero uncontrolled multi-homed devices" is not a number', () => {
@@ -420,6 +420,129 @@ describe('causal', () => {
 
   it('no "may be related" fact cited → not checked', () => {
     expect(validate(withPart('measuredPerformance', MEASURED, 'Zone Availability Rate was 40% due to the disruption.')).ok).toBe(true);
+  });
+});
+
+// ─── Changes from the first manual check ──────────────────────────────────────
+
+describe('manual check 1: BC plans (bare-code prefix match)', () => {
+  it('"the BC plans" and "BC planning" are not leaks', () => {
+    expect(foundations('The BC plans are documented and BC planning continues.').ok).toBe(true);
+  });
+
+  it('run 2 sentence passes: "…and documented BC plans."', () => {
+    expect(foundations('Westmaas has foundational controls in place such as asset inventory, risk assessment, IT/OT boundary separation, and documented BC plans.').ok).toBe(true);
+  });
+
+  it('"the BC score" is still a leak', () => {
+    expect(rulesOf(overview('The BC score is 1.80.'))).toEqual(['leakedIds']);
+  });
+});
+
+describe('manual check 1: attribution (check 8)', () => {
+  it('"RPO Achievement Rate scored 1.80" fails although F2 refs it and contains 1.80', () => {
+    expect(FACTS.find(f => f.id === 'F2')).toMatchObject({ refs: expect.arrayContaining(['BC-09']), text: expect.stringContaining('1.80') });
+    expect(overview('RPO Achievement Rate scored 1.80.').errors).toEqual([{
+      section: 'overview',
+      sentence: 'RPO Achievement Rate scored 1.80.',
+      rule: 'attribution',
+      detail: 'The number "1.80" is not in the fact about RPO Achievement Rate.',
+    }]);
+  });
+
+  it('"Zone Availability Rate (3)" fails (run 3)', () => {
+    const result = validate(withPart('measuredPerformance', MEASURED,
+      'Network Operability Under Disruption (3) and Zone Availability Rate (3) are also measured.'));
+    expect(rulesOf(result)).toEqual(['attribution']);
+    expect(result.errors[0].detail).toBe('The number "3" is not in the fact about Zone Availability Rate.');
+  });
+
+  it('numbers from the item\'s own fact pass, even when that fact is not cited', () => {
+    expect(overview('This includes the programme-gap 0 for RPO Achievement Rate.').ok).toBe(true);
+  });
+
+  it('inherited clauses are checked against the inherited item\'s own fact', () => {
+    expect(rulesOf(validate(withPart('measuredPerformance', MEASURED, 'Zone Availability Rate is 40%, scoring 3.')))).toEqual(['attribution']);
+    expect(validate(withPart('measuredPerformance', MEASURED, 'Mean Time to Detect is 18 hours, a score of 3.')).ok).toBe(true);
+  });
+
+  it('inheritance for attribution stops at a semicolon (the priority fact\'s own wording)', () => {
+    expect(validate(withPart('priorities', ['F20'],
+      'RPO Achievement Rate is a programme gap (0); then, at score 2, Mean Time to Respond.')).ok).toBe(true);
+    expect(validate(withPart('priorities', ['F20'], FACTS.find(f => f.id === 'F20').text)).ok).toBe(true);
+  });
+});
+
+describe('severity attribution (check 9)', () => {
+  it('"critical gaps in RPO Achievement Rate" fails: its fact is not CRITICAL', () => {
+    const result = validate(withPart('headline', ['F11', 'F20'], 'The assessment highlights critical gaps in RPO Achievement Rate.'));
+    expect(result.errors).toEqual([expect.objectContaining({
+      rule: 'severity', detail: 'RPO Achievement Rate is not marked CRITICAL in its fact; do not call it critical.',
+    })]);
+  });
+
+  it('"multi-homed devices are a critical issue" passes: its flag is CRITICAL', () => {
+    expect(foundations('Uncontrolled multi-homed devices are a critical issue.').ok).toBe(true);
+  });
+
+  it('an item named "critical" is masked first ("BC plan documented for critical processes")', () => {
+    expect(foundations('The BC plan documented for critical processes is in place.').ok).toBe(true);
+  });
+
+  it('"critical processes" is not a severity claim (run 1: "documented BC plan for critical processes")', () => {
+    expect(foundations('Controls include asset inventory and documented BC plan for critical processes.').ok).toBe(true);
+  });
+
+  it('"high" is not checked', () => {
+    expect(foundations('Asset interdependency documentation is a high priority.').ok).toBe(true);
+  });
+});
+
+describe('manual check 1: context facts count as cited (numbers)', () => {
+  it('"covered 8 effectiveness indicators" passes without C2 cited', () => {
+    expect(validate(withPart('overview', ['F1', 'F2', 'F3'], 'The assessment covered 8 effectiveness indicators.')).ok).toBe(true);
+  });
+
+  it('"Zone Availability Rate scored 4" still fails: 4 is in C2, not in its own fact', () => {
+    expect(rulesOf(validate(withPart('measuredPerformance', MEASURED, 'Zone Availability Rate scored 4.')))).toEqual(['attribution']);
+  });
+});
+
+describe('manual check 1: "measured" on a no-score indicator (check 4)', () => {
+  it('"Mean Time to Contain was measured." fails', () => {
+    expect(gaps('Mean Time to Contain was measured.').errors).toEqual([expect.objectContaining({
+      rule: 'noScoreWording', detail: 'Mean Time to Contain has no score; do not describe it as "measured".',
+    })]);
+  });
+
+  it('run 5 sentence fails: "…mean time to contain were measured."', () => {
+    expect(rulesOf(gaps('Mean time to detect and mean time to contain were measured.'))).toEqual(['noScoreWording']);
+  });
+
+  it('negated passes: "could not be measured", "was not measured"', () => {
+    expect(gaps('Mean Time to Contain could not be measured.').ok).toBe(true);
+    expect(gaps('Mean Time to Contain was not measured.').ok).toBe(true);
+  });
+});
+
+describe('manual check 1: aliases for foundational items', () => {
+  function withUnsetAssetInventory(text) {
+    const rec = loadScenario(baselineJson);
+    rec.layer0 = { ...rec.layer0, 'L0-asset-inventory': { state: null } };
+    const facts = buildAssessmentFacts(rec);
+    const narrative = withPart('foundationsAndFlags', [facts.find(f => f.kind === 'l0_unset').id], text);
+    narrative.sections.priorities.factIds = [facts.find(f => f.kind === 'priority').id];
+    return validateNarrative(narrative, facts);
+  }
+
+  it('"the asset inventory" names the item: unassessed and "weak" fails', () => {
+    expect(withUnsetAssetInventory('The asset inventory is weak.').errors).toEqual([expect.objectContaining({
+      rule: 'noScoreWording', detail: 'Asset inventory maintained was not assessed; do not describe it as "weak".',
+    })]);
+  });
+
+  it('plural alias: "documented BC plans" names the item and is not scored', () => {
+    expect(rulesOf(foundations('The documented BC plans scored 3.'))).toContain('unscoredScore');
   });
 });
 

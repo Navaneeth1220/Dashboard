@@ -93,6 +93,11 @@ export const L0_SEVERITY_LABELS = {
 
 // ---------------------------------------------------------------------------
 // Item definitions
+//
+// `aliases`: other ways an AI-drafted narrative names the item (from the
+// first manual check, docs/ai-report-manual-check.md). Used only by the
+// narrative validator to recognise the item; never displayed. Bare "BC plan"
+// is not an alias: it is ambiguous between the two BC plan items.
 // ---------------------------------------------------------------------------
 export const LAYER0_ITEMS = {
 
@@ -101,6 +106,7 @@ export const LAYER0_ITEMS = {
   'L0-asset-inventory': {
     id:             'L0-asset-inventory',
     name:           'Asset inventory maintained',
+    aliases:        ['asset inventory'],
     subclass:       '0A',
     inputType:      'qualitative',
     baseTag:        L0_TAG.PREREQUISITE,
@@ -126,6 +132,7 @@ export const LAYER0_ITEMS = {
   'L0-risk-assessment': {
     id:             'L0-risk-assessment',
     name:           'Risk assessment per zone',
+    aliases:        ['risk assessment'],
     subclass:       '0A',
     inputType:      'qualitative',
     baseTag:        L0_TAG.PREREQUISITE,
@@ -149,6 +156,7 @@ export const LAYER0_ITEMS = {
   'L0-interdependency': {
     id:             'L0-interdependency',
     name:           'Asset interdependency documentation',
+    aliases:        ['interdependency documentation'],
     subclass:       '0A',
     inputType:      'qualitative',
     baseTag:        L0_TAG.PREREQUISITE,
@@ -172,6 +180,7 @@ export const LAYER0_ITEMS = {
   'L0-it-ot-boundary': {
     id:             'L0-it-ot-boundary',
     name:           'Controlled IT/OT boundary separation',
+    aliases:        ['IT/OT boundary separation'],
     subclass:       '0A',
     inputType:      'qualitative',
     baseTag:        L0_TAG.ARCHITECTURE,   // architecture item
@@ -195,6 +204,7 @@ export const LAYER0_ITEMS = {
   'L0-multi-homed': {
     id:             'L0-multi-homed',
     name:           'Zero uncontrolled multi-homed devices',
+    aliases:        ['multi-homed devices', 'multi-homing'],
     subclass:       '0A',
     inputType:      'qualitative',
     baseTag:        L0_TAG.ARCHITECTURE,
@@ -218,6 +228,7 @@ export const LAYER0_ITEMS = {
   'L0-bc-plan-doc': {
     id:             'L0-bc-plan-doc',
     name:           'BC plan documented for critical processes',
+    aliases:        ['documented BC plan', 'BC plan documentation'],
     subclass:       '0A',
     inputType:      'qualitative',
     baseTag:        L0_TAG.PREREQUISITE,
@@ -360,6 +371,7 @@ export const LAYER0_ITEMS = {
   'L0-bc-plan-tested': {
     id:             'L0-bc-plan-tested',
     name:           'BC plan tested within defined period',
+    aliases:        ['BC plan test', 'BC plan testing'],
     subclass:       '0B',
     inputType:      'qualitative',
     baseTag:        L0_TAG.PROCESS_EVIDENCE,
