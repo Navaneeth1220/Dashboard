@@ -34,7 +34,7 @@ this repository contains the artifact as evaluated (release `v1.0-thesis`).
     npm run dev
 
 To reproduce the thesis demonstration: start the dashboard, load
-`scenario/Watermaas_2026-01-01_assessment` as an assessment, and load both scenario
+`scenarios/Westmaas_2026-01-01_assessment.json` as an assessment, and load both scenario
 files in the comparison view.
 
 ## Running the analysis
