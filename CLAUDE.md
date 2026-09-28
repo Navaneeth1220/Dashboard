@@ -55,6 +55,8 @@ Now a hobby project, developed on feature branches.
   an invariant is involved.
 - Inline styles in components; no Tailwind.
 - Never invent numeric values. Values come from engine output or the user.
+- On Windows PowerShell 5.1, commit messages containing quotes must use
+  `git commit -F <file>`; inline `-m` splits them into separate arguments.
 
 ## Current work
 
