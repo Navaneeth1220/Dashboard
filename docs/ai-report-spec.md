@@ -307,41 +307,93 @@ a client name with a line break still gives a one-line C1.
 ## Step 3: Validator (`validator.js`)
 
 `validateNarrative(narrative, facts)` → `{ ok, errors: [{ section, sentence, rule, detail }] }`.
-Pure, no model needed. Checks, per section (headline included):
+Pure, no model needed, never throws. `section` is `headline` or a
+`SECTION_KEYS` key; `sentence` is the offending sentence (null for
+section-level checks); `rule` is one of `shape`, `factIds`, `numbers`,
+`leakedIds`, `noScoreWording`, `unscoredScore`, `programmeGap`, `causal`;
+`detail` is plain English with descriptive names only (it is sent back to
+the model on retry and shown in the UI on failure).
 
+### Text preparation
+
+- **Quoted text**: a double-quoted span (straight or curly quotes) is removed
+  before all other checks if it appears verbatim (whitespace collapsed) in
+  the client name of a cited C1 or in an assessor note of a cited fact.
+- **Masking**: every known item name (indicator `name` and `shortName`,
+  Layer 0 item names, dimension names) is replaced by a placeholder before
+  the numbers, leaked-ID and pattern checks, so names never count as
+  numbers ("Zero uncontrolled multi-homed devices") or codes.
+- **Sentences**: split after `.` `!` `?` followed by whitespace and an
+  uppercase letter, digit, or opening quote/bracket. Decimals (`1.80`) and
+  "e.g. the" do not split.
+- **Clauses**: split each sentence on `,` `;` `—`, spaced ` – ` / ` - `, and
+  the words `and`, `but`, `while`, `whereas`, `although`, `though`.
+  Unspaced dashes (`50–69%`, `multi-homed`) do not split.
+- **Name index** (rules 4–6): built from ALL facts, not only cited ones.
+  Names match case-insensitively as whole words (`name` and `shortName`).
+- **Inheritance** (rules 4–6): a clause that names no item inherits the last
+  item named earlier in the same sentence ("Mean Time to Contain, which is
+  poor" fails).
+- **Verbatim exemption** (rules 4–6): a clause is exempt if, lower-cased
+  with whitespace collapsed and outer punctuation trimmed, it appears in a
+  cited fact.
+
+### Checks (per section, headline included)
+
+0. **Shape**: section present; `factIds` a non-empty array; `text` a
+   non-blank string.
 1. **Fact IDs**: every cited ID exists (defence in depth; the schema enum
    should already guarantee this), and no fact ID is cited twice within a
    section (the grammar does not enforce `uniqueItems`).
 2. **Numbers**: every number in the text appears in at least one cited
-   fact. Extraction handles digits (`12.5`, `1.80`, `85%`), number words
-   `one`–`twenty`, and ISO dates as a single token. Normalise before
-   comparing (`1.80` = `1.8`, `3.00` = `3`).
-3. **No leaked IDs**: no `F\d+`/`C\d+` fact IDs, internal IDs, or raw enums in
-   text. Exempt: quoted text that matches the quoted client name (C1) or an
-   assessor note in a cited fact.
-4. **No-score wording**: split text into sentences, then clauses (on `,` `;`
-   `—` and ` and `). A clause fails if it names a `no_score` item AND
-   contains a performance word (`poor`, `weak`, `bad`, `failing`, `failed`,
-   `good`, `strong`, `underperform*`, `low`, `high`), UNLESS the clause
-   appears verbatim in a cited fact.
-   Known case this exemption exists for: the readiness advisory (F18 in the
-   engine's order) contains "weak" (about the multi-homing item) in the same
-   sentence as Mean Time to Contain.
-5. **No score for unscored things**: a clause fails if it names a
-   `dim_incomplete` dimension, a `process` item, or a `no_score` item
-   together with "score" + number or "scored" + number, unless verbatim in a
-   cited fact.
-6. **Programme gap**: a clause naming a `gap_zero` item fails if it contains
-   `fail*`, `missed` or `poor`, unless verbatim in a cited fact.
+   fact. Extraction: ISO dates as a single token; digits normalised
+   (`1.80` = `1.8`, `3.00` = `3`, `85%` = `85`); number words
+   `zero`–`twenty`. Applied identically to the text and the cited facts,
+   after masking. Tokens reported by check 3 are not reported again.
+3. **No leaked IDs**: no `F\d+`/`C\d+` fact IDs, internal IDs, raw enums, or
+   bare dimension codes `IH` / `BC` in text. A bare code followed by the
+   same word as in a known item name is not a leak (today only "BC plan",
+   derived from "BC plan documented…" / "BC plan tested…"; engine messages
+   such as "No BC plan test was performed" use it outside item names).
+4. **No-score wording**: a clause whose subject (named or inherited) is a
+   `no_score` indicator, an `l0_unset` item, or a `dim_incomplete`
+   dimension fails if it contains a performance word (`poor`, `weak`,
+   `bad`, `failing`, `failed`, `good`, `strong`, `underperform*`, `low`,
+   `high`). "high priority", "high-priority", "high severity" and
+   "high-severity" are not performance words.
+5. **No score for unscored things**: a clause whose subject is a
+   `dim_incomplete` dimension, a `no_score` indicator, or any foundational
+   control / process evidence item fails if it contains a score claim: a
+   score word (`score`, `scores`, `scored`, `scoring`, `rated`, `rating`)
+   followed within three words by a number; `<number> score`;
+   `<number> out of <number>`; or, for dimensions, the dimension name
+   followed within two words by a number ("Overall score: 2.40").
+6. **Programme gap**: a clause whose subject is a `gap_zero` item fails if
+   it contains `fail*`, `missed` or `poor`, unless the word is negated
+   (`not`, `no`, `never`, `rather than`, `instead of` within the three
+   preceding words): "not a measured failure" is the fact's own wording.
 7. **Causal overclaim**: if a cited fact contains "may be related", the
    section text must not contain `caused`, `causes`, `because of`,
    `due to`, `led to`, `results from`, `resulted in`.
 
-Tests: hand-written good narrative for the Westmaas baseline passes; each
-rule has at least one failing example (e.g. "Mean Time to Contain is poor",
-"Incident Handling scored 2.50", "two of the five indicators" with no fact
-containing "two", "the multi-homing caused the low availability"); the
-readiness-advisory (F18) verbatim case passes.
+Limitations (accepted): paraphrased names ("containment time") are not
+recognised: log misses in the Step 4 manual check and add aliases to the
+data files, not the validator. Process items in a not-measurable state are
+not covered by check 4 (facts carry no state). No check that named items
+are cited (may become check 8 after Step 4).
+
+Tests: a hand-written good narrative for the Westmaas baseline passes,
+including the readiness advisory (F18) verbatim, "not a measured failure",
+`1.8` for `1.80`, "the BC plan", and the quoted client name. Each check has
+failing and passing examples, including: "Mean Time to Contain is poor";
+"Mean Time to Contain, which is poor, …" (inheritance); "Mean Time to
+Contain is not measurable, but Zone Availability Rate is poor" (OK);
+"Mean Time to Contain is a high-priority evidence gap" (OK); "Incident
+Handling scored 2.50"; "Incident Handling scored zero"; "Zero uncontrolled
+multi-homed devices" (no numbers error); "two of the five indicators" with
+no fact containing "two"; "the multi-homing caused the low availability".
+Property tests: the cited facts' own text always passes; an injected
+violation of checks 3–6 is always caught; malformed input never throws.
 
 ---
 
