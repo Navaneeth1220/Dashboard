@@ -10,15 +10,24 @@
  * response, so rejected drafts can be reviewed here without the app ever
  * returning them. Appends a dated run set to docs/ai-report-manual-check.md;
  * the Review part is filled in by hand.
+ *
+ * The generated sections (templates, no model) are built once up front and
+ * printed once per run set. Every run asserts that its generated sections
+ * are identical to that copy and pass the validator; a failed assertion is
+ * logged with the run and makes the script exit non-zero.
  */
 
 import { readFileSync, existsSync, writeFileSync, appendFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { parseAndValidateImport } from '../src/engine/persistence.js';
+import { buildAssessmentFacts } from '../src/report/facts.js';
+import { buildGeneratedSections } from '../src/report/templates.js';
+import { validateNarrative } from '../src/report/validator.js';
 import { generateNarrative, DEFAULT_MODEL, RETRY_TEMPERATURE } from '../src/report/generate.js';
 import { callOllama, OLLAMA_OPTIONS, PROMPT_TOKEN_WARNING, DEFAULT_TIMEOUT_MS } from '../src/report/providers/ollama.js';
-import { SECTION_KEYS } from '../src/report/schema.js';
+import { MODEL_PARTS, GENERATED_KEYS } from '../src/report/schema.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
@@ -83,13 +92,28 @@ function renderPart(key, part) {
   return [`**${key}** (${(part?.factIds ?? []).join(', ')}): ${part?.text}`, ''];
 }
 
-function renderNarrative(draft) {
-  const parts = [['headline', draft?.headline], ...SECTION_KEYS.map(k => [k, draft?.sections?.[k]])];
+/** The model's parts: { headline, overview } as replied, or those of the accepted narrative. */
+function renderModelParts(draft) {
+  const parts = MODEL_PARTS.map(k => [k, draft?.[k] ?? draft?.sections?.[k]]);
   if (parts.some(([, p]) => typeof p?.text !== 'string')) return ['```json', JSON.stringify(draft, null, 2), '```'];
   return parts.flatMap(([key, p]) => renderPart(key, p));
 }
 
-/** A raw reply: the whole narrative (section null) or one repaired section. */
+/**
+ * One run's generated sections against the reference copy: identical, and
+ * passing the validator. → failure lines (empty when both hold).
+ */
+function checkGenerated(generated, facts, reference) {
+  const failures = [];
+  if (!isDeepStrictEqual(generated, reference)) failures.push('the generated sections differ from the reference copy');
+  const { errors } = validateNarrative({ sections: generated }, facts, { parts: GENERATED_KEYS });
+  for (const e of errors) {
+    failures.push(`validator \`${e.rule}\` ${e.section ?? 'narrative'}${e.sentence ? `, "${e.sentence}"` : ''}: ${e.detail}`);
+  }
+  return failures;
+}
+
+/** A raw reply: the model parts (section null) or one repaired part. */
 function renderReply(content, section) {
   let reply;
   try {
@@ -97,15 +121,20 @@ function renderReply(content, section) {
   } catch {
     return ['```text', content, '```'];
   }
-  if (section === null) return renderNarrative(reply);
+  if (section === null) return renderModelParts(reply);
   return typeof reply?.text === 'string' ? renderPart(section, reply) : ['```json', JSON.stringify(reply, null, 2), '```'];
 }
 
 const roundsOf = result => Math.max(0, ...result.attempts.map(a => a.attempt));
 
-function renderRun({ n, result, raw, wallMs }) {
+function renderRun({ n, result, raw, wallMs, generatedFailures }) {
   const lines = [`#### Run ${n}: ${result.status} (${roundsOf(result)} attempt(s), ${result.attempts.length} call(s), ${seconds(wallMs)})`, ''];
   if (result.status === 'unavailable') lines.push(`Unavailable: \`${result.reason}\`: ${result.message}`, '');
+  if (generatedFailures.length === 0) {
+    lines.push('Generated sections: identical to the reference copy, pass the validator.', '');
+  } else {
+    lines.push('Generated sections: **assertion failed**', '', ...generatedFailures.map(f => `- ${f}`), '');
+  }
 
   result.attempts.forEach((a, i) => {
     const what = a.section === null ? 'whole narrative' : `repair of ${a.section}`;
@@ -119,12 +148,12 @@ function renderRun({ n, result, raw, wallMs }) {
   });
 
   if (result.status === 'ok') {
-    lines.push('<details><summary>Final narrative (accepted)</summary>', '', ...renderNarrative(result.narrative), '</details>', '');
+    lines.push('<details><summary>Final model parts (accepted)</summary>', '', ...renderModelParts(result.narrative), '</details>', '');
   }
   return lines;
 }
 
-function renderRunSet({ version, before, after, factCount, runs }) {
+function renderRunSet({ version, before, after, factCount, reference, referenceFailures, runs }) {
   const attempts = runs.flatMap(r => r.result.attempts);
   const promptCounts = attempts.map(a => a.promptEvalCount).filter(n => n !== null);
   const speeds = runs.flatMap(r => r.raw.map(tokensPerSecond)).filter(v => v !== null);
@@ -149,11 +178,21 @@ function renderRunSet({ version, before, after, factCount, runs }) {
     '| Measure | Value |',
     '|---|---|',
     `| ok | ${runs.filter(r => r.result.status === 'ok').length} of ${runs.length} |`,
+    `| generated sections identical and valid | ${runs.filter(r => r.generatedFailures.length === 0).length} of ${runs.length} |`,
     `| attempts per run (calls) | ${runs.map(r => `${roundsOf(r.result)} (${r.result.attempts.length})`).join(', ')} |`,
     `| errors by rule (all attempts) | ${countByRule(attempts.flatMap(a => a.errors))} |`,
     `| max prompt_eval_count | ${promptCounts.length ? Math.max(...promptCounts) : '?'} (warning above ${PROMPT_TOKEN_WARNING}) |`,
     `| generation speed (tokens/s, eval_duration) | ${speedSummary} |`,
     '',
+    '### Generated sections',
+    '',
+    'Built from the facts by templates (no model); every run asserts it gets exactly this.',
+    '',
+    ...(referenceFailures.length === 0
+      ? ['The reference copy passes the validator.']
+      : ['The reference copy fails the validator: **assertion failed**', '', ...referenceFailures.map(f => `- ${f}`)]),
+    '',
+    ...GENERATED_KEYS.flatMap(key => renderPart(key, reference[key])),
     '### Runs',
     '',
     '| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |',
@@ -178,6 +217,10 @@ async function main() {
   }
 
   const assessment = loadAssessment();
+  const referenceFacts = buildAssessmentFacts(assessment);
+  const reference = buildGeneratedSections(referenceFacts);
+  const referenceFailures = checkGenerated(reference, referenceFacts, reference);
+  for (const f of referenceFailures) console.error(`generated sections (reference): ${f}`);
   const before = await getJson('/api/ps');
   const runs = [];
 
@@ -206,11 +249,15 @@ async function main() {
     });
     const wallMs = Date.now() - started;
     console.log(`run ${n}: ${result.status} after ${roundsOf(result)} attempt(s), ${result.attempts.length} call(s), ${seconds(wallMs)}`);
-    runs.push({ n, result, raw, wallMs });
+    const generatedFailures = checkGenerated(result.generated, result.facts, reference);
+    for (const f of generatedFailures) console.error(`run ${n}, generated sections: ${f}`);
+    runs.push({ n, result, raw, wallMs, generatedFailures });
   }
 
   const after = await getJson('/api/ps');
-  const section = renderRunSet({ version, before, after, factCount: runs[0]?.result.facts.length ?? 0, runs });
+  const section = renderRunSet({
+    version, before, after, factCount: referenceFacts.length, reference, referenceFailures, runs,
+  });
 
   const logPath = join(ROOT, LOG);
   if (!existsSync(logPath)) {
@@ -226,6 +273,11 @@ async function main() {
   }
   appendFileSync(logPath, section);
   console.log(`\nAppended to ${LOG}.`);
+
+  if (referenceFailures.length > 0 || runs.some(r => r.generatedFailures.length > 0)) {
+    console.error('Generated sections assertion failed; see the log.');
+    process.exitCode = 1;
+  }
 }
 
 main();
