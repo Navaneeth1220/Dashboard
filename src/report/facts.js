@@ -112,6 +112,21 @@ export function stripAssessorNote(text) {
   return i === -1 ? text : text.slice(0, i);
 }
 
+const CLIENT_PATTERN = /^Assessment of "(.*)", (?:dated .*|undated)\.$/;
+
+/**
+ * User-entered text quoted verbatim in a fact: the client name (C1) and an
+ * assessor note. The validator exempts quotes of this text from its checks.
+ */
+export function quotedUserText(fact) {
+  const quoted = [];
+  const i = fact.text.indexOf(ASSESSOR_NOTE_PREFIX);
+  if (i !== -1) quoted.push(fact.text.slice(i + ASSESSOR_NOTE_PREFIX.length, -1));
+  const client = fact.kind === 'context' ? fact.text.match(CLIENT_PATTERN) : null;
+  if (client) quoted.push(client[1]);
+  return quoted;
+}
+
 /** The value the engine scored: derived percentage for ratios, else the entered value. */
 function measuredValue(def, input, result) {
   return def.inputType === 'ratio' ? result.derivedPct : parseFloat(input.value);

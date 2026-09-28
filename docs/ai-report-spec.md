@@ -336,7 +336,9 @@ the model on retry and shown in the UI on failure).
   poor" fails).
 - **Verbatim exemption** (rules 4–6): a clause is exempt if, lower-cased
   with whitespace collapsed and outer punctuation trimmed, it appears in a
-  cited fact.
+  cited fact. It applies only when the clause itself names an item; a
+  clause with an inherited subject is never exempt (a short clause such as
+  "poor" would otherwise match almost any cited fact, e.g. F19).
 
 ### Checks (per section, headline included)
 
@@ -387,6 +389,8 @@ including the readiness advisory (F18) verbatim, "not a measured failure",
 `1.8` for `1.80`, "the BC plan", and the quoted client name. Each check has
 failing and passing examples, including: "Mean Time to Contain is poor";
 "Mean Time to Contain, which is poor, …" (inheritance); "Mean Time to
+Contain is not measurable and poor." in a section citing F19 (inherited
+clause not exempt); "Mean Time to
 Contain is not measurable, but Zone Availability Rate is poor" (OK);
 "Mean Time to Contain is a high-priority evidence gap" (OK); "Incident
 Handling scored 2.50"; "Incident Handling scored zero"; "Zero uncontrolled
