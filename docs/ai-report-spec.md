@@ -230,7 +230,8 @@ Rules:
 1. Use only the facts given. Add no information, causes, or recommendations
    that are not in a fact.
 2. Every number you write, in digits or words, must appear in a fact you
-   cite. Never calculate, count, average, round, or estimate.
+   cite. Never calculate, count, average, round, or estimate. Give each
+   item its own number; never write "respectively".
 3. An item with no score (not measurable, no qualifying event or
    disruption, not yet assessed, invalid value entered) says nothing about
    performance. Never describe it as good, poor, weak, or failing. Say why
@@ -316,7 +317,7 @@ Pure, no model needed, never throws. `section` is `headline` or a
 `SECTION_KEYS` key; `sentence` is the offending sentence (null for
 section-level checks); `rule` is one of `shape`, `factIds`, `numbers`,
 `leakedIds`, `noScoreWording`, `unscoredScore`, `programmeGap`, `causal`,
-`attribution`;
+`attribution`, `severity`;
 `detail` is plain English with descriptive names only (it is sent back to
 the model on retry and shown in the UI on failure).
 
@@ -341,7 +342,7 @@ the model on retry and shown in the UI on failure).
 - **Clauses**: split each sentence on `,` `;` `—`, spaced ` – ` / ` - `, and
   the words `and`, `but`, `while`, `whereas`, `although`, `though`.
   Unspaced dashes (`50–69%`, `multi-homed`) do not split.
-- **Name index** (rules 4–6, 8): built from ALL facts, not only cited ones.
+- **Name index** (rules 4–6, 8, 9): built from ALL facts, not only cited ones.
   Names match case-insensitively as whole words (`name`, `shortName`,
   `aliases`).
 - **Inheritance** (rules 4–6): a clause that names no item inherits the last
@@ -395,22 +396,35 @@ the model on retry and shown in the UI on failure).
 7. **Causal overclaim**: if a cited fact contains "may be related", the
    section text must not contain `caused`, `causes`, `because of`,
    `due to`, `led to`, `results from`, `resulted in`.
-8. **Attribution** (`attribution`): a clause that itself names exactly one
-   item that has an own fact (its `scored`, `gap_zero`, `no_score` or
-   `process` fact) and contains a number fails unless that number is in
-   the item's own fact, not merely in some fact that refs the item. Looked
-   up in all facts, cited or not. Inherited clauses are not checked (the
-   priority fact's "at score 2" follows a named item). Verbatim-exempt
-   like checks 4–6. Found in the first manual check: "Zone Availability
-   Rate (3)" passed check 2 because 3 was in other cited facts.
+8. **Attribution** (`attribution`): a clause about exactly one item that
+   has an own fact (its `scored`, `gap_zero`, `no_score` or `process`
+   fact) and contains a number fails unless that number is in the item's
+   own fact, not merely in some fact that refs the item. Looked up in all
+   facts, cited or not. The item is the one the clause names, or the one
+   it inherits; for this check inheritance stops at a semicolon, because
+   in the priority fact's "…(programme gap, 0); then, at score 2" the score
+   belongs to the items that follow. Named clauses are verbatim-exempt like
+   checks 4–6. Found in the first manual check: "Zone Availability Rate
+   (3)" passed check 2 because 3 was in other cited facts.
+9. **Severity** (`severity`): a clause that itself names exactly one item
+   and contains "critical" (after masking item names) fails unless that
+   item's `l0_flag` or `process` fact carries CRITICAL. "critical
+   process(es)" is not a severity claim (the BC plan item's name, also
+   written "documented BC plan for critical processes"). "high" is not
+   checked. Found in the first manual check: "critical gaps in RPO
+   Achievement Rate".
 
 Limitations (accepted): paraphrased names ("containment time") are not
 recognised: log misses in the manual check and add aliases to the data
 files, not the validator. Process items in a not-measurable state are not
 covered by check 4 (facts carry no state). Check 8 does not cover
-dimensions or inherited clauses, and a context number beside a single item
-("scored 2 out of 4") fails it. No check that named items are cited (may
-become check 9).
+dimensions; a context number beside a single item ("scored 2 out of 4")
+fails it; and a number that refers forward to items named later ("RPO
+Achievement Rate and several areas with scores of 2, including Mean Time
+to Respond…") is wrongly attributed to the inherited item. Check 9 only
+sees "critical" in a clause that names the item. Prompt rule 8 (singling
+out equal-priority items) is not validated. No check that named items are
+cited (may become check 10).
 
 Tests: a hand-written good narrative for the Westmaas baseline passes,
 including the readiness advisory (F18) verbatim, "not a measured failure",
@@ -431,7 +445,12 @@ check 8; "covered 8 effectiveness indicators" without C2 cited (OK);
 "Zone Availability Rate scored 4" still fails (4 is in C2, not in its own
 fact); "Mean Time to Contain was measured" fails, "could not be measured"
 passes; aliases name their item ("asset inventory" unassessed and "weak"
-fails).
+fails); "Zone Availability Rate is 40%, scoring 3" fails check 8 (inherited
+clause), "Mean Time to Detect is 18 hours, a score of 3" passes; the
+priority fact verbatim passes; "critical gaps in RPO Achievement Rate"
+fails check 9, "multi-homed devices are a critical issue" and "documented
+BC plan for critical processes" pass. The 9 drafts from the first manual
+check are replayed before and after each validator change.
 Property tests: the cited facts' own text always passes; an injected
 violation of checks 3–6 is always caught; malformed input never throws.
 
