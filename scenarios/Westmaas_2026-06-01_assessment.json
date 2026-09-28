@@ -26,8 +26,6 @@
       },
       "BC-02": {
         "state": "measured",
-        "numerator": "4",
-        "denominator": "5",
         "value": "82"
       },
       "BC-04": {
