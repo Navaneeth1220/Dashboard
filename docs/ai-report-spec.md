@@ -315,7 +315,9 @@ The proxy only exists under `npm run dev`. That is fine for this project.
 ### Provider
 
 `POST /ollama/api/chat` with
-`{ model, messages: [system, user], format: schema, stream: false, options: { temperature: 0.2 } }`.
+`{ model, messages: [system, user], format: schema, stream: false, options: { temperature: 0.2, num_ctx: 8192 } }`.
+`num_ctx` is set explicitly because Ollama's default context window can
+silently truncate the system prompt when the fact list is long.
 Parse `message.content` as JSON. Keep the provider behind one function so a
 different backend can be added later without touching anything else.
 
