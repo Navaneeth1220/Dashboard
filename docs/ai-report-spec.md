@@ -73,15 +73,16 @@ Acceptance: `npm test` still green.
 
 `refs` holds the internal IDs the fact is about (validator use only; never
 shown to the model). Dimension facts use the pseudo-IDs `IH`, `BC`, `OVERALL`
-plus the indicators involved. IDs are assigned in a stable order: C-facts,
-then dimensions, indicators (canonical order), Layer 0 (`l0_ok`, `l0_flag`,
+plus the indicators involved. IDs are assigned in a stable order: C-facts
+(`context` C1–C2, then `scale` C3), then dimensions, indicators (canonical order), Layer 0 (`l0_ok`, `l0_flag`,
 `process`, `l0_unset`), advisories, priority.
 
 ### Fact kinds
 
 | kind | meaning |
 |---|---|
-| `context` | assessment metadata and how to read scores |
+| `context` | C1: client and date. C2: 8 effectiveness indicators in 2 dimensions, with the indicators per dimension. Counted as cited for every section in the numbers check |
+| `scale` | C3: the 0–4 scale and the incomplete-dimension rule. Normal citation rules |
 | `dim_complete` | dimension with a score |
 | `dim_incomplete` | dimension with no score (incl. Overall) |
 | `scored` | Layer 1 indicator, measured, with a score |
@@ -138,10 +139,13 @@ must match.
 
 ```
 C1  context         Assessment of "Westmaas", dated 2026-01-01.
-C2  context         Eight effectiveness indicators are scored 0–4, where 4 is
-                    best. A dimension score is the mean of its indicators. If
-                    any indicator in a dimension has no score, the dimension
-                    is incomplete and has no score.
+C2  context         8 effectiveness indicators in 2 dimensions: Incident
+                    Handling (3 indicators) and Business Continuity (5
+                    indicators).
+C3  scale           Each indicator is scored 0–4, where 4 is best. A dimension
+                    score is the mean of its indicators. If any indicator in a
+                    dimension has no score, the dimension is incomplete and
+                    has no score.
 F1  dim_incomplete  Incident Handling: incomplete. Mean Time to Contain has
                     no score, so no Incident Handling score is available.
 F2  dim_complete    Business Continuity: complete, score 1.80 out of 4 (5
@@ -317,7 +321,7 @@ Pure, no model needed, never throws. `section` is `headline` or a
 `SECTION_KEYS` key; `sentence` is the offending sentence (null for
 section-level checks); `rule` is one of `shape`, `factIds`, `numbers`,
 `leakedIds`, `noScoreWording`, `unscoredScore`, `programmeGap`, `causal`,
-`attribution`, `severity`;
+`attribution`, `severity`, `respectively`;
 `detail` is plain English with descriptive names only (it is sent back to
 the model on retry and shown in the UI on failure).
 
@@ -362,9 +366,11 @@ the model on retry and shown in the UI on failure).
    should already guarantee this), and no fact ID is cited twice within a
    section (the grammar does not enforce `uniqueItems`).
 2. **Numbers**: every number in the text appears in at least one cited
-   fact. The context facts (C1, C2) count as cited for every section: this
-   is safe only together with check 8, which ties a number next to an item
-   to that item's own fact. Extraction: ISO dates as a single token; digits
+   fact. The `context` facts (C1 client and date, C2 indicator and
+   dimension counts) count as cited for every section; the `scale` fact
+   (C3: 0–4, the incomplete-dimension rule) follows normal citation rules.
+   This is safe only together with check 8, which ties a number next to an
+   item to that item's own fact. Extraction: ISO dates as a single token; digits
    normalised (`1.80` = `1.8`, `3.00` = `3`, `85%` = `85`); number words
    `zero`–`twenty`. Applied identically to the text and the facts, after
    masking. Tokens reported by check 3 are not reported again.
@@ -395,17 +401,19 @@ the model on retry and shown in the UI on failure).
    preceding words): "not a measured failure" is the fact's own wording.
 7. **Causal overclaim**: if a cited fact contains "may be related", the
    section text must not contain `caused`, `causes`, `because of`,
-   `due to`, `led to`, `results from`, `resulted in`.
-8. **Attribution** (`attribution`): a clause about exactly one item that
-   has an own fact (its `scored`, `gap_zero`, `no_score` or `process`
-   fact) and contains a number fails unless that number is in the item's
-   own fact, not merely in some fact that refs the item. Looked up in all
-   facts, cited or not. The item is the one the clause names, or the one
-   it inherits; for this check inheritance stops at a semicolon, because
-   in the priority fact's "…(programme gap, 0); then, at score 2" the score
-   belongs to the items that follow. Named clauses are verbatim-exempt like
-   checks 4–6. Found in the first manual check: "Zone Availability Rate
-   (3)" passed check 2 because 3 was in other cited facts.
+   `due to`, `led to`, `results from`, `resulted in`. The detail names the
+   replacement: use the fact's own wording (for example "so") or leave the
+   explanation out.
+8. **Attribution** (`attribution`): a clause that itself names exactly one
+   item that has an own fact (its `scored`, `gap_zero`, `no_score` or
+   `process` fact) and contains a number fails unless that number is in
+   the item's own fact, not merely in some fact that refs the item. Looked
+   up in all facts, cited or not. Inherited clauses are not checked: in the
+   second manual check the inherited case caught nothing and misfired 6
+   times on forward references ("RPO Achievement Rate and several areas
+   with scores of 2, including…"). Verbatim-exempt like checks 4–6. Found
+   in the first manual check: "Zone Availability Rate (3)" passed check 2
+   because 3 was in other cited facts.
 9. **Severity** (`severity`): a clause that itself names exactly one item
    and contains "critical" (after masking item names) fails unless that
    item's `l0_flag` or `process` fact carries CRITICAL. "critical
@@ -413,18 +421,25 @@ the model on retry and shown in the UI on failure).
    written "documented BC plan for critical processes"). "high" is not
    checked. Found in the first manual check: "critical gaps in RPO
    Achievement Rate".
+10. **Respectively** (`respectively`): a sentence containing "respectively"
+    fails with one error ("Give each item its own number or label; do not
+    write "respectively"."), and its clauses are left out of checks 8 and
+    9: pairing items with numbers or labels across "respectively" is not
+    reliable (second manual check: "…identified as critical and high
+    priority issues, respectively" was accurate but failed check 9 with the
+    wrong reason). Checks 4–6 still apply to its clauses.
 
 Limitations (accepted): paraphrased names ("containment time") are not
 recognised: log misses in the manual check and add aliases to the data
 files, not the validator. Process items in a not-measurable state are not
 covered by check 4 (facts carry no state). Check 8 does not cover
-dimensions; a context number beside a single item ("scored 2 out of 4")
-fails it; and a number that refers forward to items named later ("RPO
-Achievement Rate and several areas with scores of 2, including Mean Time
-to Respond…") is wrongly attributed to the inherited item. Check 9 only
-sees "critical" in a clause that names the item. Prompt rule 8 (singling
-out equal-priority items) is not validated. No check that named items are
-cited (may become check 10).
+dimensions or inherited clauses; a context number beside a single item
+("scored 2 out of 4") fails it. Check 9 only sees "critical" in a clause
+that names the item. Check 2 cannot catch a count whose number is in C2
+(8, 2, 3, 5 are allowed everywhere: "three dimensions", "two of the five
+indicators") or in any cited fact ("four dimensions" with F2's "out of 4"
+cited). Prompt rule 8 (singling out equal-priority items) is not
+validated. No check that named items are cited (may become check 11).
 
 Tests: a hand-written good narrative for the Westmaas baseline passes,
 including the readiness advisory (F18) verbatim, "not a measured failure",
@@ -436,21 +451,27 @@ clause not exempt); "Mean Time to
 Contain is not measurable, but Zone Availability Rate is poor" (OK);
 "Mean Time to Contain is a high-priority evidence gap" (OK); "Incident
 Handling scored 2.50"; "Incident Handling scored zero"; "Zero uncontrolled
-multi-homed devices" (no numbers error); "two of the five indicators" with
-no fact containing "two"; "the multi-homing caused the low availability".
+multi-homed devices" (no numbers error); "six of the eight indicators"
+with no fact containing "six" (the original "two of the five" example no
+longer fails: 2 and 5 are in C2); "the multi-homing caused the low
+availability".
 From the first manual check: "documented BC plans" / "the BC plans" (OK);
 "RPO Achievement Rate scored 1.80" fails check 8 although F2 refs RPO
 Achievement Rate and contains 1.80; "Zone Availability Rate (3)" fails
 check 8; "covered 8 effectiveness indicators" without C2 cited (OK);
-"Zone Availability Rate scored 4" still fails (4 is in C2, not in its own
-fact); "Mean Time to Contain was measured" fails, "could not be measured"
+"Zone Availability Rate scored 4" fails (check 8, and check 2 unless C3 is
+cited); "Mean Time to Contain was measured" fails, "could not be measured"
 passes; aliases name their item ("asset inventory" unassessed and "weak"
-fails); "Zone Availability Rate is 40%, scoring 3" fails check 8 (inherited
-clause), "Mean Time to Detect is 18 hours, a score of 3" passes; the
-priority fact verbatim passes; "critical gaps in RPO Achievement Rate"
-fails check 9, "multi-homed devices are a critical issue" and "documented
-BC plan for critical processes" pass. The 9 drafts from the first manual
-check are replayed before and after each validator change.
+fails); "Zone Availability Rate is 40%, scoring 3" is not caught (inherited
+clause, check 8 reverted); the priority fact verbatim passes; "critical
+gaps in RPO Achievement Rate" fails check 9, "multi-homed devices are a
+critical issue" and "documented BC plan for critical processes" pass.
+From the second manual check: "across two dimensions" passes; "four
+dimensions" and "scores range from 1.80 to 4" fail in a section that does
+not cite a fact containing the number; "…critical and high priority
+issues, respectively" fails only `respectively`; "…scored 3 and 2,
+respectively" fails only `respectively`. The drafts of each manual check
+are replayed before and after each validator change.
 Property tests: the cited facts' own text always passes; an injected
 violation of checks 3–6 is always caught; malformed input never throws.
 
@@ -497,9 +518,12 @@ Keep the provider behind one function so a different backend can be added
 later without touching anything else:
 
 ```js
-callOllama({ model, system, user, schema, baseUrl = '/ollama', timeoutMs = 300000, signal })
+callOllama({ model, system, user, schema, temperature = 0.2, baseUrl = '/ollama', timeoutMs = 300000, signal })
   → { content, promptEvalCount, evalCount, evalDurationMs, doneReason, durationMs }
 ```
+
+`temperature` overrides `OLLAMA_OPTIONS.temperature` for one call (retries
+use 0.5).
 
 `evalDurationMs` is Ollama's `eval_duration` (generation time only) in ms,
 so tokens/s can be measured per attempt. Timeout 300 s: in the first
@@ -527,37 +551,70 @@ Options: `{ model = 'qwen2.5:7b', provider = callOllama, maxAttempts = 3, timeou
 reports progress (an exception it throws is logged as a warning and ignored).
 
 1. `facts = buildAssessmentFacts(assessment)`
-2. Call the provider; parse `message.content` as JSON; validate. Content
-   that is not valid JSON, or `done_reason: 'length'`, is a failed attempt
-   with one `shape` error ("The response was cut off or was not valid
-   JSON.").
-3. On a failed attempt: retry up to 2 more times. The next user message is
-   the unchanged fact list plus the latest attempt's errors only (at most
-   10, then "…and N more"), without the previous draft:
+2. Attempt 1: call the provider for the whole narrative (temperature 0.2);
+   parse `message.content` as JSON; validate. Content that is not valid
+   JSON, not an object, or `done_reason: 'length'` is a failed attempt with
+   one `shape` error ("The response was cut off or was not valid JSON.").
+3. Attempts 2 and 3 (retry temperature 0.5):
+   - If there is no usable draft (step 2's `shape` error), regenerate the
+     whole narrative: the unchanged fact list plus the latest errors (at
+     most 10, then "…and N more"), without the previous draft:
 
-   ```
-   Your previous draft broke these rules:
-   - <section>, "<sentence>": <detail>
-   - <section>: <detail>
-   Write the whole summary again from the facts above, following every rule.
-   ```
+     ```
+     Your previous draft broke these rules:
+     - <section>, "<sentence>": <detail>
+     - <section>: <detail>
+     Write the whole summary again from the facts above, following every rule.
+     ```
+   - Otherwise repair section by section (second manual check: runs failed
+     on one section whose text the model repeated word for word). Sections
+     that passed are kept exactly as they are. Each failing section, in
+     order (headline, then `SECTION_KEYS`), gets its own call with only
+     that section's facts (the facts its failed version cited; all facts if
+     it cited none), its errors (at most 10), and its description from the
+     Sections block, with a one-part schema (`{ factIds, text }`, `factIds`
+     an enum of those facts):
+
+     ```
+     <ID>: <text>              (that section's facts only)
+
+     Write only the <section> part: <description>
+     Your previous version broke these rules:
+     - "<sentence>": <detail>
+     - <detail>
+     Write this part again from the facts above, following every rule.
+     ```
+
+     A reply that is not valid JSON, not an object, or cut off leaves the
+     section as it was, with the `shape` error. After each attempt the
+     assembled narrative is validated as a whole.
 4. Returns `{ status: 'ok' | 'failed' | 'unavailable', reason?, message?, narrative, errors, facts, attempts, model }`.
-   - `attempts`: one record per attempt `{ attempt, errors, promptEvalCount, evalCount, doneReason, durationMs }`;
-     never the draft text.
+   - `attempts`: one record per provider call
+     `{ attempt, section, errors, promptEvalCount, evalCount, doneReason, durationMs }`,
+     `section` null for a whole-narrative call; `errors` are the whole
+     narrative's (whole call) or that section's (section call) after the
+     attempt. Never the draft text.
+   - `onAttempt({ attempt, maxAttempts })` once per attempt.
    - `failed` = still invalid after 3 attempts: `narrative` is null and the
      text is never shown as a report; `errors` are the last attempt's.
    - `unavailable` = the provider threw: `reason` and `message` from the
      table above, no retry, earlier drafts discarded. Timeout is 300 s per
-     attempt.
+     call.
    - Never throws.
 
-Tests: mock the provider (valid first try; invalid then valid, with the
-retry message pinned; always invalid; invalid JSON and cut-off output
-retried; error list capped; each unavailable reason with no retry;
-`onAttempt` progress; `failed` never carries draft text). Mock `fetch` for
-the provider (exact request URL and body including `num_predict`; token
-counts; warning at 3001 but not 3000; cut-off warning; every row of the
-unavailable table).
+Section descriptions are exported from `prompt.js` (`SECTION_DESCRIPTIONS`)
+and must match the Sections block of `SYSTEM_PROMPT`.
+
+Tests: mock the provider (valid first try; invalid then repaired: passed
+sections kept exactly, the section call's facts, schema, temperature 0.5 and
+message pinned; several failing sections repaired in order in one attempt;
+always invalid; invalid JSON and cut-off output get a whole-narrative retry
+at 0.5; an unusable section reply keeps the section; error list capped;
+only the latest errors; each unavailable reason with no retry; `onAttempt`
+once per attempt; `failed` never carries draft text). Mock `fetch` for the
+provider (exact request URL and body including `num_predict`; temperature
+override; token counts; warning at 3001 but not 3000; cut-off warning;
+every row of the unavailable table).
 
 ### Manual check
 
@@ -568,11 +625,12 @@ separates runs (the laptop GPU throttles under sustained load). Results go
 to `docs/ai-report-manual-check.md`.
 
 Recorded: Ollama version and `/api/ps` before and after (size, VRAM share,
-context length); per run: status, attempts, total time; per attempt:
-`prompt_eval_count`, `eval_count`, tokens/s (from `eval_duration`),
-`done_reason`, time, every validator error; the final narrative or the
-rejected drafts. Summary: ok count, attempts per run, errors by rule,
-maximum `prompt_eval_count` against 3000, tokens/s (first, last, min, max).
+context length); per run: status, attempts, total time; per provider call
+(whole narrative or one section): `prompt_eval_count`, `eval_count`,
+tokens/s (from `eval_duration`), `done_reason`, time, every validator error,
+the raw reply; the final narrative for accepted runs. Summary: ok count,
+attempts per run, errors by rule, maximum `prompt_eval_count` against 3000,
+tokens/s (first, last, min, max).
 
 Review of each run:
 1. Invariant breaks the validator missed.
