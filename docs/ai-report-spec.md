@@ -72,8 +72,10 @@ Acceptance: `npm test` still green.
 ```
 
 `refs` holds the internal IDs the fact is about (validator use only; never
-shown to the model). IDs are assigned in a stable order: C-facts, then
-dimensions, indicators (canonical order), Layer 0, advisories, priority.
+shown to the model). Dimension facts use the pseudo-IDs `IH`, `BC`, `OVERALL`
+plus the indicators involved. IDs are assigned in a stable order: C-facts,
+then dimensions, indicators (canonical order), Layer 0 (`l0_ok`, `l0_flag`,
+`process`, `l0_unset`), advisories, priority.
 
 ### Fact kinds
 
@@ -86,10 +88,11 @@ dimensions, indicators (canonical order), Layer 0, advisories, priority.
 | `gap_zero` | programme gap: score 0 because objective/capability absent |
 | `no_score` | not measurable / no qualifying event / unset: no score |
 | `l0_ok` | Layer 0 items in a satisfactory state (one grouped fact) |
-| `l0_flag` | Layer 0 action flag, with severity |
-| `process` | process evidence (vulnerability remediation etc.): value + message, never a score |
-| `advisory` | cross-indicator advisory with a non-null message |
-| `priority` | lowest Layer 1 results from the priority view |
+| `l0_flag` | Layer 0 action flag, with severity (excludes the two process-evidence items) |
+| `process` | process evidence (vulnerability remediation etc.): value + message, never a score; severity prefix when the engine raises an action flag for it |
+| `l0_unset` | Layer 0 items with no state recorded (one grouped fact) |
+| `advisory` | cross-indicator advisory with a non-null message: Rules A, B (auto-sentence only) and C. Rule D (BC plan hints) is excluded: it is data-entry guidance, not a finding |
+| `priority` | Layer 1 results scored below 3 ("Good"), by score tier, from the priority view. Always exactly one fact, with fallback text when nothing is below 3 or nothing is scored |
 
 ### Wording rules
 
@@ -108,6 +111,22 @@ dimensions, indicators (canonical order), Layer 0, advisories, priority.
   catalogue order.
 - No layer jargon. Use "effectiveness indicators" for Layer 1 and
   "foundational controls and process evidence" for Layer 0.
+- Engine messages that contain internal IDs (Rule A/B advisories, "interpret
+  alongside RM-04") are copied verbatim except that exact internal IDs are
+  replaced by `displayName()`. A bare dimension code followed by a number
+  ("BC 1.80") becomes "Business Continuity score 1.80".
+- Assessor free-text reasons (not-measurable `reason.text`) are included
+  verbatim (whitespace collapsed) at the end of the fact as
+  `Assessor note: "…"`. The quoted span is exempt from the text checks (IDs,
+  enums, decimals). A reason linked to a Layer 0 item is stated by the item's
+  name.
+- The asset-inventory contextual note is not included (layer jargon and
+  ordering advice).
+- Dimension names come from `DIMENSION_NAMES` (`displayNames.js`), severity
+  labels from `L0_SEVERITY_LABELS` (`layer0Definitions.js`), the Vulnerability
+  Remediation Rate unit from its `valueUnit`. Nothing is hardcoded in
+  `facts.js`.
+- Every `lower_is_better` indicator is marked "(lower is better)".
 
 ### Test fixture: Westmaas baseline (2026-01-01)
 
@@ -128,12 +147,14 @@ F2  dim_complete    Business Continuity: complete, score 1.80 out of 4 (5
                     Achievement Rate.
 F3  dim_incomplete  Overall score: not available, because Incident Handling
                     is incomplete.
-F4  scored          Mean Time to Detect: measured at 18 hours; score 3.
-F5  scored          Mean Time to Respond: measured at 30 hours; score 2.
+F4  scored          Mean Time to Detect: measured at 18 hours (lower is
+                    better); score 3.
+F5  scored          Mean Time to Respond: measured at 30 hours (lower is
+                    better); score 2.
 F6  no_score        Mean Time to Contain: not measurable. The evidence needed
                     to compute it is absent or unreliable. No score. This says
-                    nothing about containment performance. No reason was
-                    recorded.
+                    nothing about how Mean Time to Contain performs. No reason
+                    was recorded.
 F7  scored          Network Operability Under Disruption: measured at 85%;
                     score 3.
 F8  scored          Zone Availability Rate: measured at 40%; score 2.
@@ -152,10 +173,10 @@ F14 l0_flag         HIGH. Asset interdependency documentation is incomplete
                     or outdated.
 F15 l0_flag         HIGH. No BC plan test was performed during the assessment
                     period — a scheduled action was not completed.
-F16 process         Vulnerability Remediation Rate: 60%. Vulnerability
-                    remediation rate is below target (50–69%) — moderate
-                    programme improvement warranted. Process evidence, not
-                    scored.
+F16 process         MEDIUM NOTE. Vulnerability Remediation Rate: 60%.
+                    Vulnerability remediation rate is below target (50–69%) —
+                    moderate programme improvement warranted. Process
+                    evidence, not scored.
 F17 process         Mean Time to Remediate: 75 days. Mean time to remediate
                     is satisfactory (31–90 days) — continue monitoring.
                     Process evidence, not scored.
@@ -182,9 +203,12 @@ illustrative. Use the engine's order.
 
 Tests (Step 1):
 - Westmaas baseline produces the facts above (kinds, numbers, refs).
-- No fact text contains an internal ID (`/\b(IH|BC|RM)-\d+\b|L0-/`) or a raw
-  enum (`/_/` in a word).
-- No fact text contains a number with more than 2 decimals.
+- Outside an assessor note, no fact text contains an internal ID
+  (`/\b(IH|BC|RM)-\d+\b|L0-/`), a raw enum (`/_/` in a word), or "Layer 0/1".
+- Outside an assessor note, no fact text contains a number with more than 2
+  decimals.
+- An assessor note containing an internal ID and a number is included
+  verbatim inside `Assessor note: "…"`, and the text checks still pass.
 - Property test: for random valid assessments, every `no_score` indicator
   appears in exactly one `no_score` fact and in no `scored` fact; `process`
   facts never contain the word "score" followed by a digit.
