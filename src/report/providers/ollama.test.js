@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import {
-  callOllama, OLLAMA_OPTIONS, PROMPT_TOKEN_WARNING, ProviderUnavailableError,
+  callOllama, OLLAMA_OPTIONS, PROMPT_TOKEN_WARNING, DEFAULT_TIMEOUT_MS, ProviderUnavailableError,
 } from './ollama.js';
 
 const ARGS = { model: 'qwen2.5:7b', system: 'SYSTEM', user: 'USER', schema: { type: 'object' } };
@@ -25,6 +25,7 @@ function okBody(overrides = {}) {
     done_reason: 'stop',
     prompt_eval_count: 1234,
     eval_count: 567,
+    eval_duration: 40_500_000_000,   // nanoseconds
     ...overrides,
   };
 }
@@ -65,6 +66,10 @@ describe('request', () => {
     expect(OLLAMA_OPTIONS).toEqual({ temperature: 0.2, num_ctx: 4096, num_predict: 1024 });
   });
 
+  it('default timeout is 300 s (laptop GPU throttling, first manual check)', () => {
+    expect(DEFAULT_TIMEOUT_MS).toBe(300_000);
+  });
+
   it('uses baseUrl (the manual check talks to Ollama directly)', async () => {
     const fetchImpl = respondWith(200, okBody());
     await callOllama({ ...ARGS, baseUrl: 'http://localhost:11434', fetchImpl, warn: vi.fn() });
@@ -73,20 +78,23 @@ describe('request', () => {
 });
 
 describe('response', () => {
-  it('returns content, token counts, done reason and duration', async () => {
+  it('returns content, token counts, eval duration (ms), done reason and duration', async () => {
     const result = await callOllama({ ...ARGS, fetchImpl: respondWith(200, okBody()), warn: vi.fn() });
     expect(result).toEqual({
-      content: '{"headline":{}}', promptEvalCount: 1234, evalCount: 567, doneReason: 'stop', durationMs: expect.any(Number),
+      content: '{"headline":{}}', promptEvalCount: 1234, evalCount: 567, evalDurationMs: 40_500,
+      doneReason: 'stop', durationMs: expect.any(Number),
     });
   });
 
-  it('missing token counts become null (cached prompt)', async () => {
+  it('missing token counts and eval duration become null (cached prompt)', async () => {
     const body = okBody();
     delete body.prompt_eval_count;
     delete body.eval_count;
+    delete body.eval_duration;
     const result = await callOllama({ ...ARGS, fetchImpl: respondWith(200, body), warn: vi.fn() });
     expect(result.promptEvalCount).toBeNull();
     expect(result.evalCount).toBeNull();
+    expect(result.evalDurationMs).toBeNull();
   });
 
   it('content that is not JSON is returned as-is (generate.js decides)', async () => {

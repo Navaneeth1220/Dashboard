@@ -2,8 +2,8 @@
  * Manual check of AI narrative generation against the real model
  * (docs/ai-report-spec.md, Step 4 "Manual check").
  *
- *   npm run check:narrative          5 runs on the Westmaas baseline
- *   RUNS=1 npm run check:narrative   fewer runs
+ *   npm run check:narrative          5 runs on the Westmaas baseline, 60 s apart
+ *   RUNS=1 npm run check:narrative   fewer runs (COOLDOWN_MS overrides the pause)
  *
  * Talks to Ollama directly (OLLAMA_URL, default http://localhost:11434), not
  * through the Vite proxy. The real provider is wrapped to record every raw
@@ -17,12 +17,14 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { parseAndValidateImport } from '../src/engine/persistence.js';
 import { generateNarrative, DEFAULT_MODEL } from '../src/report/generate.js';
-import { callOllama, OLLAMA_OPTIONS, PROMPT_TOKEN_WARNING } from '../src/report/providers/ollama.js';
+import { callOllama, OLLAMA_OPTIONS, PROMPT_TOKEN_WARNING, DEFAULT_TIMEOUT_MS } from '../src/report/providers/ollama.js';
 import { SECTION_KEYS } from '../src/report/schema.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
 const RUNS = Number(process.env.RUNS ?? 5);
+// The laptop GPU throttles under sustained load (first manual check: 14.8 → 3.0 tokens/s).
+const COOLDOWN_MS = Number(process.env.COOLDOWN_MS ?? 60_000);
 const MODEL = process.env.MODEL ?? DEFAULT_MODEL;
 const SCENARIO = 'scenarios/Westmaas_2026-01-01_assessment.json';
 const LOG = 'docs/ai-report-manual-check.md';
@@ -54,6 +56,13 @@ async function getJson(path) {
 
 const gb = bytes => `${(bytes / 1e9).toFixed(2)} GB`;
 const seconds = ms => `${(ms / 1000).toFixed(1)} s`;
+
+/** Generation speed from Ollama's eval_duration (excludes prompt processing and model load). */
+function tokensPerSecond(record) {
+  if (!record?.evalCount || !record?.evalDurationMs) return null;
+  return record.evalCount / (record.evalDurationMs / 1000);
+}
+const tps = value => (value === null ? '?' : value.toFixed(1));
 
 function psRows(label, ps) {
   const models = ps?.models ?? [];
@@ -87,7 +96,7 @@ function renderRun({ n, result, raw, wallMs }) {
   if (result.status === 'unavailable') lines.push(`Unavailable: \`${result.reason}\`: ${result.message}`, '');
 
   result.attempts.forEach((a, i) => {
-    lines.push(`Attempt ${a.attempt}: prompt_eval_count ${a.promptEvalCount}, eval_count ${a.evalCount}, done_reason ${a.doneReason}, ${seconds(a.durationMs)}`);
+    lines.push(`Attempt ${a.attempt}: prompt_eval_count ${a.promptEvalCount}, eval_count ${a.evalCount}, ${tps(tokensPerSecond(raw[i]))} tokens/s, done_reason ${a.doneReason}, ${seconds(a.durationMs)}`);
     if (a.errors.length === 0) lines.push('- no validator errors');
     for (const e of a.errors) {
       lines.push(`- \`${e.rule}\` ${e.section ?? 'narrative'}${e.sentence ? `, "${e.sentence}"` : ''}: ${e.detail}`);
@@ -102,13 +111,16 @@ function renderRun({ n, result, raw, wallMs }) {
 function renderRunSet({ version, before, after, factCount, runs }) {
   const attempts = runs.flatMap(r => r.result.attempts);
   const promptCounts = attempts.map(a => a.promptEvalCount).filter(n => n !== null);
-  const speeds = attempts.filter(a => a.evalCount && a.durationMs).map(a => a.evalCount / (a.durationMs / 1000));
-  const meanSpeed = speeds.length ? (speeds.reduce((s, v) => s + v, 0) / speeds.length).toFixed(1) : '?';
+  const speeds = runs.flatMap(r => r.raw.map(tokensPerSecond)).filter(v => v !== null);
+  const speedSummary = speeds.length
+    ? `first ${tps(speeds[0])}, last ${tps(speeds.at(-1))}, min ${tps(Math.min(...speeds))}, max ${tps(Math.max(...speeds))}`
+    : '?';
 
   const lines = [
     `## Run set ${new Date().toISOString().replace('T', ' ').slice(0, 16)} UTC`,
     '',
     `- Model: ${MODEL} · Ollama ${version} · options \`${JSON.stringify(OLLAMA_OPTIONS)}\``,
+    `- Timeout ${seconds(DEFAULT_TIMEOUT_MS)} per attempt · ${seconds(COOLDOWN_MS)} cooldown between runs`,
     `- Scenario: ${SCENARIO} (${factCount} facts)`,
     '',
     '| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |',
@@ -124,14 +136,14 @@ function renderRunSet({ version, before, after, factCount, runs }) {
     `| attempts per run | ${runs.map(r => r.result.attempts.length).join(', ')} |`,
     `| errors by rule (all attempts) | ${countByRule(attempts.flatMap(a => a.errors))} |`,
     `| max prompt_eval_count | ${promptCounts.length ? Math.max(...promptCounts) : '?'} (warning above ${PROMPT_TOKEN_WARNING}) |`,
-    `| output speed, end to end | ${meanSpeed} tokens/s (eval_count / attempt time; run 1 includes model load) |`,
+    `| generation speed (tokens/s, eval_duration) | ${speedSummary} |`,
     '',
     '### Runs',
     '',
-    '| Run | Status | Attempt | Time | prompt_eval_count | eval_count | done_reason | Errors |',
-    '|---|---|---|---|---|---|---|---|',
-    ...runs.flatMap(r => r.result.attempts.map(a =>
-      `| ${r.n} | ${r.result.status} | ${a.attempt} | ${seconds(a.durationMs)} | ${a.promptEvalCount} | ${a.evalCount} | ${a.doneReason} | ${countByRule(a.errors)} |`)),
+    '| Run | Status | Attempt | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |',
+    '|---|---|---|---|---|---|---|---|---|',
+    ...runs.flatMap(r => r.result.attempts.map((a, i) =>
+      `| ${r.n} | ${r.result.status} | ${a.attempt} | ${seconds(a.durationMs)} | ${a.promptEvalCount} | ${a.evalCount} | ${tps(tokensPerSecond(r.raw[i]))} | ${a.doneReason} | ${countByRule(a.errors)} |`)),
     '',
     ...runs.flatMap(renderRun),
     '### Review',
@@ -154,11 +166,16 @@ async function main() {
   const runs = [];
 
   for (let n = 1; n <= RUNS; n++) {
+    if (n > 1 && COOLDOWN_MS > 0) {
+      console.log(`cooling down ${seconds(COOLDOWN_MS)}…`);
+      await new Promise(resolve => setTimeout(resolve, COOLDOWN_MS));
+    }
     const raw = [];
     const provider = async args => {
       try {
         const response = await callOllama({ ...args, baseUrl: OLLAMA_URL });
-        raw.push({ content: response.content });
+        raw.push({ content: response.content, evalCount: response.evalCount, evalDurationMs: response.evalDurationMs });
+        console.log(`  ${response.evalCount} tokens, ${tps(tokensPerSecond(raw.at(-1)))} tokens/s, ${seconds(response.durationMs)}`);
         return response;
       } catch (error) {
         raw.push({ error: `${error.reason ?? 'error'}: ${error.message}` });

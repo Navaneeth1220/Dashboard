@@ -4,7 +4,7 @@
  * The only module in src/report/ with side effects (network, console
  * warnings). generate.js depends only on the call shape
  *   provider({ model, system, user, schema, timeoutMs, signal })
- *     → { content, promptEvalCount, evalCount, doneReason, durationMs }
+ *     → { content, promptEvalCount, evalCount, evalDurationMs, doneReason, durationMs }
  * so another backend can be added without touching anything else.
  *
  * Failures to get a response throw ProviderUnavailableError with a reason:
@@ -20,7 +20,9 @@ export const OLLAMA_OPTIONS = { temperature: 0.2, num_ctx: 4096, num_predict: 10
 /** Above this many prompt tokens, raise num_ctx to 6144. */
 export const PROMPT_TOKEN_WARNING = 3000;
 
-export const DEFAULT_TIMEOUT_MS = 180_000;
+// 300 s: in the first manual check the laptop GPU throttled to ~3 tokens/s,
+// and a ~550-token draft then takes ~3 minutes.
+export const DEFAULT_TIMEOUT_MS = 300_000;
 
 export class ProviderUnavailableError extends Error {
   constructor(reason, message) {
@@ -99,6 +101,7 @@ export async function callOllama({
 
     const promptEvalCount = json.prompt_eval_count ?? null;
     const evalCount = json.eval_count ?? null;
+    const evalDurationMs = typeof json.eval_duration === 'number' ? json.eval_duration / 1e6 : null;   // ns → ms
     const doneReason = json.done_reason ?? null;
 
     if (promptEvalCount !== null && promptEvalCount > PROMPT_TOKEN_WARNING) {
@@ -108,7 +111,7 @@ export async function callOllama({
       warn(`Ollama output was cut off (done_reason "length"; num_predict ${OLLAMA_OPTIONS.num_predict}, num_ctx ${OLLAMA_OPTIONS.num_ctx}).`);
     }
 
-    return { content, promptEvalCount, evalCount, doneReason, durationMs: Date.now() - started };
+    return { content, promptEvalCount, evalCount, evalDurationMs, doneReason, durationMs: Date.now() - started };
   } finally {
     clearTimeout(timer);
     signal?.removeEventListener('abort', onCallerAbort);
