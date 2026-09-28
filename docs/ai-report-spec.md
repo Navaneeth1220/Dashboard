@@ -428,34 +428,109 @@ The proxy only exists under `npm run dev`. That is fine for this project.
 ### Provider
 
 `POST /ollama/api/chat` with
-`{ model, messages: [system, user], format: schema, stream: false, options: { temperature: 0.2, num_ctx: 4096 } }`.
+`{ model, messages: [system, user], format: schema, stream: false, options: { temperature: 0.2, num_ctx: 4096, num_predict: 1024 } }`.
 `num_ctx` is set explicitly because Ollama's default context window can
 silently truncate the system prompt when the fact list is long. 4096, not
 8192: the GPU has 6 GB, and at 4096 `ollama ps` shows qwen2.5:7b at 5.1 GB
 with a 16%/84% CPU/GPU split; 8192 would push more of the model onto the
-CPU.
+CPU. `num_predict: 1024` bounds a runaway output; hitting it gives
+`done_reason: 'length'`, which counts as a failed attempt.
 The provider returns `prompt_eval_count` and `eval_count` from the Ollama
 response, and logs a warning when `prompt_eval_count` exceeds 3000 (the
-signal to raise `num_ctx` to 6144).
-Parse `message.content` as JSON. Keep the provider behind one function so a
-different backend can be added later without touching anything else.
+signal to raise `num_ctx` to 6144) or when `done_reason` is `'length'`.
+Keep the provider behind one function so a different backend can be added
+later without touching anything else:
 
-### `generateNarrative(assessment, { model })`
+```js
+callOllama({ model, system, user, schema, baseUrl = '/ollama', timeoutMs = 180000, signal })
+  → { content, promptEvalCount, evalCount, doneReason, durationMs }
+```
+
+It throws `ProviderUnavailableError` with a `reason`:
+
+| Situation | `reason` |
+|---|---|
+| `fetch` rejects (dev server down / direct connection refused) | `not_running` |
+| HTTP 502 with an empty body (Vite proxy cannot reach Ollama) | `not_running` |
+| HTTP 404 `{"error":"model … not found"}` | `model_missing` |
+| our timeout fires | `timeout` |
+| the caller's `signal` aborts | `cancelled` |
+| any other non-2xx, or a body without `message.content` | `provider_error` (Ollama's error text as message) |
+
+Content that is not valid JSON is not a provider error: `generate.js`
+treats it as a failed attempt.
+
+### `generateNarrative(assessment, options)`
+
+Options: `{ model = 'qwen2.5:7b', provider = callOllama, maxAttempts = 3, timeoutMs, signal, onAttempt }`.
+`provider` swaps the backend, `signal` lets the UI cancel, `onAttempt({ attempt, maxAttempts })`
+reports progress.
 
 1. `facts = buildAssessmentFacts(assessment)`
-2. Call the provider; parse; validate.
-3. On validation failure: retry up to 2 more times, appending the validator
-   errors to the user message ("Your previous draft broke these rules: ...").
-4. Returns `{ status: 'ok' | 'failed' | 'unavailable', narrative, errors, facts, attempts }`.
-   `failed` = still invalid after 3 attempts: never show that text as a report.
-   `unavailable` = Ollama not reachable.
+2. Call the provider; parse `message.content` as JSON; validate. Content
+   that is not valid JSON, or `done_reason: 'length'`, is a failed attempt
+   with one `shape` error ("The response was cut off or was not valid
+   JSON.").
+3. On a failed attempt: retry up to 2 more times. The next user message is
+   the unchanged fact list plus the latest attempt's errors only (at most
+   10, then "…and N more"), without the previous draft:
 
-Tests: mock the provider (valid first try; invalid then valid; always
-invalid; network error).
+   ```
+   Your previous draft broke these rules:
+   - <section>, "<sentence>": <detail>
+   - <section>: <detail>
+   Write the whole summary again from the facts above, following every rule.
+   ```
+4. Returns `{ status: 'ok' | 'failed' | 'unavailable', reason?, message?, narrative, errors, facts, attempts, model }`.
+   - `attempts`: one record per attempt `{ attempt, errors, promptEvalCount, evalCount, doneReason, durationMs }`;
+     never the draft text.
+   - `failed` = still invalid after 3 attempts: `narrative` is null and the
+     text is never shown as a report; `errors` are the last attempt's.
+   - `unavailable` = the provider threw: `reason` and `message` from the
+     table above, no retry, earlier drafts discarded. Timeout is 180 s per
+     attempt.
+   - Never throws.
 
-Manual check: generate for the Westmaas baseline 5 times; note every
-validator failure. If one rule keeps failing, adjust the prompt, not the
-validator.
+Tests: mock the provider (valid first try; invalid then valid, with the
+retry message pinned; always invalid; invalid JSON and cut-off output
+retried; error list capped; each unavailable reason with no retry;
+`onAttempt` progress; `failed` never carries draft text). Mock `fetch` for
+the provider (exact request URL and body including `num_predict`; token
+counts; warning at 3001 but not 3000; cut-off warning; every row of the
+unavailable table).
+
+### Manual check
+
+`npm run check:narrative` (`scripts/narrative-check.mjs`) generates for the
+Westmaas baseline 5 times against `http://localhost:11434` directly, with
+the real provider wrapped to record every raw response. Results go to
+`docs/ai-report-manual-check.md`.
+
+Recorded: Ollama version and `/api/ps` before and after (size, VRAM share,
+context length); per run: status, attempts, total time; per attempt:
+`prompt_eval_count`, `eval_count`, `done_reason`, time, every validator
+error; the final narrative or the rejected drafts. Summary: ok count,
+attempts per run, errors by rule, maximum `prompt_eval_count` against 3000,
+generation speed.
+
+Review of each run:
+1. Invariant breaks the validator missed.
+2. Validator errors that look wrong.
+3. Paraphrased item names (alias candidates for the data files).
+4. Prompt conformance: one-sentence headline, 2–4 sentences per section,
+   no bullets, cited facts fit each section.
+5. Items named without their fact cited (evidence for a check 8).
+6. Band ranges ("below target (50–69%)" for Vulnerability Remediation Rate,
+   "(31–90 days)" for Mean Time to Remediate) presented as the band the
+   value falls in, not as a target it missed. If this fails repeatedly,
+   the fix belongs in the fact wording, not the prompt.
+
+Acting on results:
+- If the same rule fails in 3+ of 5 runs, propose a prompt change, agree
+  it, then re-run the 5.
+- If review shows a validator error was itself wrong, that is a validator
+  bug: fix it with a failing test first.
+- Never loosen a check just to make real violations pass.
 
 ---
 
