@@ -9,6 +9,7 @@ import * as fc from 'fast-check';
 import { parseAndValidateImport } from '../engine/persistence.js';
 import { INDICATORS, ALL_INDICATOR_IDS, STATE } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS, LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
+import { SECTION_KEYS } from './schema.js';
 
 export function loadScenario(json) {
   const res = parseAndValidateImport(json);
@@ -46,3 +47,20 @@ export const assessmentArb = fc.record({
   indicators: fc.record(Object.fromEntries(ALL_INDICATOR_IDS.map(id => [id, inputArb(INDICATORS[id])]))),
   layer0: fc.record(Object.fromEntries(LAYER0_ALL_IDS.map(id => [id, inputArb(LAYER0_ITEMS[id])]))),
 });
+
+/**
+ * A narrative made of the facts' own text, shared round-robin across the six
+ * parts. Always valid (validator property test), so it doubles as a known-good
+ * model reply.
+ */
+export function echoNarrative(facts) {
+  const keys = ['headline', ...SECTION_KEYS];
+  const cited = Object.fromEntries(keys.map(k => [k, []]));
+  facts.forEach((f, i) => cited[keys[i % keys.length]].push(f));
+  const asSentence = t => (/[.!?]$/.test(t) ? t : `${t}.`);
+  const part = fs => ({ factIds: fs.map(f => f.id), text: fs.map(f => asSentence(f.text)).join(' ') });
+  return {
+    headline: part(cited.headline),
+    sections: Object.fromEntries(SECTION_KEYS.map(k => [k, part(cited[k])])),
+  };
+}

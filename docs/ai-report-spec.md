@@ -464,7 +464,7 @@ treats it as a failed attempt.
 
 Options: `{ model = 'qwen2.5:7b', provider = callOllama, maxAttempts = 3, timeoutMs, signal, onAttempt }`.
 `provider` swaps the backend, `signal` lets the UI cancel, `onAttempt({ attempt, maxAttempts })`
-reports progress.
+reports progress (an exception it throws is logged as a warning and ignored).
 
 1. `facts = buildAssessmentFacts(assessment)`
 2. Call the provider; parse `message.content` as JSON; validate. Content

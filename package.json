@@ -10,7 +10,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:narrative": "node scripts/narrative-check.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.21.0",

@@ -15,7 +15,7 @@ import {
 } from './validator.js';
 import { buildAssessmentFacts } from './facts.js';
 import { SECTION_KEYS } from './schema.js';
-import { loadScenario, assessmentArb } from './testSupport.js';
+import { loadScenario, assessmentArb, echoNarrative } from './testSupport.js';
 import { ALL_INDICATOR_IDS, STATE } from '../data/indicatorDefinitions.js';
 import { LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
 import { displayName, DIMENSION_NAMES } from '../data/displayNames.js';
@@ -462,19 +462,6 @@ describe('extractNumbers', () => {
 });
 
 // ─── Property tests ───────────────────────────────────────────────────────────
-
-/** Every fact's own text, shared round-robin across the six parts. */
-function echoNarrative(facts) {
-  const keys = ['headline', ...SECTION_KEYS];
-  const cited = Object.fromEntries(keys.map(k => [k, []]));
-  facts.forEach((f, i) => cited[keys[i % keys.length]].push(f));
-  const asSentence = t => (/[.!?]$/.test(t) ? t : `${t}.`);
-  const part = fs => ({ factIds: fs.map(f => f.id), text: fs.map(f => asSentence(f.text)).join(' ') });
-  return {
-    headline: part(cited.headline),
-    sections: Object.fromEntries(SECTION_KEYS.map(k => [k, part(cited[k])])),
-  };
-}
 
 function withSentence(narrative, sentence) {
   const n = clone(narrative);
