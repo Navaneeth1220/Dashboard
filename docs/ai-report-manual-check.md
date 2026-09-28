@@ -761,3 +761,331 @@ for now: it calls the CRITICAL multi-homed devices "high priority" ("high"
 is not checked); it writes scores as "Mean Time to Detect at 3", which
 reads as a value; and a garbled sentence lists the in-place controls as
 "action flags".
+## Run set 2026-09-28 18:34 UTC
+
+- Model: qwen2.5:7b · Ollama 0.34.4 · options `{"temperature":0.2,"num_ctx":4096,"num_predict":1024}`
+- Timeout 300.0 s per call · 60.0 s cooldown between runs · retries at temperature 0.5, repairing failing sections only
+- Scenario: scenarios/Westmaas_2026-01-01_assessment.json (23 facts)
+
+| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |
+|---|---|---|---|---|---|
+| before | (no model loaded) | | | | |
+| after | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+
+### Summary
+
+| Measure | Value |
+|---|---|
+| ok | 2 of 5 |
+| attempts per run (calls) | 0 (0), 3 (4), 2 (3), 3 (4), 2 (4) |
+| errors by rule (all attempts) | severity ×7, noScoreWording ×1, causal ×7, programmeGap ×1 |
+| max prompt_eval_count | 1283 (warning above 3000) |
+| generation speed (tokens/s, eval_duration) | first 12.9, last 7.1, min 7.1, max 13.0 |
+
+### Runs
+
+| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |
+|---|---|---|---|---|---|---|---|---|---|
+| 2 | failed | 1 | whole | 51.2 s | 1283 | 514 | 12.9 | stop | severity ×2, noScoreWording ×1 |
+| 2 | failed | 2 | headline | 7.2 s | 954 | 72 | 13.0 | stop | severity ×1, causal ×1 |
+| 2 | failed | 2 | foundationsAndFlags | 8.3 s | 787 | 94 | 12.9 | stop | — |
+| 2 | failed | 3 | headline | 6.3 s | 963 | 57 | 12.9 | stop | programmeGap ×1 |
+| 3 | ok | 1 | whole | 52.3 s | 1283 | 614 | 12.5 | stop | severity ×1, causal ×1 |
+| 3 | ok | 2 | headline | 7.7 s | 900 | 67 | 11.3 | stop | — |
+| 3 | ok | 2 | gapsAndMissingEvidence | 8.8 s | 930 | 77 | 11.1 | stop | — |
+| 4 | failed | 1 | whole | 50.4 s | 1283 | 566 | 12.0 | stop | severity ×1, causal ×1 |
+| 4 | failed | 2 | headline | 8.6 s | 896 | 73 | 10.7 | stop | causal ×1 |
+| 4 | failed | 2 | gapsAndMissingEvidence | 10.1 s | 930 | 82 | 10.4 | stop | — |
+| 4 | failed | 3 | headline | 9.7 s | 919 | 74 | 9.8 | stop | causal ×1 |
+| 5 | ok | 1 | whole | 52.8 s | 1283 | 572 | 11.5 | stop | severity ×2, causal ×2 |
+| 5 | ok | 2 | headline | 8.6 s | 936 | 54 | 8.6 | stop | — |
+| 5 | ok | 2 | gapsAndMissingEvidence | 14.7 s | 917 | 98 | 7.9 | stop | — |
+| 5 | ok | 2 | foundationsAndFlags | 23.9 s | 826 | 151 | 7.1 | stop | — |
+
+#### Run 1: unavailable (0 attempt(s), 0 call(s), 82.5 s)
+
+Unavailable: `provider_error`: llama-server process has terminated: exit status 0xc0000409: The system detected an overrun of a stack-based buffer in this application. This overrun could potentially allow a malicious user to gain control of this application.: CUDA error: shared object initialization failed
+
+#### Run 2: failed (3 attempt(s), 4 call(s), 73.1 s)
+
+Attempt 1, whole narrative: prompt_eval_count 1283, eval_count 514, 12.9 tokens/s, done_reason stop, 51.2 s
+- `severity` headline, "Westmaas's cybersecurity assessment shows critical gaps in Mean Time to Contain and RPO Achievement Rate, with overall scores hampered by incomplete dimensions and high-risk process issues.": Mean Time to Contain is not marked CRITICAL in its fact; do not call it critical.
+- `noScoreWording` headline, "Westmaas's cybersecurity assessment shows critical gaps in Mean Time to Contain and RPO Achievement Rate, with overall scores hampered by incomplete dimensions and high-risk process issues.": Overall score is incomplete and has no score; do not describe it as "high".
+- `severity` foundationsAndFlags, "However, uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation pose critical and high-risk issues.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F1, F2, F3, F18, F19, F20): Westmaas's cybersecurity assessment shows critical gaps in Mean Time to Contain and RPO Achievement Rate, with overall scores hampered by incomplete dimensions and high-risk process issues.
+
+**overview** (C2, F2, F3): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Business Continuity scored 1.80, but the overall score is unavailable due to the incomplete Incident Handling dimension.
+
+**measuredPerformance** (F4, F5, F7, F8, F9, F16, F17): Measurable performance indicators showed Mean Time to Detect at 3, Mean Time to Respond at 2, Network Operability Under Disruption at 3, Zone Availability Rate at 2, Operational Threshold Violation Rate at 2, and a Vulnerability Remediation Rate of 60%. The Mean Time to Remediate was satisfactory at 75 days.
+
+**gapsAndMissingEvidence** (F1, F11, F18): Incident Handling is incomplete due to the absence of a Mean Time to Contain score. RPO Achievement Rate is a programme gap, scoring 0 as the objective does not exist. The architecture foundation and measurement-readiness actions for Mean Time to Contain need addressing.
+
+**foundationsAndFlags** (F12, F13, F14, F15, F19): Foundational controls are in place, including asset inventory, risk assessments, and BC plan documentation. However, uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation pose critical and high-risk issues. Additionally, a BC plan test was not performed during the assessment period.
+
+**priorities** (F20): The lowest results are the programme gap RPO Achievement Rate (0), followed by Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate, and RTO Achievement Rate, all scoring 2.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 954, eval_count 72, 13.0 tokens/s, done_reason stop, 7.2 s
+- `severity` headline, "The assessment highlights critical gaps in Mean Time to Contain and RPO Achievement Rate, with Zone Availability Rate and other indicators scoring poorly due to incomplete dimensions and process issues.": Mean Time to Contain is not marked CRITICAL in its fact; do not call it critical.
+- `causal` headline, "The assessment highlights critical gaps in Mean Time to Contain and RPO Achievement Rate, with Zone Availability Rate and other indicators scoring poorly due to incomplete dimensions and process issues.": Do not write "due to": a cited fact says "may be related", and "due to" claims a cause. Use the fact's own wording (for example "so") or leave the explanation out.
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F1, F2, F18, F19, F20): The assessment highlights critical gaps in Mean Time to Contain and RPO Achievement Rate, with Zone Availability Rate and other indicators scoring poorly due to incomplete dimensions and process issues.
+
+</details>
+
+Attempt 2, repair of foundationsAndFlags: prompt_eval_count 787, eval_count 94, 12.9 tokens/s, done_reason stop, 8.3 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of foundationsAndFlags)</summary>
+
+**foundationsAndFlags** (F12, F14, F15): The asset inventory, risk assessment per zone, controlled IT/OT boundary separation, and documented BC plan for critical processes are in place. However, the asset interdependency documentation is incomplete or outdated, which is marked HIGH. Additionally, there has been no BC plan test performed during the assessment period, also noted as HIGH. 
+
+</details>
+
+Attempt 3, repair of headline: prompt_eval_count 963, eval_count 57, 12.9 tokens/s, done_reason stop, 6.3 s
+- `programmeGap` headline, "The assessment shows poor scores in RPO Achievement Rate and Zone Availability Rate, with Mean Time to Contain and other indicators also scoring below expectations due to incomplete dimensions.": RPO Achievement Rate is a programme gap, not a measured failure; do not describe it as "poor".
+
+<details><summary>Attempt 3 reply (repair of headline)</summary>
+
+**headline** (F2, F20): The assessment shows poor scores in RPO Achievement Rate and Zone Availability Rate, with Mean Time to Contain and other indicators also scoring below expectations due to incomplete dimensions.
+
+</details>
+
+#### Run 3: ok (2 attempt(s), 3 call(s), 68.7 s)
+
+Attempt 1, whole narrative: prompt_eval_count 1283, eval_count 614, 12.5 tokens/s, done_reason stop, 52.3 s
+- `severity` headline, "Westmaas's assessment shows critical gaps in Mean Time to Contain and RPO Achievement Rate, with overall scores hampered by incomplete dimensions and uncontrolled multi-homed devices.": Mean Time to Contain is not marked CRITICAL in its fact; do not call it critical.
+- `causal` gapsAndMissingEvidence, "Incident Handling is incomplete due to the absence of a Mean Time to Contain score.": Do not write "due to": a cited fact says "may be related", and "due to" claims a cause. Use the fact's own wording (for example "so") or leave the explanation out.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F1, F2, F3, F18, F19, F20): Westmaas's assessment shows critical gaps in Mean Time to Contain and RPO Achievement Rate, with overall scores hampered by incomplete dimensions and uncontrolled multi-homed devices.
+
+**overview** (C2, F2, F3): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Business Continuity achieved a score of 1.80, but the overall score is unavailable due to the incomplete Incident Handling dimension.
+
+**measuredPerformance** (F4, F5, F7, F8, F9, F16, F17): Measurable performance indicators include Mean Time to Detect (3), Mean Time to Respond (2), Network Operability Under Disruption (3), Zone Availability Rate (2), Operational Threshold Violation Rate (2), and satisfactory Mean Time to Remediate (75 days, 31–90 days). Vulnerability Remediation Rate was measured at 60%, indicating moderate improvement is needed.
+
+**gapsAndMissingEvidence** (F1, F11, F12, F13, F14, F15, F18, F19): Incident Handling is incomplete due to the absence of a Mean Time to Contain score. RPO Achievement Rate is a programme gap with a score of 0, indicating the objective does not exist yet. Foundational controls are in place, but uncontrolled multi-homed devices and incomplete asset interdependency documentation pose significant risks. Additionally, a BC plan test was not performed during the assessment period.
+
+**foundationsAndFlags** (F12, F13, F14, F15, F16, F17, F18, F19): Foundational controls such as asset inventory, risk assessment, and controlled IT/OT boundary separation are in place. However, critical issues include uncontrolled multi-homed devices and incomplete asset interdependency documentation. High priority flags include uncontrolled multi-homed devices and incomplete BC plan testing. Vulnerability remediation and mean time to remediate are at satisfactory levels.
+
+**priorities** (F20): The lowest results are: RPO Achievement Rate (programme gap, 0); followed by Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate, and RTO Achievement Rate, all at score 2.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 900, eval_count 67, 11.3 tokens/s, done_reason stop, 7.7 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F1, F2, F18, F19, F20): The assessment shows incomplete Incident Handling and a low Business Continuity score, with uncontrolled multi-homed devices and measurement-readiness actions impacting overall performance.
+
+</details>
+
+Attempt 2, repair of gapsAndMissingEvidence: prompt_eval_count 930, eval_count 77, 11.1 tokens/s, done_reason stop, 8.8 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of gapsAndMissingEvidence)</summary>
+
+**gapsAndMissingEvidence** (F11, F12): There is a programme gap in RPO Achievement Rate, as the recovery point objective has not been established. Additionally, the asset inventory, risk assessment per zone, controlled IT/OT boundary separation, and documented business continuity plan for critical processes are in place.
+
+</details>
+
+<details><summary>Final narrative (accepted)</summary>
+
+**headline** (F1, F2, F18, F19, F20): The assessment shows incomplete Incident Handling and a low Business Continuity score, with uncontrolled multi-homed devices and measurement-readiness actions impacting overall performance.
+
+**overview** (C2, F2, F3): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Business Continuity achieved a score of 1.80, but the overall score is unavailable due to the incomplete Incident Handling dimension.
+
+**measuredPerformance** (F4, F5, F7, F8, F9, F16, F17): Measurable performance indicators include Mean Time to Detect (3), Mean Time to Respond (2), Network Operability Under Disruption (3), Zone Availability Rate (2), Operational Threshold Violation Rate (2), and satisfactory Mean Time to Remediate (75 days, 31–90 days). Vulnerability Remediation Rate was measured at 60%, indicating moderate improvement is needed.
+
+**gapsAndMissingEvidence** (F11, F12): There is a programme gap in RPO Achievement Rate, as the recovery point objective has not been established. Additionally, the asset inventory, risk assessment per zone, controlled IT/OT boundary separation, and documented business continuity plan for critical processes are in place.
+
+**foundationsAndFlags** (F12, F13, F14, F15, F16, F17, F18, F19): Foundational controls such as asset inventory, risk assessment, and controlled IT/OT boundary separation are in place. However, critical issues include uncontrolled multi-homed devices and incomplete asset interdependency documentation. High priority flags include uncontrolled multi-homed devices and incomplete BC plan testing. Vulnerability remediation and mean time to remediate are at satisfactory levels.
+
+**priorities** (F20): The lowest results are: RPO Achievement Rate (programme gap, 0); followed by Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate, and RTO Achievement Rate, all at score 2.
+
+</details>
+
+#### Run 4: failed (3 attempt(s), 4 call(s), 78.9 s)
+
+Attempt 1, whole narrative: prompt_eval_count 1283, eval_count 566, 12.0 tokens/s, done_reason stop, 50.4 s
+- `severity` headline, "Westmaas's assessment shows critical gaps in Mean Time to Contain and RPO Achievement Rate, with overall scores hampered by incomplete dimensions and process evidence.": Mean Time to Contain is not marked CRITICAL in its fact; do not call it critical.
+- `causal` gapsAndMissingEvidence, "Incident Handling is incomplete due to the absence of a Mean Time to Contain score.": Do not write "due to": a cited fact says "may be related", and "due to" claims a cause. Use the fact's own wording (for example "so") or leave the explanation out.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F1, F2, F3, F18, F19, F20): Westmaas's assessment shows critical gaps in Mean Time to Contain and RPO Achievement Rate, with overall scores hampered by incomplete dimensions and process evidence.
+
+**overview** (C2, F2, F3): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Business Continuity scored 1.80, but the overall score is unavailable due to the incomplete Incident Handling dimension.
+
+**measuredPerformance** (F4, F5, F7, F8, F9, F16, F17): Measurable performance indicators include Mean Time to Detect (3), Mean Time to Respond (2), Network Operability Under Disruption (3), Zone Availability Rate (2), Operational Threshold Violation Rate (2), and satisfactory Mean Time to Remediate (75 days, 31–90 days). Vulnerability Remediation Rate is below target at 60%.
+
+**gapsAndMissingEvidence** (F1, F11, F12, F13, F14, F15, F18, F19): Incident Handling is incomplete due to the absence of a Mean Time to Contain score. RPO Achievement Rate is a programme gap with a score of 0. Asset interdependency documentation is incomplete, and there are uncontrolled inter-zone multi-homed devices. Additionally, there is no BC plan test, and the architecture foundation is weak.
+
+**foundationsAndFlags** (F16, F17, F18, F19): Process evidence items like Vulnerability Remediation Rate and Mean Time to Remediate are below target but not scored. Zero uncontrolled multi-homed devices and the inability to measure Mean Time to Contain are both measurement-readiness actions. Uncontrolled multi-homed devices may be related to the poor Zone Availability Rate.
+
+**priorities** (F20): The lowest results are: RPO Achievement Rate (programme gap, 0); then, at score 2 and of equal priority, Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 896, eval_count 73, 10.7 tokens/s, done_reason stop, 8.6 s
+- `causal` headline, "The assessment shows incomplete Incident Handling, a score of 1.80 for Business Continuity, and no overall score due to incomplete dimensions and process evidence.": Do not write "due to": a cited fact says "may be related", and "due to" claims a cause. Use the fact's own wording (for example "so") or leave the explanation out.
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F1, F2, F3, F18, F19, F20): The assessment shows incomplete Incident Handling, a score of 1.80 for Business Continuity, and no overall score due to incomplete dimensions and process evidence.
+
+</details>
+
+Attempt 2, repair of gapsAndMissingEvidence: prompt_eval_count 930, eval_count 82, 10.4 tokens/s, done_reason stop, 10.1 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of gapsAndMissingEvidence)</summary>
+
+**gapsAndMissingEvidence** (F11, F18): The assessment identified a programme gap for the Recovery Point Objective (RPO) Achievement Rate, where the objective or capability does not exist yet. Additionally, the Mean Time to Contain score is not measurable, and establishing the necessary architecture foundation is required before this can be addressed. 
+
+</details>
+
+Attempt 3, repair of headline: prompt_eval_count 919, eval_count 74, 9.8 tokens/s, done_reason stop, 9.7 s
+- `causal` headline, "The assessment shows incomplete Incident Handling, a score of 1.80 for Business Continuity, and no overall score due to incomplete Incident Handling and process evidence.": Do not write "due to": a cited fact says "may be related", and "due to" claims a cause. Use the fact's own wording (for example "so") or leave the explanation out.
+
+<details><summary>Attempt 3 reply (repair of headline)</summary>
+
+**headline** (F1, F2, F3, F18, F19, F20): The assessment shows incomplete Incident Handling, a score of 1.80 for Business Continuity, and no overall score due to incomplete Incident Handling and process evidence.
+
+</details>
+
+#### Run 5: ok (2 attempt(s), 4 call(s), 100.0 s)
+
+Attempt 1, whole narrative: prompt_eval_count 1283, eval_count 572, 11.5 tokens/s, done_reason stop, 52.8 s
+- `severity` headline, "Westmaas's OT cybersecurity assessment shows a critical gap in RPO Achievement Rate and several areas of concern, including uncontrolled multi-homed devices and poor Zone Availability Rate.": RPO Achievement Rate is not marked CRITICAL in its fact; do not call it critical.
+- `causal` gapsAndMissingEvidence, "Incident Handling is incomplete due to the absence of a score for Mean Time to Contain.": Do not write "due to": a cited fact says "may be related", and "due to" claims a cause. Use the fact's own wording (for example "so") or leave the explanation out.
+- `causal` gapsAndMissingEvidence, "Additionally, Mean Time to Contain is not measurable due to insufficient evidence, and uncontrolled multi-homed devices are a significant risk.": Do not write "due to": a cited fact says "may be related", and "due to" claims a cause. Use the fact's own wording (for example "so") or leave the explanation out.
+- `severity` foundationsAndFlags, "However, uncontrolled multi-homed devices and incomplete asset interdependency documentation are flagged as critical and high priority issues.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F1, F2, F3, F11, F18, F19, F20): Westmaas's OT cybersecurity assessment shows a critical gap in RPO Achievement Rate and several areas of concern, including uncontrolled multi-homed devices and poor Zone Availability Rate.
+
+**overview** (C2, F2, F3): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Business Continuity scored 1.80, but the overall score is unavailable due to the incomplete Incident Handling dimension.
+
+**measuredPerformance** (F4, F5, F7, F8, F9, F10, F16, F17): Measurable performance indicators include Mean Time to Detect (3), Mean Time to Respond (2), Network Operability Under Disruption (3), Zone Availability Rate (2), Operational Threshold Violation Rate (2), RTO Achievement Rate (2), and satisfactory Mean Time to Remediate (75 days, 31–90 days). Vulnerability Remediation Rate is below target at 60%.
+
+**gapsAndMissingEvidence** (F1, F11, F18, F19): Incident Handling is incomplete due to the absence of a score for Mean Time to Contain. RPO Achievement Rate is a programme gap, scoring 0. Additionally, Mean Time to Contain is not measurable due to insufficient evidence, and uncontrolled multi-homed devices are a significant risk.
+
+**foundationsAndFlags** (F12, F13, F14, F15, F16, F17): Foundational controls are in place, including asset inventory, risk assessment, IT/OT boundary separation, and documented BC plans. However, uncontrolled multi-homed devices and incomplete asset interdependency documentation are flagged as critical and high priority issues. Vulnerability remediation is below target, but process evidence is not scored.
+
+**priorities** (F20): The lowest results are: RPO Achievement Rate (programme gap, 0); followed by Mean Time to Respond (2), Zone Availability Rate (2), Operational Threshold Violation Rate (2), and RTO Achievement Rate (2), all of equal priority.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 936, eval_count 54, 8.6 tokens/s, done_reason stop, 8.6 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F3, F20): The assessment indicates an incomplete Incident Handling dimension and multiple areas of concern, including a programme gap in RPO Achievement Rate and low scores in several key indicators.
+
+</details>
+
+Attempt 2, repair of gapsAndMissingEvidence: prompt_eval_count 917, eval_count 98, 7.9 tokens/s, done_reason stop, 14.7 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of gapsAndMissingEvidence)</summary>
+
+**gapsAndMissingEvidence** (F11, F18): The assessment identified a programme gap in RPO Achievement Rate, where the recovery point objective has not been established. Additionally, there is no score for Mean Time to Contain in Incident Handling, making the overall Incident Handling score unavailable. The architecture foundation for establishing Mean Time to Contain is incomplete, and uncontrolled multi-homed devices are in a weak state.
+
+</details>
+
+Attempt 2, repair of foundationsAndFlags: prompt_eval_count 826, eval_count 151, 7.1 tokens/s, done_reason stop, 23.9 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of foundationsAndFlags)</summary>
+
+**foundationsAndFlags** (F12, F13, F14, F15, F16, F17): The asset inventory and risk assessment per zone are in place, along with a controlled IT/OT boundary separation and a documented BC plan for critical processes. However, uncontrolled inter-zone multi-homed devices were identified as a critical issue, and incomplete or outdated asset interdependency documentation was noted as a high priority concern. Additionally, there has been no BC plan test performed during the assessment period, and the vulnerability remediation rate is below target at 60%, with a mean time to remediate of 75 days. 
+
+</details>
+
+<details><summary>Final narrative (accepted)</summary>
+
+**headline** (F3, F20): The assessment indicates an incomplete Incident Handling dimension and multiple areas of concern, including a programme gap in RPO Achievement Rate and low scores in several key indicators.
+
+**overview** (C2, F2, F3): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Business Continuity scored 1.80, but the overall score is unavailable due to the incomplete Incident Handling dimension.
+
+**measuredPerformance** (F4, F5, F7, F8, F9, F10, F16, F17): Measurable performance indicators include Mean Time to Detect (3), Mean Time to Respond (2), Network Operability Under Disruption (3), Zone Availability Rate (2), Operational Threshold Violation Rate (2), RTO Achievement Rate (2), and satisfactory Mean Time to Remediate (75 days, 31–90 days). Vulnerability Remediation Rate is below target at 60%.
+
+**gapsAndMissingEvidence** (F11, F18): The assessment identified a programme gap in RPO Achievement Rate, where the recovery point objective has not been established. Additionally, there is no score for Mean Time to Contain in Incident Handling, making the overall Incident Handling score unavailable. The architecture foundation for establishing Mean Time to Contain is incomplete, and uncontrolled multi-homed devices are in a weak state.
+
+**foundationsAndFlags** (F12, F13, F14, F15, F16, F17): The asset inventory and risk assessment per zone are in place, along with a controlled IT/OT boundary separation and a documented BC plan for critical processes. However, uncontrolled inter-zone multi-homed devices were identified as a critical issue, and incomplete or outdated asset interdependency documentation was noted as a high priority concern. Additionally, there has been no BC plan test performed during the assessment period, and the vulnerability remediation rate is below target at 60%, with a mean time to remediate of 75 days. 
+
+**priorities** (F20): The lowest results are: RPO Achievement Rate (programme gap, 0); followed by Mean Time to Respond (2), Zone Availability Rate (2), Operational Threshold Violation Rate (2), and RTO Achievement Rate (2), all of equal priority.
+
+</details>
+
+### Review
+
+2 of 5 accepted (runs 3 and 5). Run 1 never produced a draft: Ollama's
+llama-server crashed while loading the model ("exit status 0xc0000409 …
+CUDA error: shared object initialization failed"); the code reported it as
+`unavailable/provider_error` with no retry, as specified. Section repair
+works: repairs took 6–24 s against ~51 s for a whole narrative, the
+gapsAndMissingEvidence and foundationsAndFlags repairs passed first time
+(5 of 5), and at temperature 0.5 the model no longer repeated a rejected
+sentence word for word. The headline is still the hard part (runs 2 and 4
+failed on it).
+
+**Run 5 (accepted) is faithful.** Minor: it states that Incident Handling
+is incomplete without citing F1, and "the architecture foundation for
+establishing Mean Time to Contain is incomplete" garbles F18.
+
+**Run 3 (accepted) is not.** It says "Vulnerability remediation and mean
+time to remediate are at satisfactory levels" (F16: below target); its
+headline invents a causal link ("…measurement-readiness actions impacting
+overall performance") and calls the Business Continuity score "low" (no
+fact does); the gapsAndMissingEvidence repair dropped Mean Time to Contain,
+so the narrative never says why Incident Handling is incomplete; it calls
+the CRITICAL multi-homing "high priority"; and "incomplete BC plan testing"
+misstates "no test was performed".
+
+1. **Invariant breaks the validator missed**: the run 3 items above (the
+   process-evidence contradiction is the most serious). Also run 2 att. 3:
+   Mean Time to Contain "scoring below expectations" ("below expectations"
+   is not a performance word) with an invented cause ("due to incomplete
+   dimensions"; that headline cited no "may be related" fact); run 4 att. 2:
+   the architecture foundation "is required before this can be addressed"
+   (an order the facts do not state).
+2. **Validator errors** (16): right 9: severity "critical gap(s) in Mean
+   Time to Contain / RPO Achievement Rate" ×5; causal ×3 where the sentence
+   invents a cause ("scoring poorly due to incomplete dimensions and
+   process issues", "no overall score due to … process evidence" ×2);
+   programmeGap "poor scores in RPO Achievement Rate". Borderline 2:
+   "…pose critical and high-risk issues", "…flagged as critical and high
+   priority issues". Prompt-rule breaks only 4: "due to" explaining the
+   no-score rule (content harmless). Wrong 1: noScoreWording on "…with
+   overall scores hampered by incomplete dimensions and high-risk process
+   issues": "high" belongs to the new subject "process issues", and
+   "high-risk" is a risk phrase, not a performance word.
+3. **Paraphrased item names**: "Recovery Point Objective (RPO) Achievement
+   Rate", "documented business continuity plan for critical processes" (BC
+   spelled out), "vulnerability remediation" without "rate".
+4. **Prompt conformance**: headlines one sentence in every draft. Process
+   facts still land in measuredPerformance (all runs); run 3's
+   gapsAndMissingEvidence repair filled the section with in-place controls
+   (F12) instead of the missing evidence.
+5. **Items named without their fact cited**: run 5 gapsAndMissingEvidence
+   (Incident Handling incomplete, F1 uncited).
+6. **Band ranges**: second failure (after run set 2, run 3). Run 3 called
+   the 60% remediation rate "satisfactory", merging it with Mean Time to
+   Remediate. Per the spec, a repeated failure here points at the fact
+   wording.
+
+**Performance**: 12.9 → 7.1 tokens/s; whole narratives ~51 s, section
+repairs 6–24 s; the whole run set took about 7 minutes of generation plus
+cooldowns. No timeouts.
