@@ -1,9 +1,9 @@
-import { L0_SEVERITY } from '../data/layer0Definitions.js';
+import { L0_SEVERITY, L0_SEVERITY_LABELS } from '../data/layer0Definitions.js';
 
 const SEVERITY_CONFIG = {
-  [L0_SEVERITY.CRITICAL]:    { label: 'Critical',     bg: '#7f1d1d', text: '#fff' },
-  [L0_SEVERITY.HIGH]:        { label: 'High',         bg: '#9a3412', text: '#fff' },
-  [L0_SEVERITY.MEDIUM_NOTE]: { label: 'Medium note',  bg: '#92400e', text: '#fff' },
+  [L0_SEVERITY.CRITICAL]:    { label: L0_SEVERITY_LABELS[L0_SEVERITY.CRITICAL],    bg: '#7f1d1d', text: '#fff' },
+  [L0_SEVERITY.HIGH]:        { label: L0_SEVERITY_LABELS[L0_SEVERITY.HIGH],        bg: '#9a3412', text: '#fff' },
+  [L0_SEVERITY.MEDIUM_NOTE]: { label: L0_SEVERITY_LABELS[L0_SEVERITY.MEDIUM_NOTE], bg: '#92400e', text: '#fff' },
 };
 
 function SeverityBadge({ severity }) {

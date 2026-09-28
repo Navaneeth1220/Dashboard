@@ -17,6 +17,7 @@
 import { INDICATORS, STATE, STATE_PRIORITY_LABELS } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS } from '../data/layer0Definitions.js';
 import { displayName, formatScore } from '../data/displayNames.js';
+import { NOTHING_TO_ASSESS, NOT_YET_ASSESSED } from '../data/reportWording.js';
 
 // ── Palette ──────────────────────────────────────────────────────────────────
 const COLORS = {
@@ -264,7 +265,7 @@ function Lane3({ lane3 }) {
               }} data-lane="3">
                 {indicatorName(e.indicatorId)}
                 <span style={{ color: '#9ca3af', marginLeft: '8px', fontSize: '11px' }}>
-                  Nothing occurred to assess this indicator.
+                  {NOTHING_TO_ASSESS}
                 </span>
               </div>
             ))}
@@ -300,7 +301,7 @@ function Unassigned({ unassigned }) {
             fontSize: '12px', color: '#9ca3af',
             padding: '5px 12px', borderRadius: '6px', marginBottom: '4px',
           }} data-unassigned="unset">
-            {indicatorName(u.indicatorId)} — not yet assessed.
+            {indicatorName(u.indicatorId)} — {NOT_YET_ASSESSED}.
           </div>
         ))}
       </div>
