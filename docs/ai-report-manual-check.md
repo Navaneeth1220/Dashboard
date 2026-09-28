@@ -745,3 +745,19 @@ dimensions counted ("two", "three", "four") in 4 runs.
 **Performance**: no timeouts (longest attempt 201 s). After each 60 s
 cooldown the first attempt ran at 11.8–14.9 tokens/s; within a run it fell
 to 3.5–10.3 by attempt 3. Total ~25 minutes.
+
+**Replay with the changes from this check** (new C2/C3, check 8 on named
+clauses only, checks 10 and 11; drafts citing the old C2 mapped to C2 + C3):
+44 → 33 errors. Gone: the 6 forward-reference attribution errors; the 4
+"respectively" severity errors became `respectively` errors; "two
+dimensions" ×4 now passes. Still caught: "three dimensions" ×3 and "four
+dimensions" (check 11). New: `respectively` for "scored 2 and 2,
+respectively" (run 5 att. 1); numbers for "RPO Achievement Rate at 0" in a
+section citing neither F11 nor C3 (run 4 att. 1). Still passing: "Scores
+range from 1.80 to 4" (known limitation).
+
+Run 4 att. 2 now passes. Its flaws are known limitations, with no checks
+for now: it calls the CRITICAL multi-homed devices "high priority" ("high"
+is not checked); it writes scores as "Mean Time to Detect at 3", which
+reads as a value; and a garbled sentence lists the in-place controls as
+"action flags".

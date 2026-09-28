@@ -14,10 +14,12 @@
  * pattern checks, and rules 4–6 run per clause, where a clause that names no
  * item inherits the last item named earlier in the same sentence. The
  * verbatim exemption applies only to clauses that name an item themselves.
- * Rule 8 (attribution) ties a number next to one item to that item's own
- * fact, which is what makes counting the context facts (C1, C2) as cited for
- * every section safe in the numbers check. Rule 9 (severity) keeps
- * "critical" on items whose fact is CRITICAL.
+ * Rule 8 (attribution) ties a number next to one named item to that item's
+ * own fact, which is what makes counting the context facts (C1 client and
+ * date, C2 counts) as cited for every section safe in the numbers check; the
+ * scale fact (C3) follows normal citation. Rule 9 (severity) keeps
+ * "critical" on items whose fact is CRITICAL. Rule 10 flags "respectively".
+ * Rule 11 holds "N dimensions" to the count C2 states.
  */
 
 import { INDICATORS, ALL_INDICATOR_IDS } from '../data/indicatorDefinitions.js';
@@ -28,7 +30,8 @@ import { quotedUserText } from './facts.js';
 
 export const VALIDATOR_RULES = [
   'shape', 'factIds', 'numbers', 'leakedIds',
-  'noScoreWording', 'unscoredScore', 'programmeGap', 'causal', 'attribution', 'severity',
+  'noScoreWording', 'unscoredScore', 'programmeGap', 'causal', 'attribution', 'severity', 'respectively',
+  'dimensionCount',
 ];
 
 // ---------------------------------------------------------------------------
@@ -166,6 +169,9 @@ function isNegated(text, index) {
 
 // "critical process(es)" is part of the BC plan item's name, not a severity claim.
 const CRITICAL_WORD = /\bcritical\b(?!\s+process)/i;
+const RESPECTIVELY = /\brespectively\b/i;
+const DIMENSION_COUNT = new RegExp(`\\b(${NUM})\\s+dimensions?\\b`, 'gi');
+const C2_DIMENSIONS = /\b(\d+) dimensions\b/;
 const MAY_BE_RELATED = /may be related/i;
 const CAUSAL = /\b(?:caused|causes|because of|due to|led to|results from|resulted in)\b/i;
 
@@ -318,12 +324,13 @@ function checkClause(clause, subjects, categories) {
 }
 
 /**
- * Check 8: a clause about exactly one item with an own fact (named, or
- * inherited within the same semicolon segment) may only use numbers from
- * that fact, not from another fact that refs the item.
+ * Check 8: a clause that itself names exactly one item with an own fact may
+ * only use numbers from that fact, not from another fact that refs the item.
+ * Inherited clauses are not checked (they misfire on forward references:
+ * "…and several areas with scores of 2, including …").
  */
-function checkAttribution(clause, subjects, categories) {
-  const items = [...new Set(subjects)];
+function checkAttribution(clause, named, categories) {
+  const items = [...new Set(named)];
   if (items.length !== 1 || !categories.ownFacts.has(items[0])) return [];
 
   const [id] = items;
@@ -384,36 +391,49 @@ function checkSection(section, part, ctx) {
       }
     }
 
-    // Checks 4–6 and 8–9 per clause, with inheritance and the verbatim
-    // exemption. For check 8, inheritance stops at a semicolon: in the
-    // priority fact's "…(programme gap, 0); then, at score 2" the score
-    // belongs to the items that follow, not to the item before.
-    let lastNamed = null;
-    for (const segment of sentence.split(/\s*;\s*/)) {
-      let lastNamedInSegment = null;
-      for (const clause of splitClauses(segment)) {
-        const named = namesIn(clause);
-        const subjects = named.length > 0 ? named : (lastNamed ? [lastNamed] : []);
-        const attributed = named.length > 0 ? named : (lastNamedInSegment ? [lastNamedInSegment] : []);
-        if (named.length > 0) {
-          lastNamed = named[named.length - 1];
-          lastNamedInSegment = lastNamed;
-        }
-        if (subjects.length === 0) continue;
-
-        // Verbatim exemption only for a clause that names an item itself. An
-        // inherited clause ("poor") is short enough to match almost any fact.
-        if (named.length > 0 && citedTexts.some(t => t.includes(normalize(clause)))) continue;
-
-        for (const [rule, detail] of checkClause(clause, subjects, ctx.categories)) add(rule, detail, sentence);
-        for (const detail of checkAttribution(clause, attributed, ctx.categories)) add('attribution', detail, sentence);
-        for (const detail of checkSeverity(clause, named, ctx.categories)) add('severity', detail, sentence);
+    // Check 11: "N dimensions" must match the count the context fact states.
+    // (C2's numbers are allowed everywhere by check 2, so "three dimensions"
+    // would otherwise pass.)
+    if (ctx.dimensionCount !== null) {
+      const reported = new Set();
+      for (const m of cleaned.matchAll(DIMENSION_COUNT)) {
+        const [value] = extractNumbers(m[1]);
+        if (value === String(ctx.dimensionCount) || reported.has(m[0].toLowerCase())) continue;
+        reported.add(m[0].toLowerCase());
+        add('dimensionCount', `The facts state ${ctx.dimensionCount} dimensions; do not write "${m[0]}".`, sentence);
       }
+    }
+
+    // Check 10: pairing items with numbers or labels across "respectively"
+    // is not reliable, so such sentences skip checks 8–9.
+    const respectively = RESPECTIVELY.test(sentence);
+    if (respectively) add('respectively', 'Give each item its own number or label; do not write "respectively".', sentence);
+
+    // Checks 4–6 and 8–9 per clause, with inheritance (4–6 only) and the
+    // verbatim exemption.
+    let lastNamed = null;
+    for (const clause of splitClauses(sentence)) {
+      const named = namesIn(clause);
+      const subjects = named.length > 0 ? named : (lastNamed ? [lastNamed] : []);
+      if (named.length > 0) lastNamed = named[named.length - 1];
+      if (subjects.length === 0) continue;
+
+      // Verbatim exemption only for a clause that names an item itself. An
+      // inherited clause ("poor") is short enough to match almost any fact.
+      if (named.length > 0 && citedTexts.some(t => t.includes(normalize(clause)))) continue;
+
+      for (const [rule, detail] of checkClause(clause, subjects, ctx.categories)) add(rule, detail, sentence);
+      if (respectively) continue;
+      for (const detail of checkAttribution(clause, named, ctx.categories)) add('attribution', detail, sentence);
+      for (const detail of checkSeverity(clause, named, ctx.categories)) add('severity', detail, sentence);
     }
 
     // Check 7
     const causal = mayBeRelated ? sentence.match(CAUSAL) : null;
-    if (causal) add('causal', `A cited fact says "may be related"; do not claim a cause ("${causal[0]}").`, sentence);
+    if (causal) {
+      add('causal', `Do not write "${causal[0]}": a cited fact says "may be related", and "${causal[0]}" claims a cause. ` +
+        'Use the fact\'s own wording (for example "so") or leave the explanation out.', sentence);
+    }
   }
 
   return errors;
@@ -425,9 +445,12 @@ function checkSection(section, part, ctx) {
 
 export function validateNarrative(narrative, facts) {
   const factList = Array.isArray(facts) ? facts : [];
+  const contextFacts = factList.filter(f => f.kind === 'context');
+  const dimensionMatch = contextFacts.map(f => f.text.match(C2_DIMENSIONS)).find(Boolean);
   const ctx = {
     byId: new Map(factList.map(f => [f.id, f])),
-    contextFacts: factList.filter(f => f.kind === 'context'),
+    contextFacts,
+    dimensionCount: dimensionMatch ? Number(dimensionMatch[1]) : null,
     categories: categorize(factList),
   };
 

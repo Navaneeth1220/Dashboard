@@ -321,7 +321,7 @@ Pure, no model needed, never throws. `section` is `headline` or a
 `SECTION_KEYS` key; `sentence` is the offending sentence (null for
 section-level checks); `rule` is one of `shape`, `factIds`, `numbers`,
 `leakedIds`, `noScoreWording`, `unscoredScore`, `programmeGap`, `causal`,
-`attribution`, `severity`, `respectively`;
+`attribution`, `severity`, `respectively`, `dimensionCount`;
 `detail` is plain English with descriptive names only (it is sent back to
 the model on retry and shown in the UI on failure).
 
@@ -428,6 +428,12 @@ the model on retry and shown in the UI on failure).
     reliable (second manual check: "…identified as critical and high
     priority issues, respectively" was accurate but failed check 9 with the
     wrong reason). Checks 4–6 still apply to its clauses.
+11. **Dimension count** (`dimensionCount`): a number directly followed by
+    "dimension" or "dimensions" (digits or words) must equal the count C2
+    states ("2 dimensions"). Needed because C2's numbers are allowed
+    everywhere by check 2 ("three dimensions" would pass: 3 is in C2) and
+    F2's "out of 4" let "four dimensions" through in the second manual
+    check.
 
 Limitations (accepted): paraphrased names ("containment time") are not
 recognised: log misses in the manual check and add aliases to the data
@@ -436,10 +442,15 @@ covered by check 4 (facts carry no state). Check 8 does not cover
 dimensions or inherited clauses; a context number beside a single item
 ("scored 2 out of 4") fails it. Check 9 only sees "critical" in a clause
 that names the item. Check 2 cannot catch a count whose number is in C2
-(8, 2, 3, 5 are allowed everywhere: "three dimensions", "two of the five
-indicators") or in any cited fact ("four dimensions" with F2's "out of 4"
-cited). Prompt rule 8 (singling out equal-priority items) is not
-validated. No check that named items are cited (may become check 11).
+(8, 2, 3, 5 are allowed everywhere: "two of the five indicators") or in a
+cited fact; dimension counts are covered by check 11, other counts are
+not. Score ranges ("scores range from 1.80 to 4") pass when a cited fact
+contains both numbers. Prompt rule 8 (singling out equal-priority items)
+is not validated. Not checked either (run 4 att. 2 of the second manual
+check passes with them): "high priority" for a CRITICAL item ("high" is
+not checked); scores written as "Mean Time to Detect at 3", which reads as
+a value; a garbled sentence listing in-place controls as "action flags".
+No check that named items are cited (may become check 12).
 
 Tests: a hand-written good narrative for the Westmaas baseline passes,
 including the readiness advisory (F18) verbatim, "not a measured failure",
@@ -470,7 +481,9 @@ From the second manual check: "across two dimensions" passes; "four
 dimensions" and "scores range from 1.80 to 4" fail in a section that does
 not cite a fact containing the number; "…critical and high priority
 issues, respectively" fails only `respectively`; "…scored 3 and 2,
-respectively" fails only `respectively`. The drafts of each manual check
+respectively" fails only `respectively`; "three dimensions" and "four
+dimensions" fail check 11 even with F2 cited, "two dimensions" and "2
+dimensions" pass. The drafts of each manual check
 are replayed before and after each validator change.
 Property tests: the cited facts' own text always passes; an injected
 violation of checks 3–6 is always caught; malformed input never throws.

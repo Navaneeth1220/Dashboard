@@ -462,12 +462,13 @@ describe('manual check 1: attribution (check 8)', () => {
     expect(overview('This includes the programme-gap 0 for RPO Achievement Rate.').ok).toBe(true);
   });
 
-  it('inherited clauses are checked against the inherited item\'s own fact', () => {
-    expect(rulesOf(validate(withPart('measuredPerformance', MEASURED, 'Zone Availability Rate is 40%, scoring 3.')))).toEqual(['attribution']);
-    expect(validate(withPart('measuredPerformance', MEASURED, 'Mean Time to Detect is 18 hours, a score of 3.')).ok).toBe(true);
+  it('inherited clauses are not checked (reverted after the second manual check: 0 catches, 6 misfires)', () => {
+    expect(validate(withPart('measuredPerformance', MEASURED, 'Zone Availability Rate is 40%, scoring 3.')).ok).toBe(true);
+    expect(validate(withPart('headline', ['F11', 'F20'],
+      'RPO Achievement Rate is a programme gap, and several areas have scores of 2, including Mean Time to Respond.')).ok).toBe(true);
   });
 
-  it('inheritance for attribution stops at a semicolon (the priority fact\'s own wording)', () => {
+  it('the priority fact\'s own wording passes', () => {
     expect(validate(withPart('priorities', ['F20'],
       'RPO Achievement Rate is a programme gap (0); then, at score 2, Mean Time to Respond.')).ok).toBe(true);
     expect(validate(withPart('priorities', ['F20'], FACTS.find(f => f.id === 'F20').text)).ok).toBe(true);
@@ -514,8 +515,8 @@ describe('manual check 2: C2 counts, C3 scale', () => {
     expect(validate(withPart('overview', ['F1', 'F2', 'F3'], 'The assessment covered 8 effectiveness indicators across two dimensions.')).ok).toBe(true);
   });
 
-  it('"four dimensions" fails where no cited fact contains 4', () => {
-    expect(rulesOf(gaps('Westmaas was assessed across four dimensions.'))).toEqual(['numbers']);
+  it('"four dimensions" fails where no cited fact contains 4 (numbers and dimension count)', () => {
+    expect(rulesOf(gaps('Westmaas was assessed across four dimensions.'))).toEqual(['numbers', 'dimensionCount']);
   });
 
   it('"scores range from 1.80 to 4" fails where no cited fact contains them', () => {
@@ -525,6 +526,55 @@ describe('manual check 2: C2 counts, C3 scale', () => {
   it('the 0–4 scale needs C3 cited', () => {
     expect(rulesOf(gaps('Indicators are scored from 0 to 4.'))).toEqual(['numbers']);
     expect(validate(withPart('gapsAndMissingEvidence', [...GAPS, 'C3'], 'Indicators are scored from 0 to 4.')).ok).toBe(true);
+  });
+});
+
+describe('manual check 2: dimension count (check 11)', () => {
+  it('"three dimensions" fails even though 3 is in C2 and F2 is cited', () => {
+    expect(overview('The assessment covered 8 effectiveness indicators across three dimensions.').errors).toEqual([expect.objectContaining({
+      rule: 'dimensionCount', detail: 'The facts state 2 dimensions; do not write "three dimensions".',
+    })]);
+  });
+
+  it('"four dimensions" fails even though 4 is in cited F2 (run 5)', () => {
+    expect(rulesOf(overview('The assessment covered 8 effectiveness indicators across four dimensions.'))).toEqual(['dimensionCount']);
+  });
+
+  it('digits count too: "3 dimensions" fails', () => {
+    expect(rulesOf(overview('Westmaas was assessed in 3 dimensions.'))).toEqual(['dimensionCount']);
+  });
+
+  it('"two dimensions" and "2 dimensions" pass', () => {
+    expect(overview('The assessment covered 8 effectiveness indicators across two dimensions.').ok).toBe(true);
+    expect(overview('Westmaas was assessed in 2 dimensions.').ok).toBe(true);
+  });
+});
+
+describe('manual check 2: "respectively" (check 10)', () => {
+  const detail = 'Give each item its own number or label; do not write "respectively".';
+
+  it('run 2: "…critical and high priority issues, respectively" fails only on "respectively"', () => {
+    expect(foundations('Uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation are identified as critical and high priority issues, respectively.').errors)
+      .toEqual([expect.objectContaining({ rule: 'respectively', detail })]);
+  });
+
+  it('run 5: "…scored 3 and 2, respectively" fails only on "respectively"', () => {
+    expect(rulesOf(validate(withPart('measuredPerformance', MEASURED,
+      'Network Operability Under Disruption and Zone Availability Rate scored 3 and 2, respectively.')))).toEqual(['respectively']);
+  });
+
+  it('checks 4–6 still apply in a "respectively" sentence', () => {
+    expect(rulesOf(gaps('Mean Time to Contain is poor and RPO Achievement Rate is failing, respectively.')))
+      .toEqual(expect.arrayContaining(['respectively', 'noScoreWording', 'programmeGap']));
+  });
+});
+
+describe('manual check 2: causal detail names the replacement', () => {
+  it('suggests the fact\'s own wording', () => {
+    expect(foundations('The Zone Availability Rate result is due to the multi-homed devices.').errors).toEqual([expect.objectContaining({
+      rule: 'causal',
+      detail: 'Do not write "due to": a cited fact says "may be related", and "due to" claims a cause. Use the fact\'s own wording (for example "so") or leave the explanation out.',
+    })]);
   });
 });
 
