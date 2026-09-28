@@ -12,9 +12,9 @@ import * as fc from 'fast-check';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
 import followUpJson from '../../scenarios/Westmaas_2026-06-01_assessment.json?raw';
 import { buildAssessmentFacts, stripAssessorNote, FACT_KINDS } from './facts.js';
+import { loadScenario, assessmentArb } from './testSupport.js';
 import { computeAssessment, createBlankAssessment } from '../engine/scoring.js';
 import { createBlankLayer0 } from '../engine/layer0.js';
-import { parseAndValidateImport } from '../engine/persistence.js';
 import {
   INDICATORS,
   ALL_INDICATOR_IDS,
@@ -25,13 +25,6 @@ import { LAYER0_ITEMS, LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
 import { formatScore } from '../data/displayNames.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function loadScenario(json) {
-  const res = parseAndValidateImport(json);
-  if (!res.ok) throw new Error(res.error);
-  const { clientId, assessmentDate, indicators, layer0 } = res.data;
-  return { meta: { clientId, assessmentDate }, indicators, layer0 };
-}
 
 const meas = v => ({ state: STATE.MEASURED, value: String(v) });
 const ratio = (n, d) => ({ state: STATE.MEASURED, numerator: String(n), denominator: String(d) });
@@ -425,36 +418,6 @@ describe('general', () => {
 });
 
 // ─── 9. Property tests ────────────────────────────────────────────────────────
-
-const singleValueArb = fc.oneof(
-  { weight: 8, arbitrary: fc.double({ min: 0, max: 2000, noNaN: true }).map(String) },
-  { weight: 1, arbitrary: fc.constantFrom('', '-5', 'abc') },
-);
-const ratioArb = fc.tuple(fc.nat(40), fc.nat(40))
-  .map(([a, b]) => ({ numerator: String(Math.min(a, b)), denominator: String(Math.max(a, b)) }));
-
-const reasonArb = fc.option(fc.oneof(
-  fc.record({ layer0ItemId: fc.constantFrom(...LAYER0_ALL_IDS), text: fc.constantFrom('', 'CMDB stale') }),
-  fc.record({ text: fc.constantFrom('', 'SIEM retention too short', 'see BC-08, ticket_7, 3.14159 h') }),
-), { nil: null });
-
-function inputArb(def) {
-  return fc.constantFrom(null, ...def.allowedStates).chain(state => {
-    if (state === STATE.MEASURED) {
-      return def.inputType === 'ratio'
-        ? ratioArb.map(r => ({ state, ...r }))
-        : singleValueArb.map(value => ({ state, value }));
-    }
-    if (state === STATE.NOT_MEASURABLE) return reasonArb.map(reason => ({ state, reason }));
-    return fc.constant({ state });
-  });
-}
-
-const assessmentArb = fc.record({
-  meta: fc.constant({ clientId: 'Acme', assessmentDate: '2026-03-01' }),
-  indicators: fc.record(Object.fromEntries(ALL_INDICATOR_IDS.map(id => [id, inputArb(INDICATORS[id])]))),
-  layer0: fc.record(Object.fromEntries(LAYER0_ALL_IDS.map(id => [id, inputArb(LAYER0_ITEMS[id])]))),
-});
 
 describe('property-based tests (fast-check)', () => {
   it('every no-score indicator is in exactly one no_score fact and no scored fact', () => {

@@ -93,9 +93,14 @@ function withDisplayNames(message) {
     .replace(DIMENSION_CODE_BEFORE_NUMBER, code => `${DIMENSION_NAMES[code]} score`);
 }
 
+/** Free text on one line (every fact is one line of the user message). */
+function oneLine(text) {
+  return String(text ?? '').replace(/\s+/g, ' ').trim();
+}
+
 /** Assessor free text, verbatim apart from collapsed whitespace. Always last in a fact. */
 function assessorNote(text) {
-  return `${ASSESSOR_NOTE_PREFIX}${text.replace(/\s+/g, ' ').trim()}"`;
+  return `${ASSESSOR_NOTE_PREFIX}${oneLine(text)}"`;
 }
 
 /**
@@ -117,8 +122,10 @@ function measuredValue(def, input, result) {
 // ---------------------------------------------------------------------------
 
 function contextFacts(meta) {
-  const client = meta?.clientId ? `"${meta.clientId}"` : 'an unnamed client';
-  const date = meta?.assessmentDate ? `dated ${meta.assessmentDate}` : 'undated';
+  const clientId = oneLine(meta?.clientId);
+  const assessmentDate = oneLine(meta?.assessmentDate);
+  const client = clientId ? `"${clientId}"` : 'an unnamed client';
+  const date = assessmentDate ? `dated ${assessmentDate}` : 'undated';
   return [
     fact('context', `Assessment of ${client}, ${date}.`, []),
     fact('context',
