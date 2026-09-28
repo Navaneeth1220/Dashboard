@@ -820,3 +820,18 @@ shown on `failed`.
 - Westmaas baseline generates a validated narrative in most attempts.
 - No invariant in `CLAUDE.md` can be broken by generated text without the
   validator catching it.
+
+---
+
+## Cleanup backlog
+
+Found during this work, deliberately left alone. For later, on `main`, not on
+this branch.
+
+- `Layer0ItemCard.jsx` keeps its own `SCORE_LEVEL` map, a duplicate of
+  `SCORE_LEVEL_LABELS`.
+- The cross-indicator panel calls a related result "poor" (the advisory
+  messages in `crossIndicator.js`, `buildArchitectureMessage`), where the
+  score badges and the generated report say "Developing" for a score of 2.
+- 18 pre-existing oxlint warnings (unused imports and variables, mostly in
+  tests).

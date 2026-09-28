@@ -8,7 +8,7 @@ Now a hobby project, developed on feature branches.
 ## Commands
 
 - `npm run dev`: dev server (Vite)
-- `npm test`: full test suite (Vitest). Must stay green; currently 580 tests.
+- `npm test`: full test suite (Vitest). Must stay green.
 - `npm run lint`: oxlint
 
 ## Architecture
