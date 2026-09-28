@@ -289,6 +289,15 @@ export const LAYER0_ITEMS = {
       2: 'Vulnerability remediation rate is below target (50–69%) — moderate programme improvement warranted.',
       3: 'Vulnerability remediation rate is satisfactory (70–89%) — continue monitoring.',
     },
+    // The same bands as structured parts, for the generated report ("60%, in
+    // the 50–69% band, which is below target"). A test keeps them consistent
+    // with processMessages.
+    processBands: {
+      0: { band: null, verdict: 'no vulnerabilities are being addressed', advice: null },
+      1: { band: '< 50%', verdict: 'very low', advice: 'remediation programme is largely ineffective' },
+      2: { band: '50–69%', verdict: 'below target', advice: 'moderate programme improvement warranted' },
+      3: { band: '70–89%', verdict: 'satisfactory', advice: 'continue monitoring' },
+    },
     // stateMap covers the three non-measured states only
     stateMap: {
       [L0_STATE.NOT_MEASURABLE]: {
@@ -346,6 +355,12 @@ export const LAYER0_ITEMS = {
       1: 'Mean time to remediate is very slow (181–365 days) — vulnerabilities remain exposed for an extended period.',
       2: 'Mean time to remediate is below target (91–180 days) — moderate improvement warranted.',
       3: 'Mean time to remediate is satisfactory (31–90 days) — continue monitoring.',
+    },
+    processBands: {
+      0: { band: null, verdict: 'more than 1 year', advice: 'vulnerabilities remain exposed for an unacceptably long period' },
+      1: { band: '181–365 days', verdict: 'very slow', advice: 'vulnerabilities remain exposed for an extended period' },
+      2: { band: '91–180 days', verdict: 'below target', advice: 'moderate improvement warranted' },
+      3: { band: '31–90 days', verdict: 'satisfactory', advice: 'continue monitoring' },
     },
     stateMap: {
       [L0_STATE.NOT_MEASURABLE]: {

@@ -5,9 +5,12 @@
  * pre-worded, pre-rounded facts. It recomputes no score, state, or advisory —
  * every judgement here is read from engine output; this module only words it.
  *
- * Fact: { id: 'C1' | 'F1' | …, kind, text, refs }
+ * Fact: { id: 'C1' | 'F1' | …, kind, text, refs, data }
  *   refs — internal IDs the fact is about (validator use only; never sent to
  *          the model). Dimension facts use the pseudo-IDs IH, BC, OVERALL.
+ *   data — the same content as structured values with descriptive names, for
+ *          the generated report sections (templates.js). Never sent to the
+ *          model; text and data are built from the same engine output.
  *
  * Order (stable): context, dimensions, indicators (canonical), Layer 0
  * (l0_ok, l0_flag, process, l0_unset), advisories (engine order), priority.
@@ -49,8 +52,8 @@ const ASSESSOR_NOTE_PREFIX = 'Assessor note: "';
 // Wording helpers
 // ---------------------------------------------------------------------------
 
-function fact(kind, text, refs) {
-  return { kind, text, refs };
+function fact(kind, text, refs, data) {
+  return { kind, text, refs, data };
 }
 
 /** At most two decimals, trailing zeros dropped: 18, 12.5, 33.33. */
@@ -143,16 +146,22 @@ function contextFacts(meta) {
   const date = assessmentDate ? `dated ${assessmentDate}` : 'undated';
   const dimensions = [['IH', IH_INDICATOR_IDS], ['BC', BC_INDICATOR_IDS]];
   return [
-    fact('context', `Assessment of ${client}, ${date}.`, []),
+    fact('context', `Assessment of ${client}, ${date}.`, [],
+      { clientId: clientId || null, assessmentDate: assessmentDate || null }),
     // Counts only: the validator counts `context` facts as cited for every section.
     fact('context',
       `${ALL_INDICATOR_IDS.length} effectiveness indicators in ${dimensions.length} dimensions: ` +
       `${joinNames(dimensions.map(([dim, ids]) => `${DIMENSION_NAMES[dim]} (${ids.length} indicators)`))}.`,
-      []),
+      [],
+      {
+        indicatorCount: ALL_INDICATOR_IDS.length,
+        dimensions: dimensions.map(([dim, ids]) => ({ dimension: dim, name: DIMENSION_NAMES[dim], indicatorCount: ids.length })),
+      }),
     fact('scale',
       'Each indicator is scored 0–4, where 4 is best. A dimension score is the mean of its indicators. ' +
       'If any indicator in a dimension has no score, the dimension is incomplete and has no score.',
-      []),
+      [],
+      { min: 0, max: 4 }),
   ];
 }
 
@@ -169,14 +178,16 @@ function dimensionFacts(results) {
       facts.push(fact('dim_incomplete',
         `${name}: incomplete. ${joinNames(missing.map(displayName))} ${verb} no score, ` +
         `so no ${name} score is available.`,
-        [dim, ...missing]));
+        [dim, ...missing],
+        { dimension: dim, name, complete: false, missing: missing.map(displayName) }));
     } else {
       const gaps = ids.filter(id => results.indicators[id].programmeGap === true);
       let text = `${name}: complete, score ${formatScore(agg.score)} out of 4 (${ids.length} indicators).`;
       if (gaps.length > 0) {
         text += ` This includes the programme-gap 0${gaps.length > 1 ? 's' : ''} for ${joinNames(gaps.map(displayName))}.`;
       }
-      facts.push(fact('dim_complete', text, [dim, ...gaps]));
+      facts.push(fact('dim_complete', text, [dim, ...gaps],
+        { dimension: dim, name, complete: true, score: formatScore(agg.score), programmeGaps: gaps.map(displayName) }));
     }
   }
 
@@ -186,12 +197,14 @@ function dimensionFacts(results) {
     facts.push(fact('dim_incomplete',
       `${overall}: not available, because ${joinNames(incomplete.map(dim => DIMENSION_NAMES[dim]))} ` +
       `${incomplete.length === 1 ? 'is' : 'are'} incomplete.`,
-      ['OVERALL', ...incomplete]));
+      ['OVERALL', ...incomplete],
+      { dimension: 'OVERALL', name: overall, complete: false, incomplete: incomplete.map(dim => DIMENSION_NAMES[dim]) }));
   } else {
     facts.push(fact('dim_complete',
       `${overall}: ${formatScore(results.overall.score)} out of 4, the mean of ${DIMENSION_NAMES.IH} and ` +
       `${DIMENSION_NAMES.BC}. It is a secondary summary; the two dimension scores are the primary results.`,
-      ['OVERALL', 'IH', 'BC']));
+      ['OVERALL', 'IH', 'BC'],
+      { dimension: 'OVERALL', name: overall, complete: true, score: formatScore(results.overall.score) }));
   }
 
   return facts;
@@ -209,27 +222,32 @@ function reasonText(group, input) {
   }
 }
 
-function noScoreText(id, input, priority) {
+function noScoreFact(id, input, priority) {
   const name = displayName(id);
   const tail = `No score. This says nothing about how ${name} performs.`;
+  const noScore = (text, status, rootCause = null, note = null) =>
+    fact('no_score', text, [id], { name, dimension: INDICATORS[id].measure, status, rootCause, note });
 
   const group = priority.lane2.groups.find(g => g.affectedIndicators.includes(id));
   if (group) {
     const { chip, detail } = STATE_PRIORITY_LABELS[STATE.NOT_MEASURABLE];
-    return `${name}: ${lowerFirst(chip)}. ${detail}. ${tail} ${reasonText(group, input)}`;
+    const rootCause = group.kind === 'layer0_link' ? displayName(group.linkedLayer0ItemId) : null;
+    const note = group.kind !== 'ungrouped_no_reason' && input?.reason?.text?.trim() ? oneLine(input.reason.text) : null;
+    return noScore(`${name}: ${lowerFirst(chip)}. ${detail}. ${tail} ${reasonText(group, input)}`,
+      STATE.NOT_MEASURABLE, rootCause, note);
   }
 
   const nonEvent = priority.lane3.entries.find(e => e.indicatorId === id);
   if (nonEvent) {
     const { chip, detail } = STATE_PRIORITY_LABELS[nonEvent.state];
-    return `${name}: ${lowerFirst(chip)}. ${detail}. ${tail}`;
+    return noScore(`${name}: ${lowerFirst(chip)}. ${detail}. ${tail}`, nonEvent.state);
   }
 
   const unassigned = priority.unassigned.find(u => u.indicatorId === id);
   if (unassigned?.reason === 'invalid_input') {
-    return `${name}: invalid value entered. The value could not be scored. ${tail}`;
+    return noScore(`${name}: invalid value entered. The value could not be scored. ${tail}`, 'invalid');
   }
-  return `${name}: not yet assessed. No state was recorded. ${tail}`;
+  return noScore(`${name}: not yet assessed. No state was recorded. ${tail}`, 'unset');
 }
 
 function indicatorFacts(assessment, results, priority) {
@@ -244,19 +262,22 @@ function indicatorFacts(assessment, results, priority) {
       return fact('gap_zero',
         `${name}: ${lowerFirst(detail)}. Scored 0 as a programme gap: the objective or capability ` +
         'does not exist yet. Not a measured failure.',
-        [id]);
+        [id],
+        { name, dimension: def.measure, state: input.state });
     }
 
     if (result.score !== null) {
-      const direction = def.direction === 'lower_is_better' ? ' (lower is better)' : '';
-      let text = `${name}: measured at ${withUnit(measuredValue(def, input, result), def.unit)}${direction}; score ${result.score}.`;
+      const lowerIsBetter = def.direction === 'lower_is_better';
+      const value = withUnit(measuredValue(def, input, result), def.unit);
+      let text = `${name}: measured at ${value}${lowerIsBetter ? ' (lower is better)' : ''}; score ${result.score}.`;
       if (result.score === 0) {
         text += ` ${STATE_PRIORITY_LABELS.measured_zero.chip}: a measured result, not a programme gap.`;
       }
-      return fact('scored', text, [id]);
+      return fact('scored', text, [id],
+        { name, dimension: def.measure, value, score: result.score, level: SCORE_LEVEL_LABELS[result.score], lowerIsBetter });
     }
 
-    return fact('no_score', noScoreText(id, input, priority), [id]);
+    return noScoreFact(id, input, priority);
   });
 }
 
@@ -267,34 +288,44 @@ function layer0Facts(assessment, layer0) {
 
   const ok = LAYER0_ALL_IDS.filter(id => !isProcess(id) && isAssessed(id) && layer0.items[id].severity === null);
   if (ok.length > 0) {
-    facts.push(fact('l0_ok', `In place: ${ok.map(displayName).join('; ')}.`, ok));
+    facts.push(fact('l0_ok', `In place: ${ok.map(displayName).join('; ')}.`, ok, { names: ok.map(displayName) }));
   }
 
   // Engine order (severity, display group, catalogue). The contextual note is
   // deliberately not included (layer jargon and ordering advice).
   for (const flag of layer0.actionFlags) {
     if (isProcess(flag.itemId)) continue;
-    facts.push(fact('l0_flag', `${severityPrefix(flag.severity)} ${withDisplayNames(flag.message)}`, [flag.itemId]));
+    const message = withDisplayNames(flag.message);
+    facts.push(fact('l0_flag', `${severityPrefix(flag.severity)} ${message}`, [flag.itemId],
+      { name: displayName(flag.itemId), severity: flag.severity, message }));
   }
 
   for (const id of LAYER0_ALL_IDS.filter(id => isProcess(id) && isAssessed(id))) {
     const def = LAYER0_ITEMS[id];
     const result = layer0.items[id];
     const flag = layer0.actionFlags.find(f => f.itemId === id);
+    const valid = result.state === L0_STATE.MEASURED && !result.invalidInput;
+    const value = valid ? withUnit(measuredValue(def, assessment?.layer0?.[id] ?? {}, result), def.valueUnit) : null;
+    const message = result.message ? withDisplayNames(result.message) : null;
     const parts = [];
 
     if (flag) parts.push(severityPrefix(flag.severity));
     if (result.state === L0_STATE.MEASURED) {
-      parts.push(result.invalidInput
-        ? `${displayName(id)}: invalid value entered.`
-        : `${displayName(id)}: ${withUnit(measuredValue(def, assessment?.layer0?.[id] ?? {}, result), def.valueUnit)}.`);
+      parts.push(valid ? `${displayName(id)}: ${value}.` : `${displayName(id)}: invalid value entered.`);
     } else {
       parts.push(`${displayName(id)}: ${lowerFirst(L0_STATE_LABELS[result.state])}.`);
     }
-    if (result.message) parts.push(withDisplayNames(result.message));
+    if (message) parts.push(message);
     parts.push('Process evidence, not scored.');
 
-    facts.push(fact('process', parts.join(' '), [id]));
+    facts.push(fact('process', parts.join(' '), [id], {
+      name: displayName(id),
+      state: result.state,
+      value,
+      severity: flag?.severity ?? null,
+      band: valid ? (def.processBands[result.processScore] ?? null) : null,
+      message,
+    }));
   }
 
   const unset = LAYER0_ALL_IDS.filter(id => !isAssessed(id));
@@ -302,23 +333,49 @@ function layer0Facts(assessment, layer0) {
     facts.push(fact('l0_unset',
       `Not yet assessed (no state recorded): ${unset.map(displayName).join('; ')}. ` +
       'This says nothing about whether they are in place.',
-      unset));
+      unset,
+      { names: unset.map(displayName) }));
   }
 
   return facts;
 }
 
 /** Rules A, B (auto-sentence only) and C, in engine order. Rule D hints are data-entry guidance. */
-function advisoryFacts(cross) {
+function advisoryFacts(cross, results) {
+  const indicator = id => results.indicators[id];
   const facts = [];
   for (const note of cross.ihDependencyNotes) {
-    facts.push(fact('advisory', withDisplayNames(note.message), [note.source, note.target]));
+    facts.push(fact('advisory', withDisplayNames(note.message), [note.source, note.target], {
+      rule: 'A',
+      kind: note.severity,
+      sourceName: displayName(note.source),
+      sourceScore: indicator(note.source).score,
+      sourceProgrammeGap: indicator(note.source).programmeGap === true,
+      targetName: displayName(note.target),
+    }));
   }
   for (const pair of cross.interpretivePairs) {
-    if (pair.autoSentence) facts.push(fact('advisory', withDisplayNames(pair.autoSentence.message), [...pair.pair]));
+    if (!pair.autoSentence) continue;
+    const [containment] = pair.pair;
+    facts.push(fact('advisory', withDisplayNames(pair.autoSentence.message), [...pair.pair], {
+      rule: 'B',
+      containmentName: displayName(containment),
+      containmentScore: indicator(containment).score,
+      bcScore: formatScore(results.bc.score),
+    }));
   }
   for (const arch of cross.architectureAdvisories) {
-    if (arch.advisory) facts.push(fact('advisory', withDisplayNames(arch.advisory.message), [arch.archItemId, arch.relatedId]));
+    if (!arch.advisory) continue;
+    facts.push(fact('advisory', withDisplayNames(arch.advisory.message), [arch.archItemId, arch.relatedId], {
+      rule: 'C',
+      variant: arch.advisory.variant,
+      archItemId: arch.archItemId,
+      archState: arch.archState,
+      relatedId: arch.relatedId,
+      relatedName: displayName(arch.relatedId),
+      relatedScore: arch.relatedScore,
+      relatedProgrammeGap: indicator(arch.relatedId).programmeGap === true,
+    }));
   }
   return facts;
 }
@@ -341,14 +398,16 @@ function tierText(tier) {
 function priorityFact(priority) {
   const entries = priority.lane1.entries;   // engine order: score ascending, catalogue tie-break
   if (entries.length === 0) {
-    return fact('priority', 'No effectiveness indicator has a score, so there is no ranking of results.', []);
+    return fact('priority', 'No effectiveness indicator has a score, so there is no ranking of results.', [],
+      { fallback: 'none_scored', tiers: [] });
   }
 
   const low = entries.filter(e => e.score < PRIORITY_BELOW);
   if (low.length === 0) {
     return fact('priority',
       `No scored effectiveness indicator is below ${PRIORITY_BELOW} (${SCORE_LEVEL_LABELS[PRIORITY_BELOW]}).`,
-      entries.map(e => e.indicatorId));
+      entries.map(e => e.indicatorId),
+      { fallback: 'none_below', threshold: PRIORITY_BELOW, thresholdLevel: SCORE_LEVEL_LABELS[PRIORITY_BELOW], tiers: [] });
   }
 
   const tiers = [];
@@ -359,7 +418,15 @@ function priorityFact(priority) {
   }
   return fact('priority',
     `Lowest effectiveness results: ${tiers.map(tierText).join('; then, ')}.`,
-    low.map(e => e.indicatorId));
+    low.map(e => e.indicatorId),
+    {
+      fallback: null,
+      tiers: tiers.map(tier => ({
+        score: tier[0].score,
+        level: SCORE_LEVEL_LABELS[tier[0].score],
+        items: tier.map(e => ({ name: displayName(e.indicatorId), programmeGap: e.programmeGap === true })),
+      })),
+    });
 }
 
 function assignIds(facts) {
@@ -389,7 +456,7 @@ export function buildAssessmentFacts(assessment) {
     ...dimensionFacts(results),
     ...indicatorFacts(assessment, results, priority),
     ...layer0Facts(assessment, layer0),
-    ...advisoryFacts(cross),
+    ...advisoryFacts(cross, results),
     priorityFact(priority),
   ]);
 }

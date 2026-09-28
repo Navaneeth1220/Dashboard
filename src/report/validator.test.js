@@ -622,6 +622,29 @@ describe('manual check 1: aliases for foundational items', () => {
   });
 });
 
+// ─── Parts option (hybrid report: only the model parts are validated) ─────────
+
+describe('parts option', () => {
+  const MODEL = ['headline', 'overview'];
+  const modelOnly = { headline: GOOD.headline, sections: { overview: GOOD.sections.overview } };
+
+  it('checks only the given parts: the other sections may be absent', () => {
+    expect(validateNarrative(modelOnly, FACTS, { parts: MODEL })).toEqual({ ok: true, errors: [] });
+    expect(rulesOf(validateNarrative(modelOnly, FACTS))).toEqual(['shape']);
+  });
+
+  it('errors outside the given parts are not reported', () => {
+    const narrative = withPart('measuredPerformance', MEASURED, 'Mean Time to Detect was 99 hours.');
+    expect(validateNarrative(narrative, FACTS, { parts: MODEL }).ok).toBe(true);
+    expect(rulesOf(validateNarrative(narrative, FACTS))).toContain('numbers');
+  });
+
+  it('categories still come from all facts (a no-score item the part never cited)', () => {
+    const narrative = { headline: GOOD.headline, sections: { overview: { factIds: ['C1', 'F2'], text: 'Mean Time to Contain is poor.' } } };
+    expect(rulesOf(validateNarrative(narrative, FACTS, { parts: MODEL }))).toEqual(['noScoreWording']);
+  });
+});
+
 // ─── Splitting and extraction ─────────────────────────────────────────────────
 
 describe('splitSentences', () => {

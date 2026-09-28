@@ -1,21 +1,27 @@
 /**
  * Narrative generation (docs/ai-report-spec.md, Step 4).
  *
- * generateNarrative(assessment, options) builds the facts and asks the
- * provider for the whole narrative (attempt 1). Attempts 2 and 3 repair only
- * the sections that failed validation: each failing section gets its own call
- * with just its facts, its errors and its description, and sections that
- * passed are kept exactly as they are. Only when there is no usable draft at
- * all is the whole narrative asked for again. Retries run at a higher
- * temperature so the model does not repeat a rejected sentence word for word.
+ * Hybrid report: generateNarrative(assessment, options) builds the facts,
+ * generates four sections from them with templates (no model), and asks the
+ * provider for the two MODEL_PARTS (headline and overview) from the reduced
+ * fact set (attempt 1). Attempts 2 and 3 repair only the parts that failed
+ * validation: each failing part gets its own call with just its facts, its
+ * errors and its description, and a part that passed is kept exactly as it
+ * is. Only when there is no usable draft at all are both parts asked for
+ * again. Retries run at a higher temperature so the model does not repeat a
+ * rejected sentence word for word. The validator checks the model parts
+ * against all facts; the generated sections are not validated at runtime
+ * (a property test covers them).
  *
- * It never throws. A draft that fails validation is never returned: `failed`
- * carries no narrative, and attempt records hold errors and token counts only.
+ * It never throws. `generated` is returned whatever the status. A draft that
+ * fails validation is never returned: `failed` carries no narrative, and
+ * attempt records hold errors and token counts only.
  */
 
 import { buildAssessmentFacts } from './facts.js';
-import { SYSTEM_PROMPT, SECTION_DESCRIPTIONS, buildUserMessage } from './prompt.js';
-import { buildOutputSchema, buildSectionSchema, SECTION_KEYS } from './schema.js';
+import { SYSTEM_PROMPT, SECTION_DESCRIPTIONS, buildUserMessage, selectModelFacts } from './prompt.js';
+import { buildOutputSchema, buildSectionSchema, MODEL_PARTS, GENERATED_KEYS } from './schema.js';
+import { buildGeneratedSections } from './templates.js';
 import { validateNarrative } from './validator.js';
 import { callOllama, OLLAMA_OPTIONS, ProviderUnavailableError } from './providers/ollama.js';
 
@@ -24,10 +30,14 @@ export const DEFAULT_MODEL = 'qwen2.5:7b';
 /** At most this many errors are fed back to the model on a retry. */
 export const MAX_RETRY_ERRORS = 10;
 
-/** Retries (whole or per section) run warmer than the first attempt. */
+/** Retries (whole or per part) run warmer than the first attempt. */
 export const RETRY_TEMPERATURE = 0.5;
 
-const PARTS = ['headline', ...SECTION_KEYS];
+/** Who wrote each part of the assembled report. */
+const ORIGIN = Object.fromEntries([
+  ...MODEL_PARTS.map(key => [key, 'ai']),
+  ...GENERATED_KEYS.map(key => [key, 'generated']),
+]);
 
 const UNPARSEABLE = {
   section: null,
@@ -47,17 +57,13 @@ function parseObject(response) {
   }
 }
 
-function getPart(narrative, key) {
-  return key === 'headline' ? narrative.headline : narrative.sections?.[key];
+/** The model's { headline, overview } in the validator's narrative shape. */
+function asNarrative(draft) {
+  return { headline: draft.headline, sections: { overview: draft.overview } };
 }
 
-/** A new narrative with one part replaced; every other part is kept as the same object. */
-function withPart(narrative, key, part) {
-  if (key === 'headline') return { ...narrative, headline: part };
-  const sections = narrative.sections !== null && typeof narrative.sections === 'object' && !Array.isArray(narrative.sections)
-    ? narrative.sections
-    : {};
-  return { ...narrative, sections: { ...sections, [key]: part } };
+function validateDraft(draft, facts) {
+  return validateNarrative(asNarrative(draft), facts, { parts: MODEL_PARTS }).errors;
 }
 
 function errorLines(errors, format) {
@@ -66,7 +72,7 @@ function errorLines(errors, format) {
   return lines;
 }
 
-/** Whole-narrative retry: the unchanged fact list plus the latest errors (never the draft). */
+/** Whole-draft retry: the unchanged fact list plus the latest errors (never the draft). */
 function buildRetryMessage(baseMessage, errors) {
   return [
     baseMessage,
@@ -80,7 +86,7 @@ function buildRetryMessage(baseMessage, errors) {
   ].join('\n');
 }
 
-/** Section repair: only that section's facts, its errors and its description. */
+/** Part repair: only that part's facts, its errors and its description. */
 function buildSectionMessage(sectionFacts, key, errors) {
   return [
     buildUserMessage(sectionFacts),
@@ -92,7 +98,7 @@ function buildSectionMessage(sectionFacts, key, errors) {
   ].join('\n');
 }
 
-/** The facts a section cited (existing IDs, in fact order); all facts if it cited none. */
+/** The facts a part cited (existing IDs, in fact order); all given facts if it cited none. */
 function factsOfPart(part, facts) {
   const cited = new Set(Array.isArray(part?.factIds) ? part.factIds : []);
   const own = facts.filter(f => cited.has(f.id));
@@ -113,7 +119,11 @@ function record(attempt, section, errors, response) {
 
 /**
  * generateNarrative(assessment, options) →
- *   { status: 'ok' | 'failed' | 'unavailable', reason?, message?, narrative, errors, facts, attempts, model }
+ *   { status: 'ok' | 'failed' | 'unavailable', reason?, message?, narrative, generated, origin,
+ *     errors, facts, attempts, model }
+ *
+ * narrative (ok only): { headline, sections: { overview, ...generated } }.
+ * origin: 'ai' | 'generated' per part.
  */
 export async function generateNarrative(assessment, {
   model = DEFAULT_MODEL,
@@ -124,17 +134,20 @@ export async function generateNarrative(assessment, {
   onAttempt,
 } = {}) {
   const facts = buildAssessmentFacts(assessment);
-  const schema = buildOutputSchema(facts.map(f => f.id));
-  const baseMessage = buildUserMessage(facts);
+  const modelFacts = selectModelFacts(facts);
+  const generated = buildGeneratedSections(facts);
+  const schema = buildOutputSchema(modelFacts.map(f => f.id));
+  const baseMessage = buildUserMessage(modelFacts);
   const attempts = [];
-  let narrative = null;   // the current draft, once one is usable
+  const common = { generated, origin: ORIGIN, facts, attempts, model };
+  let draft = null;   // the model's current { headline, overview }, once one is usable
   let errors = [];
 
   const unavailable = error => {
     const e = error instanceof ProviderUnavailableError
       ? error
       : new ProviderUnavailableError('provider_error', String(error?.message ?? error));
-    return { status: 'unavailable', reason: e.reason, message: e.message, narrative: null, errors: [], facts, attempts, model };
+    return { status: 'unavailable', reason: e.reason, message: e.message, narrative: null, errors: [], ...common };
   };
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -148,25 +161,25 @@ export async function generateNarrative(assessment, {
       model, system: SYSTEM_PROMPT, user, schema: callSchema, temperature, timeoutMs, signal,
     });
 
-    const failing = narrative === null ? [] : PARTS.filter(key => errors.some(e => e.section === key));
+    const failing = draft === null ? [] : MODEL_PARTS.filter(key => errors.some(e => e.section === key));
 
     if (failing.length === 0) {
-      // Whole narrative: attempt 1, or no usable draft yet.
+      // Both parts: attempt 1, or no usable draft yet.
       let response;
       try {
         response = await call(attempt === 1 ? baseMessage : buildRetryMessage(baseMessage, errors), schema);
       } catch (error) {
         return unavailable(error);
       }
-      narrative = parseObject(response);
-      errors = narrative === null ? [UNPARSEABLE] : validateNarrative(narrative, facts).errors;
+      draft = parseObject(response);
+      errors = draft === null ? [UNPARSEABLE] : validateDraft(draft, facts);
       attempts.push(record(attempt, null, errors, response));
     } else {
-      // Repair each failing section; passed sections stay exactly as they are.
+      // Repair each failing part; a part that passed stays exactly as it is.
       const calls = [];
       const unusable = new Set();
       for (const key of failing) {
-        const partFacts = factsOfPart(getPart(narrative, key), facts);
+        const partFacts = factsOfPart(draft[key], modelFacts);
         let response;
         try {
           response = await call(
@@ -178,12 +191,12 @@ export async function generateNarrative(assessment, {
         }
         const part = parseObject(response);
         if (part === null) unusable.add(key);
-        else narrative = withPart(narrative, key, part);
+        else draft = { ...draft, [key]: part };
         calls.push({ key, response });
       }
 
-      const validated = validateNarrative(narrative, facts).errors;
-      errors = PARTS.flatMap(key => [
+      const validated = validateDraft(draft, facts);
+      errors = MODEL_PARTS.flatMap(key => [
         ...(unusable.has(key) ? [{ ...UNPARSEABLE, section: key }] : []),
         ...validated.filter(e => e.section === key),
       ]);
@@ -193,9 +206,10 @@ export async function generateNarrative(assessment, {
     }
 
     if (errors.length === 0) {
-      return { status: 'ok', narrative, errors: [], facts, attempts, model };
+      const narrative = { headline: draft.headline, sections: { overview: draft.overview, ...generated } };
+      return { status: 'ok', narrative, errors: [], ...common };
     }
   }
 
-  return { status: 'failed', narrative: null, errors, facts, attempts, model };
+  return { status: 'failed', narrative: null, errors, ...common };
 }

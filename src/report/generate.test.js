@@ -1,10 +1,11 @@
 /**
- * Generation tests — docs/ai-report-spec.md, Step 4. The provider is mocked.
+ * Generation tests — docs/ai-report-spec.md, Step 4 (hybrid report). The
+ * provider is mocked.
  *
- * VALID is the facts' own text (always passes the validator); INVALID adds
- * one known violation to its overview. Attempt 1 writes the whole narrative;
- * attempts 2 and 3 repair only the failing sections (whole-narrative retry
- * only when there is no usable draft).
+ * The model writes only the headline and the overview, from the reduced fact
+ * set; the four generated sections come from the templates. VALID is the
+ * model facts' own text (always passes the validator); INVALID adds one known
+ * violation to its overview.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -12,29 +13,38 @@ import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?ra
 import { generateNarrative, DEFAULT_MODEL, MAX_RETRY_ERRORS, RETRY_TEMPERATURE } from './generate.js';
 import { ProviderUnavailableError } from './providers/ollama.js';
 import { buildAssessmentFacts } from './facts.js';
-import { SYSTEM_PROMPT, buildUserMessage } from './prompt.js';
+import { buildGeneratedSections } from './templates.js';
+import { SYSTEM_PROMPT, buildUserMessage, selectModelFacts } from './prompt.js';
 import { buildOutputSchema, buildSectionSchema } from './schema.js';
-import { loadScenario, echoNarrative } from './testSupport.js';
+import { loadScenario } from './testSupport.js';
 
 const ASSESSMENT = loadScenario(baselineJson);
 const FACTS = buildAssessmentFacts(ASSESSMENT);
-const BASE_MESSAGE = buildUserMessage(FACTS);
-
-const VALID = echoNarrative(FACTS);
+const MODEL_FACTS = selectModelFacts(FACTS);
+const BASE_MESSAGE = buildUserMessage(MODEL_FACTS);
+const GENERATED = buildGeneratedSections(FACTS);
+const ORIGIN = {
+  headline: 'ai', overview: 'ai',
+  measuredPerformance: 'generated', gapsAndMissingEvidence: 'generated', foundationsAndFlags: 'generated', priorities: 'generated',
+};
 
 const clone = value => JSON.parse(JSON.stringify(value));
+const asSentence = t => (/[.!?]$/.test(t) ? t : `${t}.`);
+const partOf = facts => ({ factIds: facts.map(f => f.id), text: facts.map(f => asSentence(f.text)).join(' ') });
 
-function withText(narrative, key, extra) {
-  const n = clone(narrative);
-  const part = key === 'headline' ? n.headline : n.sections[key];
-  part.text += ` ${extra}`;
-  return n;
+/** Both model parts from the model facts' own text. */
+const VALID = { headline: partOf(MODEL_FACTS.slice(0, 1)), overview: partOf(MODEL_FACTS.slice(1)) };
+
+function withText(reply, key, extra) {
+  const r = clone(reply);
+  r[key].text += ` ${extra}`;
+  return r;
 }
 
 const POOR = 'Mean Time to Contain is poor.';
 const POOR_ERROR_LINE = `- "${POOR}": Mean Time to Contain has no score; do not describe it as "poor".`;
 const INVALID = withText(VALID, 'overview', POOR);
-const OVERVIEW_FACTS = FACTS.filter(f => INVALID.sections.overview.factIds.includes(f.id));
+const OVERVIEW_FACTS = MODEL_FACTS.filter(f => INVALID.overview.factIds.includes(f.id));
 
 const reply = (value, overrides = {}) => ({
   content: typeof value === 'string' ? value : JSON.stringify(value),
@@ -54,15 +64,18 @@ function scripted(...replies) {
 
 const shapeError = { section: null, sentence: null, rule: 'shape', detail: 'The response was cut off or was not valid JSON.' };
 const counts = { promptEvalCount: 1300, evalCount: 600, doneReason: 'stop', durationMs: 1000 };
+const assembled = parts => ({ headline: parts.headline, sections: { overview: parts.overview, ...GENERATED } });
 
 describe('ok', () => {
-  it('valid on the first try: one whole-narrative call at temperature 0.2', async () => {
+  it('valid on the first try: the model gets only its facts; the report assembles the generated sections', async () => {
     const provider = scripted(reply(VALID));
     const result = await generateNarrative(ASSESSMENT, { provider });
 
     expect(result).toEqual({
       status: 'ok',
-      narrative: VALID,
+      narrative: assembled(VALID),
+      generated: GENERATED,
+      origin: ORIGIN,
       errors: [],
       facts: FACTS,
       attempts: [{ attempt: 1, section: null, errors: [], ...counts }],
@@ -73,7 +86,7 @@ describe('ok', () => {
       model: 'qwen2.5:7b',
       system: SYSTEM_PROMPT,
       user: BASE_MESSAGE,
-      schema: buildOutputSchema(FACTS.map(f => f.id)),
+      schema: buildOutputSchema(MODEL_FACTS.map(f => f.id)),
       temperature: 0.2,
       timeoutMs: undefined,
       signal: undefined,
@@ -81,7 +94,7 @@ describe('ok', () => {
   });
 
   it('invalid overview: only the overview is repaired, with its own facts, schema, errors and description', async () => {
-    const provider = scripted(reply(INVALID), reply(VALID.sections.overview));
+    const provider = scripted(reply(INVALID), reply(VALID.overview));
     const result = await generateNarrative(ASSESSMENT, { provider });
 
     expect(result.status).toBe('ok');
@@ -93,7 +106,7 @@ describe('ok', () => {
     expect(repair.user).toBe([
       buildUserMessage(OVERVIEW_FACTS),
       '',
-      'Write only the overview part: what was assessed and the dimension results.',
+      'Write only the overview part: what was assessed, the dimension results, and the critical and high flags.',
       'Your previous version broke these rules:',
       POOR_ERROR_LINE,
       'Write this part again from the facts above, following every rule.',
@@ -104,32 +117,29 @@ describe('ok', () => {
     ]);
   });
 
-  it('passed sections are kept exactly as they were', async () => {
-    const provider = scripted(reply(INVALID), reply(VALID.sections.overview));
+  it('the part that passed is kept exactly as it was', async () => {
+    const provider = scripted(reply(INVALID), reply(VALID.overview));
     const result = await generateNarrative(ASSESSMENT, { provider });
-    const { overview, ...otherSections } = result.narrative.sections;
-    const { overview: _, ...invalidOthers } = INVALID.sections;
     expect(result.narrative.headline).toEqual(INVALID.headline);
-    expect(otherSections).toEqual(invalidOthers);
-    expect(overview).toEqual(VALID.sections.overview);
+    expect(result.narrative.sections.overview).toEqual(VALID.overview);
   });
 
-  it('several failing sections are repaired in order within one attempt', async () => {
-    const draft = withText(withText(VALID, 'priorities', POOR), 'headline', POOR);
-    const provider = scripted(reply(draft), reply(VALID.headline), reply(VALID.sections.priorities));
+  it('both parts are repaired in order within one attempt', async () => {
+    const draft = withText(withText(VALID, 'overview', POOR), 'headline', POOR);
+    const provider = scripted(reply(draft), reply(VALID.headline), reply(VALID.overview));
     const onAttempt = vi.fn();
     const result = await generateNarrative(ASSESSMENT, { provider, onAttempt });
 
     expect(result.status).toBe('ok');
     expect(provider).toHaveBeenCalledTimes(3);
     expect(provider.mock.calls[1][0].user).toContain('Write only the headline part: one sentence with the most important point.');
-    expect(provider.mock.calls[2][0].user).toContain('Write only the priorities part: the lowest results, as the priority fact lists them.');
-    expect(result.attempts.map(a => [a.attempt, a.section])).toEqual([[1, null], [2, 'headline'], [2, 'priorities']]);
+    expect(provider.mock.calls[2][0].user).toContain('Write only the overview part:');
+    expect(result.attempts.map(a => [a.attempt, a.section])).toEqual([[1, null], [2, 'headline'], [2, 'overview']]);
     expect(onAttempt).toHaveBeenCalledTimes(2);
   });
 
   it('passes model, timeoutMs and signal through to every call', async () => {
-    const provider = scripted(reply(INVALID), reply(VALID.sections.overview));
+    const provider = scripted(reply(INVALID), reply(VALID.overview));
     const signal = new AbortController().signal;
     const result = await generateNarrative(ASSESSMENT, { provider, model: 'llama3.1:8b', timeoutMs: 5000, signal });
     for (const [args] of provider.mock.calls) {
@@ -140,20 +150,23 @@ describe('ok', () => {
 });
 
 describe('failed', () => {
-  it('always invalid: failed after 3 attempts, no narrative, last errors', async () => {
-    const provider = scripted(reply(INVALID), reply(INVALID.sections.overview));
+  it('always invalid: failed after 3 attempts, no narrative, generated sections still returned', async () => {
+    const provider = scripted(reply(INVALID), reply(INVALID.overview));
     const result = await generateNarrative(ASSESSMENT, { provider });
 
     expect(provider).toHaveBeenCalledTimes(3);
     expect(result.status).toBe('failed');
     expect(result.narrative).toBeNull();
+    expect(result.generated).toEqual(GENERATED);
+    expect(result.origin).toEqual(ORIGIN);
     expect(result.errors).toEqual(result.attempts[2].errors);
     expect(result.attempts.map(a => [a.attempt, a.section])).toEqual([[1, null], [2, 'overview'], [3, 'overview']]);
   });
 
-  it('never carries the draft text', async () => {
+  it('never carries the model text', async () => {
     const marker = 'This sentence only exists in the rejected draft.';
-    const provider = scripted(reply(withText(INVALID, 'overview', marker)), reply(withText(INVALID, 'overview', marker).sections.overview));
+    const draft = withText(INVALID, 'overview', marker);
+    const provider = scripted(reply(draft), reply(draft.overview));
     const result = await generateNarrative(ASSESSMENT, { provider });
     expect(result.status).toBe('failed');
     expect(JSON.stringify(result)).not.toContain(marker);
@@ -171,7 +184,7 @@ describe('failed', () => {
 });
 
 describe('unusable output', () => {
-  it('content that is not JSON: whole-narrative retry at temperature 0.5, message pinned', async () => {
+  it('content that is not JSON: retry of both parts at temperature 0.5, message pinned', async () => {
     const provider = scripted(reply('{"headline": {"factIds": ["C1"'), reply(VALID));
     const result = await generateNarrative(ASSESSMENT, { provider });
 
@@ -179,7 +192,7 @@ describe('unusable output', () => {
     expect(result.attempts[0]).toEqual({ attempt: 1, section: null, errors: [shapeError], ...counts });
     const retry = provider.mock.calls[1][0];
     expect(retry.temperature).toBe(0.5);
-    expect(retry.schema).toEqual(buildOutputSchema(FACTS.map(f => f.id)));
+    expect(retry.schema).toEqual(buildOutputSchema(MODEL_FACTS.map(f => f.id)));
     expect(retry.user).toBe([
       BASE_MESSAGE,
       '',
@@ -194,7 +207,6 @@ describe('unusable output', () => {
     const result = await generateNarrative(ASSESSMENT, { provider });
     expect(result.status).toBe('ok');
     expect(result.attempts[0]).toMatchObject({ section: null, errors: [shapeError], doneReason: 'length' });
-    expect(provider.mock.calls[1][0].schema).toEqual(buildOutputSchema(FACTS.map(f => f.id)));
   });
 
   it('JSON that is not an object is unusable', async () => {
@@ -208,20 +220,18 @@ describe('unusable output', () => {
     const result = await generateNarrative(ASSESSMENT, { provider: scripted(null) });
     expect(result.status).toBe('failed');
     expect(result.errors).toEqual([shapeError]);
+    expect(result.generated).toEqual(GENERATED);
   });
 
-  it('an unusable section reply keeps the section as it was, with the shape error', async () => {
-    const provider = scripted(reply(INVALID), reply('not json'), reply(VALID.sections.overview));
+  it('an unusable part reply keeps the part as it was, with the shape error', async () => {
+    const provider = scripted(reply(INVALID), reply('not json'), reply(VALID.overview));
     const result = await generateNarrative(ASSESSMENT, { provider });
 
     expect(result.status).toBe('ok');
     expect(result.attempts[1]).toMatchObject({
       attempt: 2,
       section: 'overview',
-      errors: [
-        { ...shapeError, section: 'overview' },
-        expect.objectContaining({ section: 'overview', rule: 'noScoreWording' }),
-      ],
+      errors: [{ ...shapeError, section: 'overview' }, expect.objectContaining({ section: 'overview', rule: 'noScoreWording' })],
     });
     const third = provider.mock.calls[2][0].user;
     expect(third).toContain('- The response was cut off or was not valid JSON.');
@@ -230,9 +240,9 @@ describe('unusable output', () => {
 });
 
 describe('retry messages', () => {
-  it(`a section repair lists at most ${MAX_RETRY_ERRORS} errors, then "…and N more"`, async () => {
+  it(`a part repair lists at most ${MAX_RETRY_ERRORS} errors, then "…and N more"`, async () => {
     const numbers = Array.from({ length: 12 }, (_, i) => `The value is ${101 + i}.`).join(' ');
-    const provider = scripted(reply(withText(VALID, 'overview', numbers)), reply(VALID.sections.overview));
+    const provider = scripted(reply(withText(VALID, 'overview', numbers)), reply(VALID.overview));
     const result = await generateNarrative(ASSESSMENT, { provider });
 
     expect(result.attempts[0].errors).toHaveLength(12);
@@ -242,11 +252,7 @@ describe('retry messages', () => {
   });
 
   it('uses only the latest attempt\'s errors', async () => {
-    const provider = scripted(
-      reply(INVALID),
-      reply(withText(VALID, 'overview', 'The value is 999.').sections.overview),
-      reply(VALID.sections.overview),
-    );
+    const provider = scripted(reply(INVALID), reply(withText(VALID, 'overview', 'The value is 999.').overview), reply(VALID.overview));
     await generateNarrative(ASSESSMENT, { provider });
     const third = provider.mock.calls[2][0].user;
     expect(third).toContain('"999"');
@@ -256,14 +262,15 @@ describe('retry messages', () => {
 
 describe('unavailable', () => {
   for (const reason of ['not_running', 'model_missing', 'timeout', 'cancelled', 'provider_error']) {
-    it(`${reason}: no retry, reason and message returned`, async () => {
+    it(`${reason}: no retry, reason and message returned, generated sections still returned`, async () => {
       const provider = scripted(new ProviderUnavailableError(reason, `message for ${reason}`));
       const result = await generateNarrative(ASSESSMENT, { provider });
 
       expect(provider).toHaveBeenCalledOnce();
       expect(result).toEqual({
         status: 'unavailable', reason, message: `message for ${reason}`,
-        narrative: null, errors: [], facts: FACTS, attempts: [], model: DEFAULT_MODEL,
+        narrative: null, generated: GENERATED, origin: ORIGIN,
+        errors: [], facts: FACTS, attempts: [], model: DEFAULT_MODEL,
       });
     });
   }
@@ -273,10 +280,10 @@ describe('unavailable', () => {
     expect(result).toMatchObject({ status: 'unavailable', reason: 'provider_error', message: 'fetch failed' });
   });
 
-  it('unavailable during a section repair discards the draft', async () => {
+  it('unavailable during a part repair discards the draft', async () => {
     const provider = scripted(reply(INVALID), new ProviderUnavailableError('timeout', 'No response.'));
     const result = await generateNarrative(ASSESSMENT, { provider });
-    expect(result).toMatchObject({ status: 'unavailable', reason: 'timeout', narrative: null });
+    expect(result).toMatchObject({ status: 'unavailable', reason: 'timeout', narrative: null, generated: GENERATED });
     expect(result.attempts).toHaveLength(1);
   });
 });
@@ -284,7 +291,7 @@ describe('unavailable', () => {
 describe('progress', () => {
   it('onAttempt reports each attempt once', async () => {
     const onAttempt = vi.fn();
-    await generateNarrative(ASSESSMENT, { provider: scripted(reply(INVALID), reply(INVALID.sections.overview)), onAttempt });
+    await generateNarrative(ASSESSMENT, { provider: scripted(reply(INVALID), reply(INVALID.overview)), onAttempt });
     expect(onAttempt.mock.calls.map(c => c[0])).toEqual([
       { attempt: 1, maxAttempts: 3 }, { attempt: 2, maxAttempts: 3 }, { attempt: 3, maxAttempts: 3 },
     ]);

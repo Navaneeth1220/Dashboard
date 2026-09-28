@@ -1,10 +1,12 @@
 /**
  * Narrative validator for AI-drafted reports (docs/ai-report-spec.md, Step 3).
  *
- * validateNarrative(narrative, facts) → { ok, errors: [{ section, sentence, rule, detail }] }
+ * validateNarrative(narrative, facts, { parts }?) → { ok, errors: [{ section, sentence, rule, detail }] }
  *
  * Pure, no model needed, never throws. Checks every section of a generated
- * narrative against the facts it was written from. It reads only the facts
+ * narrative against the facts it was written from; `parts` (default: headline
+ * and every section) limits the check to some parts, e.g. the two the model
+ * writes. Categories always come from all facts. It reads only the facts
  * (kind, text, refs) and the data definitions; it re-derives no score or
  * state. `detail` uses descriptive names only: it is sent back to the model
  * on retry and shown in the UI when validation fails.
@@ -443,7 +445,10 @@ function checkSection(section, part, ctx) {
 // Entry point
 // ---------------------------------------------------------------------------
 
-export function validateNarrative(narrative, facts) {
+/** Every part of a full narrative; `options.parts` narrows the check to some of them. */
+const ALL_PARTS = ['headline', ...SECTION_KEYS];
+
+export function validateNarrative(narrative, facts, { parts: partNames = ALL_PARTS } = {}) {
   const factList = Array.isArray(facts) ? facts : [];
   const contextFacts = factList.filter(f => f.kind === 'context');
   const dimensionMatch = contextFacts.map(f => f.text.match(C2_DIMENSIONS)).find(Boolean);
@@ -460,7 +465,7 @@ export function validateNarrative(narrative, facts) {
   }
 
   const sections = narrative.sections !== null && typeof narrative.sections === 'object' ? narrative.sections : {};
-  const parts = [['headline', narrative.headline], ...SECTION_KEYS.map(key => [key, sections[key]])];
+  const parts = partNames.map(key => [key, key === 'headline' ? narrative.headline : sections[key]]);
 
   const seen = new Set();
   const errors = [];

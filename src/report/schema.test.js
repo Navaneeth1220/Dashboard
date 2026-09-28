@@ -1,59 +1,51 @@
 /**
- * Output schema tests — docs/ai-report-spec.md, Step 2.
+ * Output schema tests — docs/ai-report-spec.md, Step 2. The model writes only
+ * the headline and the overview, from the reduced fact set.
  */
 
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
-import { buildOutputSchema, buildSectionSchema, SECTION_KEYS } from './schema.js';
+import { buildOutputSchema, buildSectionSchema, SECTION_KEYS, MODEL_PARTS, GENERATED_KEYS } from './schema.js';
 import { buildAssessmentFacts } from './facts.js';
+import { selectModelFacts } from './prompt.js';
 import { loadScenario, assessmentArb } from './testSupport.js';
 
-/** [name, sectionSchema] for the headline and each of the five sections. */
-function allSections(schema) {
-  return [
-    ['headline', schema.properties.headline],
-    ...SECTION_KEYS.map(key => [key, schema.properties.sections.properties[key]]),
-  ];
-}
+const partsOf = schema => MODEL_PARTS.map(key => [key, schema.properties[key]]);
+
+describe('keys', () => {
+  it('model parts, generated sections, and all report sections', () => {
+    expect(MODEL_PARTS).toEqual(['headline', 'overview']);
+    expect(GENERATED_KEYS).toEqual(['measuredPerformance', 'gapsAndMissingEvidence', 'foundationsAndFlags', 'priorities']);
+    expect(SECTION_KEYS).toEqual(['overview', ...GENERATED_KEYS]);
+  });
+});
 
 describe('buildOutputSchema', () => {
-  const factIds = buildAssessmentFacts(loadScenario(baselineJson)).map(f => f.id);
+  const factIds = selectModelFacts(buildAssessmentFacts(loadScenario(baselineJson))).map(f => f.id);
   const schema = buildOutputSchema(factIds);
 
-  it('has the agreed section keys', () => {
-    expect(SECTION_KEYS).toEqual(['overview', 'measuredPerformance', 'gapsAndMissingEvidence', 'foundationsAndFlags', 'priorities']);
-  });
-
-  it('top level: headline and sections, both required, nothing else', () => {
+  it('top level: headline and overview, both required, nothing else', () => {
     expect(schema.type).toBe('object');
-    expect(Object.keys(schema.properties)).toEqual(['headline', 'sections']);
-    expect(schema.required).toEqual(['headline', 'sections']);
+    expect(Object.keys(schema.properties)).toEqual(MODEL_PARTS);
+    expect(schema.required).toEqual(MODEL_PARTS);
     expect(schema.additionalProperties).toBe(false);
   });
 
-  it('sections: the five keys in order, all required, nothing else', () => {
-    const sections = schema.properties.sections;
-    expect(Object.keys(sections.properties)).toEqual(SECTION_KEYS);
-    expect(sections.required).toEqual(SECTION_KEYS);
-    expect(sections.additionalProperties).toBe(false);
-  });
-
-  it('every section: factIds before text, in properties and in required', () => {
-    for (const [name, section] of allSections(schema)) {
-      expect(Object.keys(section.properties), name).toEqual(['factIds', 'text']);
-      expect(section.required, name).toEqual(['factIds', 'text']);
+  it('each part: factIds before text, in properties and in required', () => {
+    for (const [name, part] of partsOf(schema)) {
+      expect(Object.keys(part.properties), name).toEqual(['factIds', 'text']);
+      expect(part.required, name).toEqual(['factIds', 'text']);
     }
   });
 
-  it('every section: factIds enum equals the fact IDs, minItems 1; text minLength 1; nothing else', () => {
-    expect(factIds).toHaveLength(23);
-    for (const [name, section] of allSections(schema)) {
-      expect(section.properties.factIds, name).toEqual({
-        type: 'array', items: { type: 'string', enum: factIds }, minItems: 1,
-      });
-      expect(section.properties.text, name).toEqual({ type: 'string', minLength: 1 });
-      expect(section.additionalProperties, name).toBe(false);
+  it('each part: factIds enum equals the model fact IDs, minItems 1; text minLength 1; nothing else', () => {
+    expect(factIds).toEqual(['C1', 'C2', 'C3', 'F1', 'F2', 'F3', 'F13', 'F14', 'F15', 'F20']);
+    for (const [name, part] of partsOf(schema)) {
+      expect(part).toEqual(buildSectionSchema(factIds));
+      expect(part.properties.factIds, name).toEqual({ type: 'array', items: { type: 'string', enum: factIds }, minItems: 1 });
+      expect(part.properties.text, name).toEqual({ type: 'string', minLength: 1 });
+      expect(part.additionalProperties, name).toBe(false);
     }
   });
 
@@ -61,8 +53,8 @@ describe('buildOutputSchema', () => {
     const ids = ['C1', 'F1'];
     const built = buildOutputSchema(ids);
     ids.push('F2');
-    for (const [, section] of allSections(built)) {
-      expect(section.properties.factIds.items.enum).toEqual(['C1', 'F1']);
+    for (const [, part] of partsOf(built)) {
+      expect(part.properties.factIds.items.enum).toEqual(['C1', 'F1']);
     }
   });
 
@@ -72,28 +64,26 @@ describe('buildOutputSchema', () => {
     expect(Object.keys(roundTrip.properties.headline.properties)).toEqual(['factIds', 'text']);
   });
 
-  it('buildSectionSchema: one { factIds, text } part, enum of the given facts only (section repair)', () => {
-    const ids = ['C2', 'F5'];
-    const section = buildSectionSchema(ids);
-    ids.push('F6');
-    expect(section).toEqual({
+  it('buildSectionSchema: one { factIds, text } part, enum of the given facts only (part repair)', () => {
+    const ids = ['C2', 'F1'];
+    const part = buildSectionSchema(ids);
+    ids.push('F2');
+    expect(part).toEqual({
       type: 'object',
       properties: {
-        factIds: { type: 'array', items: { type: 'string', enum: ['C2', 'F5'] }, minItems: 1 },
+        factIds: { type: 'array', items: { type: 'string', enum: ['C2', 'F1'] }, minItems: 1 },
         text: { type: 'string', minLength: 1 },
       },
       required: ['factIds', 'text'],
       additionalProperties: false,
     });
-    // Same shape as each part of the full schema
-    expect(buildSectionSchema(factIds)).toEqual(schema.properties.headline);
   });
 
-  it('property: the enum equals the fact IDs for random assessments', () => {
+  it('property: the enum equals the model fact IDs for random assessments', () => {
     fc.assert(fc.property(assessmentArb, rec => {
-      const ids = buildAssessmentFacts(rec).map(f => f.id);
-      for (const [, section] of allSections(buildOutputSchema(ids))) {
-        expect(section.properties.factIds.items.enum).toEqual(ids);
+      const ids = selectModelFacts(buildAssessmentFacts(rec)).map(f => f.id);
+      for (const [, part] of partsOf(buildOutputSchema(ids))) {
+        expect(part.properties.factIds.items.enum).toEqual(ids);
       }
     }), { numRuns: 100 });
   });

@@ -8,8 +8,8 @@
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
-import { SYSTEM_PROMPT, SECTION_DESCRIPTIONS, buildUserMessage } from './prompt.js';
-import { SECTION_KEYS } from './schema.js';
+import { SYSTEM_PROMPT, SECTION_DESCRIPTIONS, buildUserMessage, selectModelFacts } from './prompt.js';
+import { MODEL_PARTS } from './schema.js';
 import { buildAssessmentFacts, stripAssessorNote } from './facts.js';
 import { loadScenario, assessmentArb } from './testSupport.js';
 
@@ -20,8 +20,9 @@ const PSEUDO_ID = /\b(IH|OVERALL)\b/;
 describe('SYSTEM_PROMPT', () => {
   it('is the agreed prompt', () => {
     expect(SYSTEM_PROMPT).toBe(
-`You write a short management summary of an OT cybersecurity assessment,
-for a manager who does not know the scoring system.
+`You write the headline and the overview of a short management summary of an
+OT cybersecurity assessment, for a manager who does not know the scoring
+system. The rest of the report is generated from the assessment.
 You will receive a numbered list of facts. They are complete and correct.
 
 Rules:
@@ -56,20 +57,15 @@ Rules:
 
 Sections:
 - headline: one sentence with the most important point.
-- overview: what was assessed and the dimension results.
-- measuredPerformance: indicators that were measured and scored.
-- gapsAndMissingEvidence: programme gaps, items with no score, and
-  incomplete dimensions.
-- foundationsAndFlags: foundational controls, process evidence, action
-  flags, and advisories.
-- priorities: the lowest results, as the priority fact lists them.`
+- overview: what was assessed, the dimension results, and the critical and
+  high flags.`
     );
   });
 });
 
 describe('SECTION_DESCRIPTIONS', () => {
-  it('covers the headline and every section, in order', () => {
-    expect(Object.keys(SECTION_DESCRIPTIONS)).toEqual(['headline', ...SECTION_KEYS]);
+  it('covers exactly the two model parts, in order', () => {
+    expect(Object.keys(SECTION_DESCRIPTIONS)).toEqual(MODEL_PARTS);
   });
 
   it('matches the Sections block of SYSTEM_PROMPT', () => {
@@ -77,6 +73,35 @@ describe('SECTION_DESCRIPTIONS', () => {
     for (const [key, description] of Object.entries(SECTION_DESCRIPTIONS)) {
       expect(prompt).toContain(`- ${key}: ${description}`);
     }
+  });
+});
+
+describe('selectModelFacts', () => {
+  it('Westmaas baseline: the exact reduced message the model receives', () => {
+    const message = buildUserMessage(selectModelFacts(buildAssessmentFacts(loadScenario(baselineJson))));
+    expect(message).toBe([
+      'C1: Assessment of "Westmaas", dated 2026-01-01.',
+      'C2: 8 effectiveness indicators in 2 dimensions: Incident Handling (3 indicators) and Business Continuity (5 indicators).',
+      'C3: Each indicator is scored 0–4, where 4 is best. A dimension score is the mean of its indicators. If any indicator in a dimension has no score, the dimension is incomplete and has no score.',
+      'F1: Incident Handling: incomplete. Mean Time to Contain has no score, so no Incident Handling score is available.',
+      'F2: Business Continuity: complete, score 1.80 out of 4 (5 indicators). This includes the programme-gap 0 for RPO Achievement Rate.',
+      'F3: Overall score: not available, because Incident Handling is incomplete.',
+      'F13: CRITICAL. Uncontrolled inter-zone multi-homed devices were identified.',
+      'F14: HIGH. Asset interdependency documentation is incomplete or outdated.',
+      'F15: HIGH. No BC plan test was performed during the assessment period — a scheduled action was not completed.',
+      'F20: Lowest effectiveness results: RPO Achievement Rate (programme gap, 0); then, at score 2 and of equal priority, listed in catalogue order: Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate.',
+    ].join('\n'));
+  });
+
+  it('property: keeps context, scale, dimensions, critical/high flags and process items, and the priority fact', () => {
+    fc.assert(fc.property(assessmentArb, rec => {
+      const facts = buildAssessmentFacts(rec);
+      const kept = selectModelFacts(facts);
+      const expected = facts.filter(f =>
+        ['context', 'scale', 'dim_complete', 'dim_incomplete', 'priority'].includes(f.kind) ||
+        (['l0_flag', 'process'].includes(f.kind) && ['critical', 'high'].includes(f.data.severity)));
+      expect(kept).toEqual(expected);
+    }), { numRuns: 200 });
   });
 });
 

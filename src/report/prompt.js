@@ -1,13 +1,16 @@
 /**
  * Prompt for AI-drafted narrative reports (docs/ai-report-spec.md, Step 2).
  *
- * The model sees only SYSTEM_PROMPT and the numbered fact list — never fact
- * kinds, refs, or raw assessment inputs. Keep SYSTEM_PROMPT identical to the
- * spec; prompt changes are agreed there first.
+ * The model sees only SYSTEM_PROMPT and the numbered list of the reduced
+ * fact set (selectModelFacts) — never fact kinds, refs, data, or raw
+ * assessment inputs. It writes the headline and the overview; the other
+ * sections are generated from the facts (templates.js). Keep SYSTEM_PROMPT
+ * identical to the spec; prompt changes are agreed there first.
  */
 
-export const SYSTEM_PROMPT = `You write a short management summary of an OT cybersecurity assessment,
-for a manager who does not know the scoring system.
+export const SYSTEM_PROMPT = `You write the headline and the overview of a short management summary of an
+OT cybersecurity assessment, for a manager who does not know the scoring
+system. The rest of the report is generated from the assessment.
 You will receive a numbered list of facts. They are complete and correct.
 
 Rules:
@@ -42,26 +45,32 @@ Rules:
 
 Sections:
 - headline: one sentence with the most important point.
-- overview: what was assessed and the dimension results.
-- measuredPerformance: indicators that were measured and scored.
-- gapsAndMissingEvidence: programme gaps, items with no score, and
-  incomplete dimensions.
-- foundationsAndFlags: foundational controls, process evidence, action
-  flags, and advisories.
-- priorities: the lowest results, as the priority fact lists them.`;
+- overview: what was assessed, the dimension results, and the critical and
+  high flags.`;
 
 /**
- * The Sections block as data, for single-section repair calls. Must match
+ * The Sections block as data, for single-part repair calls. Must match
  * SYSTEM_PROMPT (whitespace-normalised); a test enforces it.
  */
 export const SECTION_DESCRIPTIONS = {
   headline: 'one sentence with the most important point.',
-  overview: 'what was assessed and the dimension results.',
-  measuredPerformance: 'indicators that were measured and scored.',
-  gapsAndMissingEvidence: 'programme gaps, items with no score, and incomplete dimensions.',
-  foundationsAndFlags: 'foundational controls, process evidence, action flags, and advisories.',
-  priorities: 'the lowest results, as the priority fact lists them.',
+  overview: 'what was assessed, the dimension results, and the critical and high flags.',
 };
+
+const MODEL_KINDS = new Set(['context', 'scale', 'dim_complete', 'dim_incomplete', 'priority']);
+const FLAG_KINDS = new Set(['l0_flag', 'process']);
+const MODEL_SEVERITIES = new Set(['critical', 'high']);
+
+/**
+ * selectModelFacts(facts) → Fact[]
+ * The reduced fact set the model writes from, in fact order: context, scale,
+ * dimension results, critical and high flags (foundational and process), and
+ * the priority fact. The fact objects are kept as they are (same IDs).
+ */
+export function selectModelFacts(facts) {
+  return facts.filter(f =>
+    MODEL_KINDS.has(f.kind) || (FLAG_KINDS.has(f.kind) && MODEL_SEVERITIES.has(f.data?.severity)));
+}
 
 /**
  * buildUserMessage(facts) → string

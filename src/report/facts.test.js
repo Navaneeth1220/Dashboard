@@ -82,7 +82,7 @@ function textViolation(f) {
 
 describe('Westmaas baseline', () => {
   it('produces the agreed facts (ids, kinds, text, refs)', () => {
-    expect(buildAssessmentFacts(loadScenario(baselineJson))).toEqual([
+    expect(buildAssessmentFacts(loadScenario(baselineJson)).map(({ data: _data, ...f }) => f)).toEqual([
       { id: 'C1', kind: 'context', refs: [],
         text: 'Assessment of "Westmaas", dated 2026-01-01.' },
       { id: 'C2', kind: 'context', refs: [],
@@ -135,6 +135,61 @@ describe('Westmaas baseline', () => {
   it('passes the text checks', () => {
     const violations = buildAssessmentFacts(loadScenario(baselineJson)).map(textViolation).filter(Boolean);
     expect(violations).toEqual([]);
+  });
+
+  it('carries structured data for the generated sections (never sent to the model)', () => {
+    const scored = (name, dimension, value, score, level, lowerIsBetter) => ({ name, dimension, value, score, level, lowerIsBetter });
+    const multiHomed = { archItemId: 'L0-multi-homed', archState: 'uncontrolled_multi_homing_found' };
+    const data = Object.fromEntries(buildAssessmentFacts(loadScenario(baselineJson)).map(f => [f.id, f.data]));
+    expect(data).toEqual({
+      C1: { clientId: 'Westmaas', assessmentDate: '2026-01-01' },
+      C2: {
+        indicatorCount: 8,
+        dimensions: [
+          { dimension: 'IH', name: 'Incident Handling', indicatorCount: 3 },
+          { dimension: 'BC', name: 'Business Continuity', indicatorCount: 5 },
+        ],
+      },
+      C3: { min: 0, max: 4 },
+      F1: { dimension: 'IH', name: 'Incident Handling', complete: false, missing: ['Mean Time to Contain'] },
+      F2: { dimension: 'BC', name: 'Business Continuity', complete: true, score: '1.80', programmeGaps: ['RPO Achievement Rate'] },
+      F3: { dimension: 'OVERALL', name: 'Overall score', complete: false, incomplete: ['Incident Handling'] },
+      F4: scored('Mean Time to Detect', 'IH', '18 hours', 3, 'Good', true),
+      F5: scored('Mean Time to Respond', 'IH', '30 hours', 2, 'Developing', true),
+      F6: { name: 'Mean Time to Contain', dimension: 'IH', status: 'not_measurable', rootCause: null, note: null },
+      F7: scored('Network Operability Under Disruption', 'BC', '85%', 3, 'Good', false),
+      F8: scored('Zone Availability Rate', 'BC', '40%', 2, 'Developing', false),
+      F9: scored('Operational Threshold Violation Rate', 'BC', '12.5%', 2, 'Developing', true),
+      F10: scored('RTO Achievement Rate', 'BC', '50%', 2, 'Developing', false),
+      F11: { name: 'RPO Achievement Rate', dimension: 'BC', state: 'no_rpo_defined' },
+      F12: { names: ['Asset inventory maintained', 'Risk assessment per zone', 'Controlled IT/OT boundary separation', 'BC plan documented for critical processes'] },
+      F13: { name: 'Zero uncontrolled multi-homed devices', severity: 'critical', message: 'Uncontrolled inter-zone multi-homed devices were identified.' },
+      F14: { name: 'Asset interdependency documentation', severity: 'high', message: 'Asset interdependency documentation is incomplete or outdated.' },
+      F15: { name: 'BC plan tested within defined period', severity: 'high', message: 'No BC plan test was performed during the assessment period — a scheduled action was not completed.' },
+      F16: {
+        name: 'Vulnerability Remediation Rate', state: 'measured', value: '60%', severity: 'medium_note',
+        band: { band: '50–69%', verdict: 'below target', advice: 'moderate programme improvement warranted' },
+        message: 'Vulnerability remediation rate is below target (50–69%) — moderate programme improvement warranted.',
+      },
+      F17: {
+        name: 'Mean Time to Remediate', state: 'measured', value: '75 days', severity: null,
+        band: { band: '31–90 days', verdict: 'satisfactory', advice: 'continue monitoring' },
+        message: 'Mean time to remediate is satisfactory (31–90 days) — continue monitoring.',
+      },
+      F18: { rule: 'C', variant: 'readiness', ...multiHomed, relatedId: 'IH-08', relatedName: 'Mean Time to Contain', relatedScore: null, relatedProgrammeGap: false },
+      F19: { rule: 'C', variant: 'bypass', ...multiHomed, relatedId: 'BC-02', relatedName: 'Zone Availability Rate', relatedScore: 2, relatedProgrammeGap: false },
+      F20: {
+        fallback: null,
+        tiers: [
+          { score: 0, level: 'None', items: [{ name: 'RPO Achievement Rate', programmeGap: true }] },
+          {
+            score: 2, level: 'Developing',
+            items: ['Mean Time to Respond', 'Zone Availability Rate', 'Operational Threshold Violation Rate', 'RTO Achievement Rate']
+              .map(name => ({ name, programmeGap: false })),
+          },
+        ],
+      },
+    });
   });
 });
 
@@ -382,7 +437,10 @@ describe('advisory facts', () => {
 describe('priority fact', () => {
   it('nothing below 3 gives the fallback', () => {
     const facts = buildAssessmentFacts(healthyRecord());
-    expect(factsOf(facts, 'priority')).toMatchObject([{ text: 'No scored effectiveness indicator is below 3 (Good).' }]);
+    expect(factsOf(facts, 'priority')).toMatchObject([{
+      text: 'No scored effectiveness indicator is below 3 (Good).',
+      data: { fallback: 'none_below', threshold: 3, thresholdLevel: 'Good', tiers: [] },
+    }]);
   });
 
   it('nothing scored gives the fallback', () => {
@@ -390,6 +448,7 @@ describe('priority fact', () => {
     expect(factsOf(facts, 'priority')).toEqual([{
       id: expect.any(String), kind: 'priority', refs: [],
       text: 'No effectiveness indicator has a score, so there is no ranking of results.',
+      data: { fallback: 'none_scored', tiers: [] },
     }]);
   });
 
