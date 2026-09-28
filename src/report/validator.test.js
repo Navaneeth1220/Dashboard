@@ -662,13 +662,18 @@ function withSentence(narrative, sentence) {
   return n;
 }
 
+// Each run validates several whole narratives; under the full parallel suite
+// the default 5 s per test was exceeded occasionally (timing only, no
+// counterexample in 3,000 extra runs).
+const PROPERTY_TIMEOUT_MS = 30_000;
+
 describe('property-based tests (fast-check)', () => {
   it('the cited facts\' own text always passes', () => {
     fc.assert(fc.property(assessmentArb, rec => {
       const facts = buildAssessmentFacts(rec);
       expect(validateNarrative(echoNarrative(facts), facts).errors).toEqual([]);
     }), { numRuns: 200 });
-  });
+  }, PROPERTY_TIMEOUT_MS);
 
   it('an injected violation of checks 3–6 is always caught', () => {
     fc.assert(fc.property(assessmentArb, fc.constantFrom(...ALL_INDICATOR_IDS, ...LAYER0_ALL_IDS), (rec, leakedId) => {
@@ -684,7 +689,7 @@ describe('property-based tests (fast-check)', () => {
         if (f.kind === 'gap_zero') expect(rules(`${displayName(f.refs[0])} failed.`)).toContain('programmeGap');
       }
     }), { numRuns: 100 });
-  });
+  }, PROPERTY_TIMEOUT_MS);
 
   it('malformed input never throws', () => {
     const partArb = fc.oneof(fc.anything(), fc.record({ factIds: fc.anything(), text: fc.anything() }));
@@ -697,5 +702,5 @@ describe('property-based tests (fast-check)', () => {
       expect(typeof result.ok).toBe('boolean');
       expect(Array.isArray(result.errors)).toBe(true);
     }), { numRuns: 300 });
-  });
+  }, PROPERTY_TIMEOUT_MS);
 });
