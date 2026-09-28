@@ -8,7 +8,8 @@
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
-import { SYSTEM_PROMPT, buildUserMessage } from './prompt.js';
+import { SYSTEM_PROMPT, SECTION_DESCRIPTIONS, buildUserMessage } from './prompt.js';
+import { SECTION_KEYS } from './schema.js';
 import { buildAssessmentFacts, stripAssessorNote } from './facts.js';
 import { loadScenario, assessmentArb } from './testSupport.js';
 
@@ -63,6 +64,19 @@ Sections:
   flags, and advisories.
 - priorities: the lowest results, as the priority fact lists them.`
     );
+  });
+});
+
+describe('SECTION_DESCRIPTIONS', () => {
+  it('covers the headline and every section, in order', () => {
+    expect(Object.keys(SECTION_DESCRIPTIONS)).toEqual(['headline', ...SECTION_KEYS]);
+  });
+
+  it('matches the Sections block of SYSTEM_PROMPT', () => {
+    const prompt = SYSTEM_PROMPT.replace(/\s+/g, ' ');
+    for (const [key, description] of Object.entries(SECTION_DESCRIPTIONS)) {
+      expect(prompt).toContain(`- ${key}: ${description}`);
+    }
   });
 });
 

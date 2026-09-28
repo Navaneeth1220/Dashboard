@@ -51,6 +51,19 @@ Sections:
 - priorities: the lowest results, as the priority fact lists them.`;
 
 /**
+ * The Sections block as data, for single-section repair calls. Must match
+ * SYSTEM_PROMPT (whitespace-normalised); a test enforces it.
+ */
+export const SECTION_DESCRIPTIONS = {
+  headline: 'one sentence with the most important point.',
+  overview: 'what was assessed and the dimension results.',
+  measuredPerformance: 'indicators that were measured and scored.',
+  gapsAndMissingEvidence: 'programme gaps, items with no score, and incomplete dimensions.',
+  foundationsAndFlags: 'foundational controls, process evidence, action flags, and advisories.',
+  priorities: 'the lowest results, as the priority fact lists them.',
+};
+
+/**
  * buildUserMessage(facts) → string
  * One "ID: text" line per fact, in fact order. Fact text is sent unmodified
  * so the validator's "verbatim in a cited fact" checks match what the model saw.

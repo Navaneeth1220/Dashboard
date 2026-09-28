@@ -3,7 +3,7 @@
  *
  * The only module in src/report/ with side effects (network, console
  * warnings). generate.js depends only on the call shape
- *   provider({ model, system, user, schema, timeoutMs, signal })
+ *   provider({ model, system, user, schema, temperature, timeoutMs, signal })
  *     → { content, promptEvalCount, evalCount, evalDurationMs, doneReason, durationMs }
  * so another backend can be added without touching anything else.
  *
@@ -53,7 +53,7 @@ function unavailableForStatus(status, text, json) {
 }
 
 export async function callOllama({
-  model, system, user, schema,
+  model, system, user, schema, temperature = OLLAMA_OPTIONS.temperature,
   baseUrl = '/ollama', timeoutMs = DEFAULT_TIMEOUT_MS, signal,
   fetchImpl = globalThis.fetch, warn = console.warn,
 }) {
@@ -80,7 +80,7 @@ export async function callOllama({
           messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
           format: schema,
           stream: false,
-          options: OLLAMA_OPTIONS,
+          options: { ...OLLAMA_OPTIONS, temperature },
         }),
         signal: controller.signal,
       });

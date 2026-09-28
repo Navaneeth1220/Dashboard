@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
-import { buildOutputSchema, SECTION_KEYS } from './schema.js';
+import { buildOutputSchema, buildSectionSchema, SECTION_KEYS } from './schema.js';
 import { buildAssessmentFacts } from './facts.js';
 import { loadScenario, assessmentArb } from './testSupport.js';
 
@@ -70,6 +70,23 @@ describe('buildOutputSchema', () => {
     const roundTrip = JSON.parse(JSON.stringify(schema));
     expect(roundTrip).toEqual(schema);
     expect(Object.keys(roundTrip.properties.headline.properties)).toEqual(['factIds', 'text']);
+  });
+
+  it('buildSectionSchema: one { factIds, text } part, enum of the given facts only (section repair)', () => {
+    const ids = ['C2', 'F5'];
+    const section = buildSectionSchema(ids);
+    ids.push('F6');
+    expect(section).toEqual({
+      type: 'object',
+      properties: {
+        factIds: { type: 'array', items: { type: 'string', enum: ['C2', 'F5'] }, minItems: 1 },
+        text: { type: 'string', minLength: 1 },
+      },
+      required: ['factIds', 'text'],
+      additionalProperties: false,
+    });
+    // Same shape as each part of the full schema
+    expect(buildSectionSchema(factIds)).toEqual(schema.properties.headline);
   });
 
   it('property: the enum equals the fact IDs for random assessments', () => {

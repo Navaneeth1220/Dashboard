@@ -66,6 +66,13 @@ describe('request', () => {
     expect(OLLAMA_OPTIONS).toEqual({ temperature: 0.2, num_ctx: 4096, num_predict: 1024 });
   });
 
+  it('temperature overrides the default for one call (retries use 0.5)', async () => {
+    const fetchImpl = respondWith(200, okBody());
+    await callOllama({ ...ARGS, temperature: 0.5, fetchImpl, warn: vi.fn() });
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body).options).toEqual({ temperature: 0.5, num_ctx: 4096, num_predict: 1024 });
+    expect(OLLAMA_OPTIONS.temperature).toBe(0.2);
+  });
+
   it('default timeout is 300 s (laptop GPU throttling, first manual check)', () => {
     expect(DEFAULT_TIMEOUT_MS).toBe(300_000);
   });

@@ -16,7 +16,8 @@ export const SECTION_KEYS = [
   'priorities',
 ];
 
-function sectionSchema(factIds) {
+/** One `{ factIds, text }` part; also the schema of a single-section repair call. */
+export function buildSectionSchema(factIds) {
   return {
     type: 'object',
     properties: {
@@ -33,10 +34,10 @@ export function buildOutputSchema(factIds) {
   return {
     type: 'object',
     properties: {
-      headline: sectionSchema(factIds),
+      headline: buildSectionSchema(factIds),
       sections: {
         type: 'object',
-        properties: Object.fromEntries(SECTION_KEYS.map(key => [key, sectionSchema(factIds)])),
+        properties: Object.fromEntries(SECTION_KEYS.map(key => [key, buildSectionSchema(factIds)])),
         required: [...SECTION_KEYS],
         additionalProperties: false,
       },
