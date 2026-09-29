@@ -960,23 +960,73 @@ Acting on results:
 
 ## Step 5: UI (`NarrativePanel.jsx`)
 
-- Placed in the dashboard view (`view === 'dashboard'` in `App.jsx`), below
-  the existing panels.
-- "Generate narrative" button, a loading state, and a model name shown.
-- On `ok`: headline + five sections in an editable text area, and a copy
-  button. The headline and overview carry a visible label "AI-drafted —
-  review before use"; the four generated sections carry "Generated from the
-  assessment" (from `origin`).
-- Collapsible "Based on facts" list showing each section's cited facts.
-- On `failed`: no model text; show "The draft did not pass validation" and
-  the error list, plus the generated sections with their label.
-- On `unavailable`: "Ollama is not running at localhost:11434" plus the
-  start command (or the reason's own message), plus the generated sections.
-- The panel is a pure renderer of `generateNarrative` output; it computes
-  nothing.
+Files:
 
-Tests: renders each status; the label is always present on `ok`; no text is
-shown on `failed`.
+```
+src/hooks/useNarrative.js          state and the generateNarrative call (the only stateful part)
+src/components/NarrativePanel.jsx  pure renderer of the hook's state and the result
+src/data/reportWording.js          SECTION_TITLES and the panel's fixed wording
+```
+
+`useNarrative({ provider? })` → `{ phase, attempt, maxAttempts, result,
+snapshot, generate(snapshot), cancel() }`. `phase` is `idle`, `running` or
+`done`. `generate` stores the JSON of the assessment snapshot it was given,
+calls `generateNarrative(snapshot, { signal, onAttempt })` and keeps the
+latest attempt number; `cancel` aborts the call (the result is then
+`unavailable` with reason `cancelled`). A second `generate` while running is
+ignored; unmounting aborts. `provider` exists only for tests.
+
+`App.jsx` builds the snapshot `{ meta: { clientId, assessmentDate },
+indicators, layer0 }` from its state, and passes `stale` (the snapshot JSON
+differs from the one the result was generated from) to the panel.
+
+The panel (placed in the dashboard view, `view === 'dashboard'`, below the
+existing panels):
+- Header "Narrative report", the model name, and a "Generate narrative"
+  button (disabled while running).
+- Running: "Generating… attempt N of M" and a "Cancel" button.
+- `ok`: the headline and the five sections, each in its own editable text
+  area under its title (`SECTION_TITLES`: Headline, Overview, Measured
+  performance, Gaps and missing evidence, Foundations and flags,
+  Priorities) with its label from `origin`: "AI-drafted — review before
+  use" or "Generated from the assessment". Once a part's text differs from
+  what was generated, its label becomes "Edited". Edits are panel state and
+  are dropped when a new result arrives.
+- Under each part, a collapsible "Based on facts" list: the text of each
+  cited fact, looked up in `result.facts` by ID (fact IDs are not shown).
+- A "Copy" button (whenever parts are shown) copies every shown part as
+  "Title" and text, then a footer:
+  - "AI-drafted with <model>, review before use: Headline, Overview." (only
+    when AI-drafted parts are shown);
+  - "Generated from the assessment: Measured performance, …";
+  - "Edited after generation: …" (only when a part was edited).
+- `failed`: "The draft did not pass validation" and the error list (the
+  part's title and the `detail`; never a sentence), then the four generated
+  sections with their label. No model text.
+- `unavailable`: by reason. `not_running`: "Ollama is not running at
+  localhost:11434." and "Start it with: ollama serve". `model_missing`: the
+  reason's message and "Download the model with: ollama pull <model>".
+  `cancelled`: "Generation cancelled." (neutral, not an error). `timeout`,
+  `provider_error`: the reason's message. Then the four generated sections.
+- Stale: "The assessment has changed since this draft was generated.
+  Generate again to update it." above the parts; the draft stays.
+- The panel computes nothing: it renders the hook's state, the result and
+  its own edit state. The `/ollama` proxy exists only on the dev server; a
+  production build always shows `not_running`.
+
+Tests (`narrativePanel-ui.test.jsx`, `useNarrative.test.jsx`): results come
+from `generateNarrative` for the Westmaas baseline with a scripted provider,
+one per status and unavailable reason. `ok`: every title and label, the
+labels follow `origin`, "Based on facts" lists the cited facts' text;
+editing a part makes its label "Edited", and Copy writes the edited text
+with the footer listing it (clipboard mocked). `failed`: the error list by
+part title, the generated sections, and no draft text anywhere (a marker
+sentence in the rejected draft, and every rejected sentence). Each
+unavailable reason shows its message and command. Running: the attempt
+counter and a disabled button; Cancel gives "Generation cancelled.". Stale
+notice shown when `stale`. The hook: one call per generate, the attempt
+counter, cancel aborts, a second generate while running is ignored. The
+shared-wording test covers the new component.
 
 ---
 
