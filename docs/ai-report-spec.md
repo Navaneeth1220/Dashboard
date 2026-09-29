@@ -288,6 +288,8 @@ Rules:
 13. Refer to each flag by the severity its fact states, never as
     "priority"; severity is not an order of action.
 14. Do not describe consequences, risks or urgency.
+15. Describe a score only by its number or the dashboard's level label
+    (e.g. Good, Developing).
 
 Sections:
 - headline: one sentence stating the most important finding, not a title.
@@ -329,6 +331,10 @@ headlines added "posing a high risk (to the organization)" (4 runs) and
 addressing this issue"; no fact states a consequence, risk or urgency.
 Validator check 4 still treats "high risk" as not a performance word;
 rule 14 is not validated.
+
+Rule 15 comes from the June re-run after those changes: accepted parts
+called score-2 results "below average", "weaknesses", "areas of concern"
+and "critical issues". Validator check 16 enforces it.
 
 The Sections block exists because Ollama turns the schema into a grammar:
 the grammar fixes the key names but never tells the model what each section
@@ -383,7 +389,7 @@ Pure, no model needed, never throws. `section` is `headline` or a
 section-level checks); `rule` is one of `shape`, `factIds`, `numbers`,
 `leakedIds`, `noScoreWording`, `unscoredScore`, `programmeGap`, `causal`,
 `attribution`, `severity`, `respectively`, `dimensionCount`, `headlineFacts`,
-`relation`;
+`relation`, `flagCount`, `missing`, `judgement`;
 `detail` is plain English with descriptive names only (it is sent back to
 the model on retry and shown in the UI on failure). The optional `parts`
 (default: `headline` and all of `SECTION_KEYS`) limits which parts are
@@ -491,7 +497,14 @@ categories still come from all facts.
    process(es)" is not a severity claim (the BC plan item's name, also
    written "documented BC plan for critical processes"). "high" is not
    checked. Found in the first manual check: "critical gaps in RPO
-   Achievement Rate".
+   Achievement Rate". Also, per sentence: a sentence containing
+   "critical" (after masking) that names no flagged item (an item with an
+   `l0_flag` fact, or a `process` fact with a severity) fails when none of
+   the cited flag facts is CRITICAL ("None of the cited flags is
+   CRITICAL; do not write "critical"."). Not reported again when the
+   clause rule already failed that sentence. Found in the June re-run:
+   "equal priority critical issues with response times and recovery
+   rates" (no item named, no CRITICAL flag cited).
 10. **Respectively** (`respectively`): a sentence containing "respectively"
     fails with one error ("Give each item its own number or label; do not
     write "respectively"."), and its clauses are left out of checks 8 and
@@ -522,6 +535,41 @@ categories still come from all facts.
     be related to the Incident Handling score" (accepted; no fact relates
     them). The generated foundationsAndFlags cites the advisory facts it
     renders, so it passes.
+14. **Flag count** (`flagCount`): a number (digits or words) followed,
+    within two words, by "flag" or "flags" must equal the number of cited
+    flag facts: `l0_flag` facts and `process` facts with a severity
+    (CRITICAL, HIGH, MEDIUM NOTE). When a severity word ("critical",
+    "high", "medium") stands between the number and "flag(s)", only the
+    cited flag facts of that severity count ("two HIGH severity flags"
+    with two HIGH flags cited passes). Detail: "The cited facts contain N
+    flag(s); do not write "…"." Needed for the same reason as check 11:
+    "two" passes check 2 because 2 is in C2. Found in the June and
+    sparse re-runs: "There are two flags" (one flag), "two HIGH severity
+    flags" (one HIGH flag; the coverage statement counted as a flag).
+15. **Missing** (`missing`): "missing indicator(s)" (also "missing
+    effectiveness indicator(s)") fails anywhere; and a clause whose
+    subject (named or inherited) is a `no_score` indicator or an
+    `l0_unset` item fails if it contains "missing", unless followed by
+    "data", "score(s)", "evidence" or "value(s)" ("missing data on Mean
+    Time to Contain" passes). Detail: "Do not call <name> missing: it
+    exists and has no score. Say it has no score." (for the phrase:
+    "Do not write "missing indicator": the indicator exists; say it has
+    no score."). Enforces the last sentence of prompt rule 3, which the
+    model broke in 3 of 5 baseline runs after it was added.
+16. **Judgement** (`judgement`): a sentence that names a scored item (an
+    item with a `scored` fact, or the dimension of a `dim_complete`
+    fact, including the overall score) or states a score (the score-claim
+    patterns of check 5) fails if it contains "below average",
+    "weakness", "weaknesses", "area(s) of concern", "poor", "low" or
+    "weak" (whole words; "lower", "lowest" do not count). Level labels
+    (`SCORE_LEVEL_LABELS`: Excellent, Good, Developing, Initial, None)
+    pass. Verbatim-exempt: a sentence that appears in a cited fact passes
+    (the Rule C advisory message itself says "poor"; see the cleanup
+    backlog). Detail: "Do not describe a score as "<word>": describe it
+    only by its number or its level label (for example Good or
+    Developing)." Found in the June re-run: "Both dimensions are complete
+    but scored below average", "equal priority weaknesses", "areas of
+    concern".
 
 Limitations (accepted): paraphrased names ("containment time") are not
 recognised: log misses in the manual check and add aliases to the data
@@ -582,8 +630,20 @@ From the June manual check: an overview ending " }" fails `shape` once
 brace, quoted exactly in a part citing C1, passes; "which may be related
 to the Incident Handling score" in an overview citing no advisory fact
 fails `relation`, in a section citing F19 it passes; "May be related"
-(capitalised) fails too. The drafts of each manual check are replayed
-before and after each validator change.
+(capitalised) fails too. From the June and sparse re-runs: "There are two
+flags" citing one flag fails `flagCount`, "three flags" citing F13–F15
+passes, "two HIGH severity flags" passes with two HIGH flags cited and
+fails with one; "a missing indicator" and "missing indicators" fail
+`missing`, "Mean Time to Contain is missing" fails, "missing data on Mean
+Time to Contain" and "missing scores" pass; "equal priority critical
+issues with response times" citing no CRITICAL flag fails `severity`
+once; "Both dimensions are complete but scored below average", "equal
+priority weaknesses in Mean Time to Respond", "Zone Availability Rate is
+poor (score 2)" not verbatim fail `judgement`; "Mean Time to Respond
+scored 2 (Developing)" and each level label pass; the Rule C advisory
+verbatim passes. The hand-written good narrative no longer says "the
+poor Zone Availability Rate (score 2)". The drafts of each manual check
+are replayed before and after each validator change.
 Property tests: the cited facts' own text always passes; an injected
 violation of checks 3–6 is always caught; malformed input never throws.
 
