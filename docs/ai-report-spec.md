@@ -382,7 +382,8 @@ Pure, no model needed, never throws. `section` is `headline` or a
 `SECTION_KEYS` key; `sentence` is the offending sentence (null for
 section-level checks); `rule` is one of `shape`, `factIds`, `numbers`,
 `leakedIds`, `noScoreWording`, `unscoredScore`, `programmeGap`, `causal`,
-`attribution`, `severity`, `respectively`, `dimensionCount`, `headlineFacts`;
+`attribution`, `severity`, `respectively`, `dimensionCount`, `headlineFacts`,
+`relation`;
 `detail` is plain English with descriptive names only (it is sent back to
 the model on retry and shown in the UI on failure). The optional `parts`
 (default: `headline` and all of `SECTION_KEYS`) limits which parts are
@@ -425,7 +426,12 @@ categories still come from all facts.
 ### Checks (per section, headline included)
 
 0. **Shape**: section present; `factIds` a non-empty array; `text` a
-   non-blank string.
+   non-blank string. Also (`shape`, section-level, one error per part): the
+   text must not contain `{` or `}` once exempt quoted text (client name,
+   assessor notes) is removed ("The text contains "{" or "}". Write plain
+   sentences only, without JSON."). Unlike the other shape errors this one
+   does not stop the other checks. Found in the June manual check: an
+   accepted overview ended with a stray " }".
 1. **Fact IDs**: every cited ID exists (defence in depth; the schema enum
    should already guarantee this), and no fact ID is cited twice within a
    section (the grammar does not enforce `uniqueItems`).
@@ -506,6 +512,16 @@ categories still come from all facts.
     the fact it comes from."). It is repaired like any other part. Found in
     the first hybrid run set: all five headlines were a title citing only
     C1.
+13. **Relation** (`relation`): a sentence containing "may be related"
+    (any case) fails unless a cited fact contains "may be related"
+    ("Do not write "may be related": no cited fact relates these items.
+    Only an advisory fact can state that two items may be related.").
+    Check 7 only guards a relation a fact states; this one stops the model
+    inventing one. Found in the June manual check: "a HIGH flag for
+    incomplete or outdated asset interdependency documentation, which may
+    be related to the Incident Handling score" (accepted; no fact relates
+    them). The generated foundationsAndFlags cites the advisory facts it
+    renders, so it passes.
 
 Limitations (accepted): paraphrased names ("containment time") are not
 recognised: log misses in the manual check and add aliases to the data
@@ -560,9 +576,14 @@ dimensions" fail check 11 even with F2 cited, "two dimensions" and "2
 dimensions" pass. From the first hybrid run set: a headline citing only
 C1, or C1–C3, fails check 12 with one section-level error; C1 with F2
 passes; an overview citing only C1 does not fail check 12 (headline
-only). A headline failing check 12 is repaired with all model facts. The
-drafts of each manual check are replayed before and after each validator
-change.
+only). A headline failing check 12 is repaired with all model facts.
+From the June manual check: an overview ending " }" fails `shape` once
+(also "{"), and its other checks still run; a client name containing a
+brace, quoted exactly in a part citing C1, passes; "which may be related
+to the Incident Handling score" in an overview citing no advisory fact
+fails `relation`, in a section citing F19 it passes; "May be related"
+(capitalised) fails too. The drafts of each manual check are replayed
+before and after each validator change.
 Property tests: the cited facts' own text always passes; an injected
 violation of checks 3–6 is always caught; malformed input never throws.
 
