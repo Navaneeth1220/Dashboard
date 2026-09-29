@@ -1059,6 +1059,33 @@ describe('the app: the headline is exactly one sentence (check 18)', () => {
   });
 });
 
+describe('sparse re-run after the final fix round: a count is not a dimension score (check 5)', () => {
+  const sparse = text => validateNarrative(
+    { sections: { overview: { factIds: ['C2', 'F1', 'F2', 'F3'], text } } }, SPARSE_FACTS, { parts: ['overview'] });
+
+  it('"Business Continuity has five effectiveness indicators" passes (runs 2 and 3 failed on it)', () => {
+    expect(sparse('Similarly, Business Continuity has five effectiveness indicators, but the dimension is incomplete because Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate have no scores.').ok).toBe(true);
+    expect(sparse('The assessment covered Incident Handling and Business Continuity across 8 effectiveness indicators.').ok).toBe(true);
+    expect(sparse('Business Continuity has 5 indicators.').ok).toBe(true);
+  });
+
+  it('a score for an incomplete dimension still fails', () => {
+    expect(rulesOf(sparse('Business Continuity scored 2.'))).toEqual(['unscoredScore']);
+    expect(rulesOf(sparse('Business Continuity: 2.5 out of 4.'))).toContain('unscoredScore');
+  });
+});
+
+describe('June re-run after the final fix round: "moderate" (check 16)', () => {
+  it('"reflecting moderate performance" fails', () => {
+    expect(rulesOf(juneOverview('The overall score is 2.73 out of 4, reflecting moderate performance.'))).toEqual(['judgement']);
+  });
+
+  it('the generated process sentence names no score and passes', () => {
+    const text = 'Vulnerability Remediation Rate is 60%, in the 50–69% band, which is below target — moderate programme improvement warranted (medium note).';
+    expect(validateNarrative({ sections: { foundationsAndFlags: { factIds: ['F14'], text } } }, JUNE_FACTS, { parts: ['foundationsAndFlags'] }).ok).toBe(true);
+  });
+});
+
 describe('property-based tests (fast-check)', () => {
   it('the cited facts\' own text always passes', () => {
     fc.assert(fc.property(assessmentArb, rec => {

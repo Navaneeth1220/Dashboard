@@ -171,8 +171,10 @@ const SCORE_CLAIM = new RegExp(
   `|\\b${NUM}\\s*(?:out of|/)\\s*\\d`,
   'i'
 );
+// A number followed by "(effectiveness) indicator(s)" is a count, not a score
+// ("Business Continuity has five effectiveness indicators").
 const DIMENSION_VALUE = Object.fromEntries(DIMENSION_IDS.map(id => [
-  id, new RegExp(`${escapeRegExp(DIMENSION_NAMES[id])}\\W+(?:\\w+\\W+){0,2}?${NUM}\\b`, 'i'),
+  id, new RegExp(`${escapeRegExp(DIMENSION_NAMES[id])}\\W+(?:\\w+\\W+){0,2}?${NUM}\\b(?!\\s+(?:effectiveness\\s+)?indicators?\\b)`, 'i'),
 ]));
 
 const FAIL_WORD = /\b(?:fail\w*|missed|poor)\b/gi;
@@ -202,7 +204,7 @@ const MISSING_INDICATOR = /\bmissing\s+(?:effectiveness\s+)?indicators?\b/i;
 const MISSING_WORD = /\bmissing\b(?!\s+(?:§\s+)?(?:data|scores?|evidence|values?)\b)/i;
 
 // Check 16: judgement words about a scored result (level labels are allowed).
-const JUDGEMENT = /\bbelow average\b|\bweakness(?:es)?\b|\bareas? of concern\b|\bperforming well\b|\bpoor\b|\blow\b|\bweak\b/i;
+const JUDGEMENT = /\bbelow average\b|\bweakness(?:es)?\b|\bareas? of concern\b|\bperforming well\b|\bmoderate\b|\bpoor\b|\blow\b|\bweak\b/i;
 const SCORE_WORD = /\b(?:score|scores|scored|scoring)\b/i;
 // Not "performed": "no BC plan test was performed" is not about a score.
 const PERFORM_WORD = /\bperform(?:s|ing|ance)?\b/i;
