@@ -106,7 +106,7 @@ plus the indicators involved. IDs are assigned in a stable order: C-facts
 | `process` | process evidence (vulnerability remediation etc.): value + message, never a score; severity prefix when the engine raises an action flag for it |
 | `l0_unset` | Layer 0 items with no state recorded (one grouped fact) |
 | `advisory` | cross-indicator advisory with a non-null message: Rules A, B (auto-sentence only) and C. Rule D (BC plan hints) is excluded: it is data-entry guidance, not a finding |
-| `priority` | Layer 1 results scored below 3 ("Good"), by score tier, from the priority view. Always exactly one fact, with fallback text when nothing is below 3 or nothing is scored |
+| `priority` | How many effectiveness indicators have a score, then the Layer 1 results scored below 3 ("Good"), by score tier, from the priority view. Always exactly one fact, with fallback text when nothing is below 3 or nothing is scored |
 
 ### Wording rules
 
@@ -122,7 +122,20 @@ plus the indicators involved. IDs are assigned in a stable order: C-facts
 - `dim_complete` for BC must state when a programme-gap 0 is included in the
   mean.
 - `priority`: items with equal scores are marked as equal priority, listed in
-  catalogue order.
+  catalogue order. The fact opens with coverage from engine counts (the
+  priority view's scored entries, out of all effectiveness indicators):
+  "All 8 effectiveness indicators have a score", "Only 7 of 8 effectiveness
+  indicators have a score", "Only 1 of 8 effectiveness indicators has a
+  score". With tiers: "<coverage>. Lowest effectiveness results: …". With
+  nothing below 3: "<coverage>; none is below 3 (Good)." ("neither" for 2
+  scored, "it is not below" for 1). With nothing scored, unchanged: "No
+  effectiveness indicator has a score, so there is no ranking of results."
+  The counts are also in `data` (`scoredCount`, `indicatorCount`); the
+  priorities template does not use them (generated sections state no
+  counts). Added after the sparse-scenario manual check: "No scored
+  effectiveness indicator is below 3 (Good)", with 6 of 8 indicators
+  unassessed, became "All scored indicators are performing at a good
+  level" in 4 of 5 overviews.
 - No layer jargon. Use "effectiveness indicators" for Layer 1 and
   "foundational controls and process evidence" for Layer 0.
 - Engine messages that contain internal IDs (Rule A/B advisories, "interpret
@@ -209,7 +222,8 @@ F19 advisory        Zero uncontrolled multi-homed devices is in a weak state
                     foundation and the evidence needed to measure Mean Time to
                     Contain are both measurement-readiness actions — address
                     them together.
-F20 priority        Lowest effectiveness results: RPO Achievement Rate
+F20 priority        Only 7 of 8 effectiveness indicators have a score.
+                    Lowest effectiveness results: RPO Achievement Rate
                     (programme gap, 0); then, at score 2 and of equal
                     priority, listed in catalogue order: Mean Time to Respond,
                     Zone Availability Rate, Operational Threshold Violation
@@ -278,7 +292,7 @@ Sections:
 - headline: one sentence stating the most important finding, not a title.
   Do not repeat the client name or date.
 - overview: what was assessed, the dimension results, and the critical and
-  high flags.
+  high flags; mention every flag given.
 ```
 
 Rule 13 and the headline description come from the review of the first
@@ -299,6 +313,10 @@ accurate (F1). The rule now covers only what it protects; validator check
 so a model fact set that ever includes an advisory is still guarded. The
 last sentence of rule 3 comes from the same run set: runs 2 and 5 called
 the indicator "missing" (it exists; its score is missing).
+
+"mention every flag given" (overview) comes from the sparse-scenario
+manual check: 4 of 5 overviews left out the only (HIGH) flag and said
+"no critical or high flags in the scored areas".
 
 The Sections block exists because Ollama turns the schema into a grammar:
 the grammar fixes the key names but never tells the model what each section
