@@ -18,7 +18,7 @@
 
 import { computeAssessment } from '../engine/scoring.js';
 import { computeLayer0 } from '../engine/layer0.js';
-import { computeCrossIndicator } from '../engine/crossIndicator.js';
+import { computeCrossIndicator, BC_LOW_THRESHOLD } from '../engine/crossIndicator.js';
 import { computePriorityView } from '../engine/priorityView.js';
 import {
   INDICATORS,
@@ -362,6 +362,7 @@ function advisoryFacts(cross, results) {
       containmentName: displayName(containment),
       containmentScore: indicator(containment).score,
       bcScore: formatScore(results.bc.score),
+      bcThreshold: BC_LOW_THRESHOLD,
     }));
   }
   for (const arch of cross.architectureAdvisories) {

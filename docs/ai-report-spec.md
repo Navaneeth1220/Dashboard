@@ -511,7 +511,14 @@ categories still come from all facts.
    before "out of", "5 out of 4"), in a clause that names it or inherits
    it, must equal the score in that fact ("score 2.80 out of 4",
    "Overall score: 2.73 out of 4"): "Business Continuity, with a score of 5
-   out of 4" fails although F2 contains 5 ("5 indicators"). Detail: "The
+   out of 4" fails although F2 contains 5 ("5 indicators"). Numbers from
+   the context facts (C1's date, C2's counts) beside a complete dimension
+   are not attributed to it: C2 describes the dimensions ("covered 8
+   effectiveness indicators across two dimensions: Incident Handling …",
+   "the 2026-01-01 assessment found a Business Continuity score of 1.8 out
+   of 4" pass; the replay found 50 false positives without this). So
+   "Business Continuity covers 3 indicators" is not caught (3 is in C2; the
+   check 2 limitation for counts). Detail: "The
    score of <dimension> is <score>; do not write "<number>"." Found in the
    June re-run: "Incident Handling, with a score of 3 out of 4 … Business
    Continuity, with a score of 5 out of 4" (the indicator counts).
@@ -586,7 +593,8 @@ categories still come from all facts.
     item with a `scored` fact, or the dimension of a `dim_complete`
     fact, including the overall score) or states a score (the score-claim
     patterns of check 5, or a score word: score, scores, scored, scoring,
-    or a form of "perform": performs, performing, performed, performance)
+    or perform, performs, performing, performance; not "performed", as
+    in "no BC plan test was performed")
     fails if it contains "below average",
     "weakness", "weaknesses", "area(s) of concern", "poor", "low" or
     "weak" (whole words; "lower", "lowest" do not count). Level labels
@@ -603,7 +611,11 @@ categories still come from all facts.
     separation can affect <outcome>" (`reportWording.js`), true for every
     boundary state. "performing well" is on the list too (sparse re-run:
     "Only two out of eight effectiveness indicators are performing well",
-    which reads as if the six unassessed ones were not).
+    which reads as if the six unassessed ones were not). The generated Rule
+    B advisory said "while Business Continuity is low (0.80)", which this
+    check fails (found by the templates property test); it now reads
+    "while Business Continuity scored 0.80, below 2", from the fact's data
+    (`bcScore`, and `bcThreshold` from the engine's `BC_LOW_THRESHOLD`).
 17. **Level label** (`levelLabel`, headline and overview only): a
     `SCORE_LEVEL_LABELS` word used as a level label fails: capitalised
     after the first word of a sentence ("is Developing", "both at Good

@@ -35,7 +35,8 @@ const partOf = facts => ({ factIds: facts.map(f => f.id), text: facts.map(f => a
 /** Both model parts from the model facts' own text; the headline cites a finding (F2), not only context (check 12). */
 const HEADLINE_FACTS = MODEL_FACTS.filter(f => f.id === 'F2');
 const VALID = {
-  headline: partOf(HEADLINE_FACTS),
+  // One sentence (check 18): F2's first sentence.
+  headline: { factIds: ['F2'], text: HEADLINE_FACTS[0].text.split('. ')[0] + '.' },
   overview: partOf(MODEL_FACTS.filter(f => !HEADLINE_FACTS.includes(f))),
 };
 
@@ -314,11 +315,12 @@ describe('retry messages', () => {
 
 describe('unavailable', () => {
   for (const reason of ['not_running', 'model_missing', 'timeout', 'cancelled', 'provider_error']) {
-    it(`${reason}: no retry, reason and message returned, generated sections still returned`, async () => {
+    it(`${reason}: reason and message returned, generated sections still returned`, async () => {
       const provider = scripted(new ProviderUnavailableError(reason, `message for ${reason}`));
       const result = await generateNarrative(ASSESSMENT, { provider });
 
-      expect(provider).toHaveBeenCalledOnce();
+      // Only provider_error on the very first call is repeated, once.
+      expect(provider).toHaveBeenCalledTimes(reason === 'provider_error' ? 2 : 1);
       expect(result).toEqual({
         status: 'unavailable', reason, message: `message for ${reason}`,
         narrative: null, generated: GENERATED, origin: ORIGIN,
@@ -326,6 +328,24 @@ describe('unavailable', () => {
       });
     });
   }
+
+  it('provider_error on the very first call: repeated once, then ok (the llama-server load crash)', async () => {
+    const onAttempt = vi.fn();
+    const provider = scripted(new ProviderUnavailableError('provider_error', 'llama-server process has terminated'), reply(VALID));
+    const result = await generateNarrative(ASSESSMENT, { provider, onAttempt });
+    expect(result.status).toBe('ok');
+    expect(provider).toHaveBeenCalledTimes(2);
+    expect(provider.mock.calls[1][0]).toEqual(provider.mock.calls[0][0]);
+    expect(result.attempts).toHaveLength(1);
+    expect(onAttempt).toHaveBeenCalledOnce();
+  });
+
+  it('provider_error on a later call (a repair) is not repeated', async () => {
+    const provider = scripted(reply(INVALID), new ProviderUnavailableError('provider_error', 'boom'), reply(VALID.overview));
+    const result = await generateNarrative(ASSESSMENT, { provider });
+    expect(result).toMatchObject({ status: 'unavailable', reason: 'provider_error' });
+    expect(provider).toHaveBeenCalledTimes(2);
+  });
 
   it('network error thrown as a plain error → provider_error', async () => {
     const result = await generateNarrative(ASSESSMENT, { provider: scripted(new TypeError('fetch failed')) });

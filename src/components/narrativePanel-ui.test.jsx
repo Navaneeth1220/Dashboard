@@ -25,7 +25,8 @@ const asSentence = t => (/[.!?]$/.test(t) ? t : `${t}.`);
 const partOf = facts => ({ factIds: facts.map(f => f.id), text: facts.map(f => asSentence(f.text)).join(' ') });
 const HEADLINE_FACTS = MODEL_FACTS.filter(f => f.id === 'F2');
 const VALID = {
-  headline: partOf(HEADLINE_FACTS),
+  // One sentence (check 18): F2's first sentence.
+  headline: { factIds: ['F2'], text: HEADLINE_FACTS[0].text.split('. ')[0] + '.' },
   overview: partOf(MODEL_FACTS.filter(f => !HEADLINE_FACTS.includes(f))),
 };
 const POOR = 'Mean Time to Contain is poor.';

@@ -10,6 +10,8 @@
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
+import followUpJson from '../../scenarios/Westmaas_2026-06-01_assessment.json?raw';
+import sparseJson from '../../scenarios/Oudendijk_2026-03-01_assessment.json?raw';
 import {
   validateNarrative, splitSentences, splitClauses, extractNumbers, VALIDATOR_RULES,
 } from './validator.js';
@@ -185,7 +187,8 @@ describe('factIds', () => {
 
 describe('numbers', () => {
   it('a number in no cited fact', () => {
-    expect(rulesOf(overview('Business Continuity is complete at 2.5.'))).toEqual(['numbers']);
+    // Also attribution since complete dimensions are in check 8 (final fix round).
+    expect(rulesOf(overview('Business Continuity is complete at 2.5.'))).toEqual(['numbers', 'attribution']);
   });
 
   it('"six of the eight indicators": only "six" fails (8 is in C2)', () => {
@@ -948,6 +951,113 @@ function withSentence(narrative, sentence) {
 // the default 5 s per test was exceeded occasionally (timing only, no
 // counterexample in 3,000 extra runs).
 const PROPERTY_TIMEOUT_MS = 30_000;
+
+// ─── Final fix round ──────────────────────────────────────────────────────────
+
+const JUNE_FACTS = buildAssessmentFacts(loadScenario(followUpJson));
+const SPARSE_FACTS = buildAssessmentFacts(loadScenario(sparseJson));
+const juneOverview = text => validateNarrative(
+  { sections: { overview: { factIds: ['C2', 'F1', 'F2', 'F3'], text } } }, JUNE_FACTS, { parts: ['overview'] });
+
+describe('re-run after checks 14–16: complete dimensions in check 8', () => {
+  it('"Business Continuity, with a score of 5 out of 4" fails although 5 is in its fact (June run 4)', () => {
+    expect(juneOverview('Business Continuity, with a score of 5 out of 4.').errors).toEqual([{
+      section: 'overview', sentence: 'Business Continuity, with a score of 5 out of 4.', rule: 'attribution',
+      detail: 'The score of Business Continuity is 2.80; do not write "5".',
+    }]);
+  });
+
+  it('the right score passes, written as in the fact or normalised', () => {
+    expect(juneOverview('Business Continuity scored 2.80 out of 4.').ok).toBe(true);
+    expect(juneOverview('Business Continuity, with 5 indicators, scored 2.8 out of 4.').ok).toBe(true);
+    expect(juneOverview('The overall score is 2.73 out of 4.').ok).toBe(true);
+  });
+
+  it('another dimension\'s score fails, named or inherited', () => {
+    expect(rulesOf(juneOverview('Incident Handling scored 2.80.'))).toEqual(['attribution']);
+    expect(rulesOf(juneOverview('The overall score is 2.67 out of 4.'))).toEqual(['attribution']);
+    expect(rulesOf(juneOverview('Incident Handling, with a score of 3 out of 4, is complete.'))).toEqual(['attribution']);
+  });
+
+  it('a number in a clause naming the dimension must be in its fact', () => {
+    expect(rulesOf(juneOverview('Business Continuity covers 7 indicators.'))).toContain('numbers');
+    // 3 is in C2, which describes the dimensions: not caught (known limitation for counts).
+    expect(juneOverview('Business Continuity covers 3 indicators.').ok).toBe(true);
+    expect(juneOverview('The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity.').ok).toBe(true);
+  });
+});
+
+describe('re-run after checks 14–16: numbers next to "flag(s)" are left to check 14', () => {
+  const flags = (ids, text) => validate(withPart('overview', [...OVERVIEW, ...ids], text));
+
+  it('"There is one HIGH severity flag" passes with one flag fact cited (June runs 2 and 4)', () => {
+    expect(flags(['F14'], 'There is one HIGH severity flag.').ok).toBe(true);
+    expect(flags(['F14'], 'There is one flag.').ok).toBe(true);
+  });
+
+  it('a wrong count still fails, as flagCount only', () => {
+    expect(rulesOf(flags(['F13', 'F14'], 'There is one flag.'))).toEqual(['flagCount']);
+  });
+});
+
+describe('re-run after checks 14–16: level labels in the model parts (check 17)', () => {
+  const detail = label => `Do not write the level label "${label}": describe a score only by its number.`;
+
+  it('"The overall score is Developing" fails in the overview (June runs 1, 3, 5)', () => {
+    expect(overview('The overall score is Developing.').errors).toEqual([{
+      section: 'overview', sentence: 'The overall score is Developing.', rule: 'levelLabel', detail: detail('Developing'),
+    }]);
+  });
+
+  it('"both at Good level" and "a good level" fail; the headline too', () => {
+    expect(rulesOf(overview('Only two indicators are scored, both at Good level.'))).toEqual(['levelLabel']);
+    expect(rulesOf(validate(withPart('headline', ['F2'], 'Business Continuity is at a good level.')))).toEqual(['levelLabel']);
+    for (const label of ['Excellent', 'Initial', 'None']) {
+      expect(rulesOf(overview(`Business Continuity is rated ${label}.`))).toContain('levelLabel');
+    }
+  });
+
+  it('a fact\'s own "3 (Good)" passes (F15, sparse scenario)', () => {
+    const text = 'Only 2 of 8 effectiveness indicators have a score; neither is below 3 (Good).';
+    expect(validateNarrative({ sections: { overview: { factIds: ['C2', 'F15'], text } } }, SPARSE_FACTS, { parts: ['overview'] }).ok).toBe(true);
+    const paraphrase = 'Only two out of eight effectiveness indicators have scores, but neither is below 3 (Good).';
+    expect(validateNarrative({ sections: { overview: { factIds: ['C2', 'F15'], text: paraphrase } } }, SPARSE_FACTS, { parts: ['overview'] }).ok).toBe(true);
+  });
+
+  it('sentence-initial words are not labels; the generated sections keep theirs', () => {
+    expect(overview('None of the dimensions has a level label here.').ok).toBe(true);
+    expect(validate(withPart('measuredPerformance', MEASURED, 'Mean Time to Detect scored 3 (Good).')).ok).toBe(true);
+  });
+
+  it('is a known rule', () => {
+    expect(VALIDATOR_RULES).toContain('levelLabel');
+  });
+});
+
+describe('re-run after checks 14–16: "performing well" (check 16)', () => {
+  it('fails with a scored item named, and without one (sparse run 3)', () => {
+    expect(rulesOf(validate(withPart('measuredPerformance', MEASURED, 'Mean Time to Detect is performing well.')))).toEqual(['judgement']);
+    expect(rulesOf(overview('Only two out of eight effectiveness indicators are performing well.'))).toEqual(['judgement']);
+  });
+});
+
+describe('the app: the headline is exactly one sentence (check 18)', () => {
+  it('a headline copying two flag facts fails once', () => {
+    const text = 'CRITICAL: Uncontrolled inter-zone multi-homed devices were identified. HIGH: Asset interdependency documentation is incomplete or outdated.';
+    expect(validate(withPart('headline', ['F13', 'F14'], text)).errors).toEqual([{
+      section: 'headline', sentence: null, rule: 'headlineSentences', detail: 'The headline must be exactly one sentence.',
+    }]);
+  });
+
+  it('one sentence passes; other parts may have several', () => {
+    expect(validate(withPart('headline', ['F13'], 'Uncontrolled inter-zone multi-homed devices were identified.')).ok).toBe(true);
+    expect(validate(GOOD).ok).toBe(true);
+  });
+
+  it('is a known rule', () => {
+    expect(VALIDATOR_RULES).toContain('headlineSentences');
+  });
+});
 
 describe('property-based tests (fast-check)', () => {
   it('the cited facts\' own text always passes', () => {

@@ -24,19 +24,24 @@
  * Rule 11 holds "N dimensions" to the count C2 states. Rule 12 makes the
  * headline cite a finding, not only context and scale facts. Rule 13 allows
  * "may be related" only when a cited fact says it. Braces (JSON leaking into
- * the text) are a shape error.
+ * the text) are a shape error. Rule 14 holds "N flags" to the cited flags,
+ * 15 rejects "missing" for an item with no score, 16 judgement words about
+ * scores, 17 level labels in the model parts (numbers only), 18 a headline
+ * of more than one sentence. Rule 8 also ties a complete dimension's score to
+ * its own fact.
  */
 
-import { INDICATORS, ALL_INDICATOR_IDS } from '../data/indicatorDefinitions.js';
+import { INDICATORS, ALL_INDICATOR_IDS, SCORE_LEVEL_LABELS } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS, LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
 import { displayName, DIMENSION_NAMES } from '../data/displayNames.js';
-import { SECTION_KEYS } from './schema.js';
+import { SECTION_KEYS, MODEL_PARTS } from './schema.js';
 import { quotedUserText } from './facts.js';
 
 export const VALIDATOR_RULES = [
   'shape', 'factIds', 'numbers', 'leakedIds',
   'noScoreWording', 'unscoredScore', 'programmeGap', 'causal', 'attribution', 'severity', 'respectively',
-  'dimensionCount', 'headlineFacts', 'relation', 'flagCount', 'missing', 'judgement',
+  'dimensionCount', 'headlineFacts', 'relation', 'flagCount', 'missing', 'judgement', 'levelLabel',
+  'headlineSentences',
 ];
 
 /** Fact kinds that set the scene rather than state a finding (C1–C3). */
@@ -197,8 +202,25 @@ const MISSING_INDICATOR = /\bmissing\s+(?:effectiveness\s+)?indicators?\b/i;
 const MISSING_WORD = /\bmissing\b(?!\s+(?:§\s+)?(?:data|scores?|evidence|values?)\b)/i;
 
 // Check 16: judgement words about a scored result (level labels are allowed).
-const JUDGEMENT = /\bbelow average\b|\bweakness(?:es)?\b|\bareas? of concern\b|\bpoor\b|\blow\b|\bweak\b/i;
+const JUDGEMENT = /\bbelow average\b|\bweakness(?:es)?\b|\bareas? of concern\b|\bperforming well\b|\bpoor\b|\blow\b|\bweak\b/i;
 const SCORE_WORD = /\b(?:score|scores|scored|scoring)\b/i;
+// Not "performed": "no BC plan test was performed" is not about a score.
+const PERFORM_WORD = /\bperform(?:s|ing|ance)?\b/i;
+
+// Check 17: level labels in the model parts. Capitalised after the first word
+// of a sentence, or lower case before "level(s)".
+const LEVEL_WORDS = Object.values(SCORE_LEVEL_LABELS);
+const LEVEL_CAPITALISED = new RegExp(`\\b(${LEVEL_WORDS.join('|')})\\b`, 'g');
+const LEVEL_LOWER = new RegExp(`\\b(${LEVEL_WORDS.map(w => w.toLowerCase()).join('|')})\\s+levels?\\b`, 'g');
+const LEVEL_CHECKED_PARTS = new Set(MODEL_PARTS);
+
+// Check 8, complete dimensions: the number of a score claim ("score of 5",
+// "5 out of 4") and the score in a dim_complete fact.
+const SCORE_CLAIM_NUMBER = new RegExp(
+  `\\b(?:score|scores|scored|scoring|rated|rating)\\b(?:\\W+\\w+){0,3}?\\W+(${NUM})\\b|\\b(${NUM})\\s*(?:out of|/)\\s*\\d`,
+  'gi'
+);
+const DIMENSION_SCORE = /\bscore:?\s+(\d+(?:\.\d+)?)\s+out of\b/;
 const CAUSAL = /\b(?:caused|causes|because of|due to|led to|results from|resulted in)\b/i;
 
 const QUOTED = /"([^"]*)"|“([^”]*)”/g;
@@ -219,6 +241,8 @@ function categorize(facts) {
   const flaggedItems = new Set();  // rule 9, per sentence: items with any flag
   const notScored = new Set();     // rule 15: no-score indicators and unassessed Layer 0 items
   const scored = new Set();        // rule 16: scored indicators and complete dimensions
+  const dimensionScores = new Map(); // rule 8: complete dimension → its score as the fact writes it
+  const contextNumbers = new Set(facts.filter(f => f.kind === 'context').flatMap(f => extractNumbers(maskNames(f.text))));
 
   for (const id of LAYER0_ALL_IDS) unscored.set(id, 'is not scored');
   for (const f of facts) {
@@ -232,7 +256,12 @@ function categorize(facts) {
       for (const id of f.refs) flaggedItems.add(id);
     }
     if (f.kind === 'scored') for (const id of f.refs) scored.add(id);
-    if (f.kind === 'dim_complete') scored.add(f.refs[0]);
+    if (f.kind === 'dim_complete') {
+      scored.add(f.refs[0]);
+      ownFacts.set(f.refs[0], f);
+      const score = f.text.match(DIMENSION_SCORE)?.[1];
+      if (score !== undefined) dimensionScores.set(f.refs[0], score);
+    }
     if (f.kind === 'no_score' || f.kind === 'l0_unset') for (const id of f.refs) notScored.add(id);
     if (f.kind === 'no_score') {
       for (const id of f.refs) {
@@ -249,7 +278,7 @@ function categorize(facts) {
       for (const id of f.refs) gaps.add(id);
     }
   }
-  return { noJudgement, noScore, unscored, gaps, ownFacts, criticalItems, flaggedItems, notScored, scored };
+  return { noJudgement, noScore, unscored, gaps, ownFacts, criticalItems, flaggedItems, notScored, scored, dimensionScores, contextNumbers };
 }
 
 /** A flag fact: an l0_flag fact, or a process fact with a severity. → its severity, or null. */
@@ -279,6 +308,44 @@ function checkFlagCount(cleaned, cited) {
       `do not write "${m[0]}".`);
   }
   return details;
+}
+
+/** The text with the numbers of flag counts blanked: check 14 decides those, not checks 2 and 8. */
+function blankFlagCounts(text) {
+  return text.replace(FLAG_COUNT, (whole, number) => whole.replace(number, ' '));
+}
+
+/**
+ * Check 8, complete dimensions: in a clause whose subject (named or
+ * inherited) is exactly one complete dimension, each score claim must give
+ * that dimension's score.
+ */
+function checkDimensionScore(clause, subjects, categories) {
+  if (subjects.length !== 1 || !categories.dimensionScores.has(subjects[0])) return [];
+  const [id] = subjects;
+  const score = categories.dimensionScores.get(id);
+  const details = [];
+  for (const m of maskNames(blankFlagCounts(clause)).matchAll(SCORE_CLAIM_NUMBER)) {
+    const raw = m[1] ?? m[2];
+    const [value] = extractNumbers(raw);
+    if (value === String(Number(score))) continue;
+    details.push(`The score of ${nameOf(id)} is ${score}; do not write "${raw}".`);
+  }
+  return details;
+}
+
+/** Check 17: level labels used as such; a "<number> (<label>)" pair from a cited fact's text passes. */
+function checkLevelLabels(masked, citedTexts) {
+  const firstWord = masked.search(/[A-Za-z]/);
+  const labels = [];
+  for (const m of masked.matchAll(LEVEL_CAPITALISED)) {
+    if (m.index === firstWord) continue;
+    const pair = masked.slice(0, m.index).match(/(\d+(?:\.\d+)?)\s*\($/);
+    if (pair && citedTexts.some(t => t.includes(`${pair[1]} (${m[1].toLowerCase()})`))) continue;
+    labels.push(m[1]);
+  }
+  for (const m of masked.matchAll(LEVEL_LOWER)) labels.push(m[1]);
+  return [...new Set(labels)];
 }
 
 // ---------------------------------------------------------------------------
@@ -399,10 +466,14 @@ function checkAttribution(clause, named, categories) {
 
   const [id] = items;
   const own = new Set(extractNumbers(maskNames(categories.ownFacts.get(id).text)));
+  const isDimension = categories.dimensionScores.has(id);
   const seen = new Set();
   const details = [];
-  for (const { raw, value } of numberTokens(stripLeakTokens(maskNames(clause)))) {
+  for (const { raw, value } of numberTokens(stripLeakTokens(maskNames(blankFlagCounts(clause))))) {
     if (own.has(value) || seen.has(value)) continue;
+    // The context facts describe the dimensions (C1 date, C2 counts): "8 indicators in two
+    // dimensions: Incident Handling …". Score claims are checked strictly below.
+    if (isDimension && categories.contextNumbers.has(value)) continue;
     seen.add(value);
     details.push(`The number "${raw}" is not in the fact about ${nameOf(id)}.`);
   }
@@ -456,6 +527,11 @@ function checkSection(section, part, ctx) {
     add('shape', 'The text contains "{" or "}". Write plain sentences only, without JSON.');
   }
 
+  // Check 18: the headline is one sentence (the app: three flag facts copied).
+  if (section === 'headline' && splitSentences(text).length !== 1) {
+    add('headlineSentences', 'The headline must be exactly one sentence.');
+  }
+
   for (const sentence of splitSentences(text)) {
     // Check 13: only a cited fact that says "may be related" allows it (June
     // manual check: a HIGH flag "may be related to the Incident Handling score").
@@ -469,7 +545,7 @@ function checkSection(section, part, ctx) {
     for (const detail of leaks) add('leakedIds', detail, sentence);
 
     const missing = new Set();
-    for (const { raw, value } of numberTokens(cleaned)) {
+    for (const { raw, value } of numberTokens(blankFlagCounts(cleaned))) {
       if (!allowedNumbers.has(value) && !missing.has(value)) {
         missing.add(value);
         add('numbers', `The number "${raw}" does not appear in any fact cited by this section.`, sentence);
@@ -530,6 +606,7 @@ function checkSection(section, part, ctx) {
       }
       if (respectively) continue;
       for (const detail of checkAttribution(clause, named, ctx.categories)) add('attribution', detail, sentence);
+      for (const detail of checkDimensionScore(clause, subjects, ctx.categories)) add('attribution', detail, sentence);
       for (const detail of checkSeverity(clause, named, ctx.categories)) {
         add('severity', detail, sentence);
         severityReported = true;
@@ -550,10 +627,18 @@ function checkSection(section, part, ctx) {
     // labels (Good, Developing, …) are not in the list.
     const judgement = maskedSentence.match(JUDGEMENT);
     const aboutScore = sentenceNames.some(id => ctx.categories.scored.has(id))
-      || SCORE_CLAIM.test(maskedSentence) || SCORE_WORD.test(maskedSentence);
+      || SCORE_CLAIM.test(maskedSentence) || SCORE_WORD.test(maskedSentence) || PERFORM_WORD.test(maskedSentence);
     if (judgement && aboutScore && !verbatim) {
       add('judgement', `Do not describe a score as "${judgement[0].toLowerCase()}": describe it only by its number ` +
         'or its level label (for example Good or Developing).', sentence);
+    }
+
+    // Check 17: the model parts give scores as numbers only (no fact gives
+    // them the level of a dimension score).
+    if (LEVEL_CHECKED_PARTS.has(section) && !verbatim) {
+      for (const label of checkLevelLabels(maskedSentence, cited.map(f => f.text.toLowerCase()))) {
+        add('levelLabel', `Do not write the level label "${label}": describe a score only by its number.`, sentence);
+      }
     }
 
     // Check 7

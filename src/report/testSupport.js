@@ -10,6 +10,7 @@ import { parseAndValidateImport } from '../engine/persistence.js';
 import { INDICATORS, ALL_INDICATOR_IDS, STATE } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS, LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
 import { SECTION_KEYS } from './schema.js';
+import { splitSentences, CONTEXT_KINDS } from './validator.js';
 
 export function loadScenario(json) {
   const res = parseAndValidateImport(json);
@@ -49,18 +50,19 @@ export const assessmentArb = fc.record({
 });
 
 /**
- * A narrative made of the facts' own text, shared round-robin across the six
- * parts. Always valid (validator property test), so it doubles as a known-good
- * model reply.
+ * A narrative made of the facts' own text, shared round-robin across the five
+ * sections; the headline is the first sentence of the first finding fact (one
+ * sentence, citing a finding: checks 12 and 18). Always valid (validator
+ * property test), so it doubles as a known-good model reply.
  */
 export function echoNarrative(facts) {
-  const keys = ['headline', ...SECTION_KEYS];
-  const cited = Object.fromEntries(keys.map(k => [k, []]));
-  facts.forEach((f, i) => cited[keys[i % keys.length]].push(f));
+  const cited = Object.fromEntries(SECTION_KEYS.map(k => [k, []]));
+  facts.forEach((f, i) => cited[SECTION_KEYS[i % SECTION_KEYS.length]].push(f));
   const asSentence = t => (/[.!?]$/.test(t) ? t : `${t}.`);
   const part = fs => ({ factIds: fs.map(f => f.id), text: fs.map(f => asSentence(f.text)).join(' ') });
+  const finding = facts.find(f => !CONTEXT_KINDS.has(f.kind)) ?? facts[0];
   return {
-    headline: part(cited.headline),
+    headline: { factIds: [finding.id], text: asSentence(splitSentences(finding.text)[0]) },
     sections: Object.fromEntries(SECTION_KEYS.map(k => [k, part(cited[k])])),
   };
 }

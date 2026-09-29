@@ -39,6 +39,11 @@ const ORIGIN = Object.fromEntries([
   ...GENERATED_KEYS.map(key => [key, 'generated']),
 ]);
 
+/** The unavailable reason an error from the provider maps to (a plain error is provider_error). */
+function reasonOf(error) {
+  return error instanceof ProviderUnavailableError ? error.reason : 'provider_error';
+}
+
 const UNPARSEABLE = {
   section: null,
   sentence: null,
@@ -182,11 +187,20 @@ export async function generateNarrative(assessment, {
 
     if (failing.length === 0) {
       // Both parts: attempt 1, or no usable draft yet.
+      const user = attempt === 1 ? baseMessage : buildRetryMessage(baseMessage, errors);
       let response;
       try {
-        response = await call(attempt === 1 ? baseMessage : buildRetryMessage(baseMessage, errors), schema);
+        response = await call(user, schema);
       } catch (error) {
-        return unavailable(error);
+        // The very first call is repeated once on provider_error: Ollama's
+        // llama-server crashed while loading the model in two manual-check
+        // run sets, and the next request loads it again.
+        if (attempt !== 1 || reasonOf(error) !== 'provider_error') return unavailable(error);
+        try {
+          response = await call(user, schema);
+        } catch (repeated) {
+          return unavailable(repeated);
+        }
       }
       draft = parseObject(response);
       errors = draft === null ? [UNPARSEABLE] : validateDraft(draft, facts);

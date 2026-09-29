@@ -212,8 +212,10 @@ function dependencySentence(d) {
 }
 
 function containmentSentence(d) {
-  return `${d.containmentName} was fast (${scoreText(d.containmentScore, false)}) while ${DIMENSION_NAMES.BC} is low ` +
-    `(${d.bcScore}); in OT, rapid containment can itself disrupt operations, and the containment action appears ` +
+  // The value and the threshold, not "is low": a judgement word beside a
+  // score fails validator check 16.
+  return `${d.containmentName} was fast (${scoreText(d.containmentScore, false)}) while ${DIMENSION_NAMES.BC} scored ` +
+    `${d.bcScore}, below ${d.bcThreshold}; in OT, rapid containment can itself disrupt operations, and the containment action appears ` +
     'to have been operationally costly.';
 }
 

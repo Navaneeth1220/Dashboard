@@ -206,7 +206,7 @@ describe('foundationsAndFlags variants', () => {
       indicators: { 'IH-08': meas(10), 'BC-01': meas(10), 'BC-02': meas(10), 'BC-04': ratio(6, 10), 'BC-08': ratio(1, 10), 'BC-09': ratio(1, 10) },
     });
     expect(generated.foundationsAndFlags.text).toContain(
-      'Mean Time to Contain was fast (score 3, Good) while Business Continuity is low (0.80); in OT, rapid containment can itself disrupt operations, and the containment action appears to have been operationally costly.'
+      'Mean Time to Contain was fast (score 3, Good) while Business Continuity scored 0.80, below 2; in OT, rapid containment can itself disrupt operations, and the containment action appears to have been operationally costly.'
     );
   });
 });

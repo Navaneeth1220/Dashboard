@@ -55,8 +55,7 @@ Rules:
 13. Refer to each flag by the severity its fact states, never as
     "priority"; severity is not an order of action.
 14. Do not describe consequences, risks or urgency.
-15. Describe a score only by its number or the dashboard's level label
-    (e.g. Good, Developing).
+15. Describe a score only by its number.
 
 Sections:
 - headline: one sentence stating the most important finding, not a title.
