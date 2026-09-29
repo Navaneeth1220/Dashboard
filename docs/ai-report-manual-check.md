@@ -4688,3 +4688,282 @@ run 5 on "respectively".
 
 **Performance**: 13.3–14.3 tokens/s; max prompt_eval_count 868.
 
+## Run set 2026-09-29 10:17 UTC: Oudendijk_2026-03-01_assessment.json
+
+- Model: qwen2.5:7b · Ollama 0.34.4 · options `{"temperature":0.2,"num_ctx":4096,"num_predict":1024}`
+- Timeout 300.0 s per call · 60.0 s cooldown between runs · retries at temperature 0.5, repairing failing sections only
+- Scenario: scenarios/Oudendijk_2026-03-01_assessment.json (18 facts)
+
+| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |
+|---|---|---|---|---|---|
+| before | (no model loaded) | | | | |
+| after | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+
+### Summary
+
+| Measure | Value |
+|---|---|
+| ok | 4 of 5 |
+| generated sections identical and valid | 5 of 5 |
+| attempts per run (calls) | 1 (1), 3 (5), 3 (4), 2 (3), 1 (1) |
+| errors by rule (all attempts) | severity ×5, levelLabel ×2, flagCount ×1, unscoredScore ×2, respectively ×1, missing ×2 |
+| max prompt_eval_count | 947 (warning above 3000) |
+| generation speed (tokens/s, eval_duration) | first 14.9, last 15.0, min 14.5, max 15.1 |
+
+### Generated sections
+
+Built from the facts by templates (no model); every run asserts it gets exactly this.
+
+The reference copy passes the validator.
+
+**measuredPerformance** (C3, F4, F7): Each effectiveness indicator is scored from 0 to 4, where 4 is best. In Incident Handling, Mean Time to Detect was 20 hours (score 3, Good). In Business Continuity, Network Operability Under Disruption was 90% (score 4, Excellent). For Mean Time to Detect, lower values are better.
+
+**gapsAndMissingEvidence** (F1, F2, F3, F5, F6, F8, F9, F10, F11): Mean Time to Respond is not yet assessed. Mean Time to Contain is not yet assessed. Zone Availability Rate is not yet assessed. Operational Threshold Violation Rate is not yet assessed. RTO Achievement Rate is not yet assessed. RPO Achievement Rate is not yet assessed. This says nothing about how Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate perform, but without them Incident Handling and Business Continuity have no score, so there is no overall score either.
+
+**foundationsAndFlags** (F12, F13, F14): In place: Asset inventory maintained. Not yet assessed: Risk assessment per zone, Controlled IT/OT boundary separation, Zero uncontrolled multi-homed devices, BC plan documented for critical processes, Vulnerability Remediation Rate, Mean Time to Remediate and BC plan tested within defined period. This says nothing about whether they are in place.
+
+The following issues were flagged (listed by severity; this is not an order of action). High: asset interdependency documentation is incomplete or outdated.
+
+**priorities** (F5, F6, F8, F9, F10, F11, F15): No scored effectiveness indicator is below 3 (Good). Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate are not ranked because they have no score.
+
+### Runs
+
+| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | ok | 1 | whole | 78.8 s | 804 | 143 | 14.9 | stop | — |
+| 2 | failed | 1 | whole | 10.3 s | 804 | 152 | 15.1 | stop | severity ×1, levelLabel ×2 |
+| 2 | failed | 2 | headline | 2.8 s | 762 | 31 | 14.5 | stop | severity ×1 |
+| 2 | failed | 2 | overview | 8.5 s | 830 | 112 | 15.0 | stop | flagCount ×1, unscoredScore ×1 |
+| 2 | failed | 3 | headline | 2.7 s | 673 | 33 | 14.7 | stop | — |
+| 2 | failed | 3 | overview | 7.3 s | 900 | 88 | 14.7 | stop | respectively ×1 |
+| 3 | ok | 1 | whole | 11.8 s | 804 | 161 | 15.0 | stop | severity ×1, unscoredScore ×1 |
+| 3 | ok | 2 | headline | 2.8 s | 715 | 33 | 14.8 | stop | — |
+| 3 | ok | 2 | overview | 11.5 s | 831 | 156 | 14.9 | stop | missing ×2 |
+| 3 | ok | 3 | overview | 11.9 s | 947 | 163 | 14.6 | stop | — |
+| 4 | ok | 1 | whole | 10.7 s | 804 | 144 | 14.9 | stop | severity ×2 |
+| 4 | ok | 2 | headline | 2.8 s | 711 | 33 | 14.8 | stop | — |
+| 4 | ok | 2 | overview | 8.9 s | 826 | 119 | 14.9 | stop | — |
+| 5 | ok | 1 | whole | 9.4 s | 804 | 125 | 15.0 | stop | — |
+
+#### Run 1: ok (1 attempt(s), 1 call(s), 78.8 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 143, 14.9 tokens/s, done_reason stop, 78.8 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): No overall score due to incomplete Incident Handling and Business Continuity dimensions.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, as several indicators have no score. The overall score is not available. Additionally, there is a HIGH severity flag for incomplete asset interdependency documentation, and only two indicators have scores, both rated good.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F3): No overall score due to incomplete Incident Handling and Business Continuity dimensions.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, as several indicators have no score. The overall score is not available. Additionally, there is a HIGH severity flag for incomplete asset interdependency documentation, and only two indicators have scores, both rated good.
+
+</details>
+
+#### Run 2: failed (3 attempt(s), 5 call(s), 31.8 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 152, 15.1 tokens/s, done_reason stop, 10.3 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `levelLabel` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+- `levelLabel` overview, "Key issues include a lack of asset interdependency documentation, rated HIGH, and only two indicators with scores, both at good levels.": Do not write the level label "good": describe a score only by its number.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F15): The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, resulting in no overall score. Key issues include a lack of asset interdependency documentation, rated HIGH, and only two indicators with scores, both at good levels.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 762, eval_count 31, 14.5 tokens/s, done_reason stop, 2.8 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13): The assessment identifies critical gaps in asset interdependency documentation.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 830, eval_count 112, 15.0 tokens/s, done_reason stop, 8.5 s
+- `flagCount` overview, "There are two flags: a HIGH severity issue with incomplete asset interdependency documentation, and a note that only two out of eight effectiveness indicators have scores, both at a score of 3 or above.": The cited facts contain 1 flag; do not write "two flags".
+- `unscoredScore` overview, "There are two flags: a HIGH severity issue with incomplete asset interdependency documentation, and a note that only two out of eight effectiveness indicators have scores, both at a score of 3 or above.": Asset interdependency documentation is not scored; do not give it a score.
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling with three indicators and Business Continuity with five indicators. Both dimensions are incomplete, resulting in no overall score. There are two flags: a HIGH severity issue with incomplete asset interdependency documentation, and a note that only two out of eight effectiveness indicators have scores, both at a score of 3 or above.
+
+</details>
+
+Attempt 3, repair of headline: prompt_eval_count 673, eval_count 33, 14.7 tokens/s, done_reason stop, 2.7 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of headline)</summary>
+
+**headline** (F13): The assessment identifies a high severity gap in asset interdependency documentation.
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 900, eval_count 88, 14.7 tokens/s, done_reason stop, 7.3 s
+- `respectively` overview, "The assessment covered Incident Handling and Business Continuity, each with three and five indicators respectively.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13): The assessment covered Incident Handling and Business Continuity, each with three and five indicators respectively. Both dimensions are incomplete due to missing score indicators, resulting in no overall score. Additionally, there is a HIGH severity issue related to incomplete or outdated asset interdependency documentation.
+
+</details>
+
+#### Run 3: ok (3 attempt(s), 4 call(s), 38.0 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 161, 15.0 tokens/s, done_reason stop, 11.8 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two indicators out of eight have a score, both of which are good.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `unscoredScore` overview, "Additionally, a HIGH severity flag was raised for incomplete asset interdependency documentation, and only two indicators scored above 2, both rated as good.": Asset interdependency documentation is not scored; do not give it a score.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F15): The assessment identifies critical gaps in asset interdependency documentation and notes that only two indicators out of eight have a score, both of which are good.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete due to missing scores, resulting in no overall score. Additionally, a HIGH severity flag was raised for incomplete asset interdependency documentation, and only two indicators scored above 2, both rated as good.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 715, eval_count 33, 14.8 tokens/s, done_reason stop, 2.8 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13): The assessment identifies a high severity gap in asset interdependency documentation.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 831, eval_count 156, 14.9 tokens/s, done_reason stop, 11.5 s
+- `missing` overview, "Both dimensions are incomplete, with no scores available for Incident Handling due to missing Mean Time to Respond and Mean Time to Contain indicators, and for Business Continuity due to missing Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate indicators.": Do not call Mean Time to Respond missing: it exists and has no score. Say it has no score.
+- `missing` overview, "Both dimensions are incomplete, with no scores available for Incident Handling due to missing Mean Time to Respond and Mean Time to Contain indicators, and for Business Continuity due to missing Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate indicators.": Do not call Zone Availability Rate missing: it exists and has no score. Say it has no score.
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered Incident Handling and Business Continuity across 8 effectiveness indicators. Both dimensions are incomplete, with no scores available for Incident Handling due to missing Mean Time to Respond and Mean Time to Contain indicators, and for Business Continuity due to missing Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate indicators. Consequently, an overall score is not available. Additionally, a HIGH severity flag was raised for incomplete or outdated asset interdependency documentation. Only two of the eight effectiveness indicators have scores, and both are rated as good.
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 947, eval_count 163, 14.6 tokens/s, done_reason stop, 11.9 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, which includes three effectiveness indicators, is incomplete due to the lack of scores for Mean Time to Respond and Mean Time to Contain. Business Continuity, comprising five effectiveness indicators, is also incomplete as Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate have no scores. Consequently, no overall score is available. Additionally, there is a HIGH flag for incomplete asset interdependency documentation. Only two out of eight effectiveness indicators have scores, and neither is below 3 (Good).
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13): The assessment identifies a high severity gap in asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, which includes three effectiveness indicators, is incomplete due to the lack of scores for Mean Time to Respond and Mean Time to Contain. Business Continuity, comprising five effectiveness indicators, is also incomplete as Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate have no scores. Consequently, no overall score is available. Additionally, there is a HIGH flag for incomplete asset interdependency documentation. Only two out of eight effectiveness indicators have scores, and neither is below 3 (Good).
+
+</details>
+
+#### Run 4: ok (2 attempt(s), 3 call(s), 22.4 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 144, 14.9 tokens/s, done_reason stop, 10.7 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two indicators have scores, both of which are good.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `severity` overview, "Critical issues include incomplete asset interdependency documentation, and only two indicators have scores, both rated good.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F15): The assessment identifies critical gaps in asset interdependency documentation and notes that only two indicators have scores, both of which are good.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, resulting in no overall score. Critical issues include incomplete asset interdependency documentation, and only two indicators have scores, both rated good.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 711, eval_count 33, 14.8 tokens/s, done_reason stop, 2.8 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13): The assessment identifies a high severity gap in asset interdependency documentation.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 826, eval_count 119, 14.9 tokens/s, done_reason stop, 8.9 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Both dimensions were found to be incomplete, as several key indicators did not have scores. As a result, overall scores for both dimensions and the overall assessment are not available. Additionally, there is a HIGH flag for incomplete asset interdependency documentation. Only two of the eight effectiveness indicators have scores, and both are rated good.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13): The assessment identifies a high severity gap in asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Both dimensions were found to be incomplete, as several key indicators did not have scores. As a result, overall scores for both dimensions and the overall assessment are not available. Additionally, there is a HIGH flag for incomplete asset interdependency documentation. Only two of the eight effectiveness indicators have scores, and both are rated good.
+
+</details>
+
+#### Run 5: ok (1 attempt(s), 1 call(s), 9.4 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 125, 15.0 tokens/s, done_reason stop, 9.4 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): No overall score due to incomplete Incident Handling and Business Continuity dimensions.
+
+**overview** (C2, F1, F2, F13, F15): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, with no scores available. A HIGH flag was raised for incomplete asset interdependency documentation. Only two indicators have scores, both rated good.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F3): No overall score due to incomplete Incident Handling and Business Continuity dimensions.
+
+**overview** (C2, F1, F2, F13, F15): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, with no scores available. A HIGH flag was raised for incomplete asset interdependency documentation. Only two indicators have scores, both rated good.
+
+</details>
+
+### Review
+
+After the check 5 fix (a count beside a dimension is not a score) and
+"moderate" (commits b0ef90e, 98cc0ab). **4 of 5 accepted (previous: 1 of
+5)**; runs 1 and 5 on the first attempt. No check 5 false positive this
+time. Run 2 failed on "respectively" in its last overview repair.
+
+1. **Invariant breaks the validator missed**: "both rated good" in the
+   accepted overviews of runs 1, 4 and 5 (Network Operability Under
+   Disruption is score 4): the known limitation of check 17 (lower-case
+   label not before "level"). Run 4: "overall scores for both dimensions
+   and the overall assessment are not available" (clumsy, correct).
+2. **Validator errors** (13): right 11 (severity ×5, levelLabel ×2,
+   missing ×2, flagCount ×1, respectively ×1); wrong reason 2:
+   unscoredScore for asset interdependency documentation in sentences
+   that give the indicators a score after it (inherited subject; known
+   limitation; both sentences had other real errors).
+3. **Paraphrased item names**: none. "missing score indicators" (run 2,
+   rejected part) is not caught by check 15 (only "missing
+   (effectiveness) indicator(s)").
+4. **Prompt conformance**: headlines one sentence; overviews 3–6
+   sentences.
+5. **Items named without their fact cited**: none.
+6. **Band ranges**: not applicable.
+
+**Performance**: 14.5–15.1 tokens/s; max prompt_eval_count 947; run 1
+78.8 s (model load).
+
