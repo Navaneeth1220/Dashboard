@@ -110,7 +110,7 @@ describe('ok', () => {
     expect(repair.user).toBe([
       buildUserMessage(OVERVIEW_FACTS),
       '',
-      'Write only the overview part: what was assessed, the dimension results, and the critical and high flags.',
+      'Write only the overview part: what was assessed, the dimension results, and the critical and high flags; mention every flag given.',
       'Your previous version broke these rules:',
       POOR_ERROR_LINE,
       'Write this part again from the facts above, following every rule.',

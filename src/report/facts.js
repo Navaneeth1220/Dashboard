@@ -394,20 +394,40 @@ function tierText(tier) {
   return `at score ${score} and of equal priority, listed in catalogue order: ${names.join(', ')}`;
 }
 
+/**
+ * How many effectiveness indicators have a score, from the priority view's
+ * scored entries ("Only 2 of 8 effectiveness indicators have a score"). The
+ * sparse-scenario manual check turned "no scored indicator is below 3" into
+ * "all scored indicators are performing well" when 6 of 8 were unassessed.
+ */
+function coverageText(scoredCount, indicatorCount) {
+  if (scoredCount === indicatorCount) return `All ${indicatorCount} effectiveness indicators have a score`;
+  const verb = scoredCount === 1 ? 'has' : 'have';
+  return `Only ${scoredCount} of ${indicatorCount} effectiveness indicators ${verb} a score`;
+}
+
+function noneBelowText(scoredCount) {
+  const threshold = `${PRIORITY_BELOW} (${SCORE_LEVEL_LABELS[PRIORITY_BELOW]})`;
+  if (scoredCount === 1) return `it is not below ${threshold}`;
+  return `${scoredCount === 2 ? 'neither' : 'none'} is below ${threshold}`;
+}
+
 /** Always exactly one fact, so the priorities section always has something to cite. */
 function priorityFact(priority) {
   const entries = priority.lane1.entries;   // engine order: score ascending, catalogue tie-break
+  const counts = { scoredCount: entries.length, indicatorCount: ALL_INDICATOR_IDS.length };
   if (entries.length === 0) {
     return fact('priority', 'No effectiveness indicator has a score, so there is no ranking of results.', [],
-      { fallback: 'none_scored', tiers: [] });
+      { fallback: 'none_scored', tiers: [], ...counts });
   }
+  const coverage = coverageText(counts.scoredCount, counts.indicatorCount);
 
   const low = entries.filter(e => e.score < PRIORITY_BELOW);
   if (low.length === 0) {
     return fact('priority',
-      `No scored effectiveness indicator is below ${PRIORITY_BELOW} (${SCORE_LEVEL_LABELS[PRIORITY_BELOW]}).`,
+      `${coverage}; ${noneBelowText(counts.scoredCount)}.`,
       entries.map(e => e.indicatorId),
-      { fallback: 'none_below', threshold: PRIORITY_BELOW, thresholdLevel: SCORE_LEVEL_LABELS[PRIORITY_BELOW], tiers: [] });
+      { fallback: 'none_below', threshold: PRIORITY_BELOW, thresholdLevel: SCORE_LEVEL_LABELS[PRIORITY_BELOW], tiers: [], ...counts });
   }
 
   const tiers = [];
@@ -417,10 +437,11 @@ function priorityFact(priority) {
     else tiers.push([entry]);
   }
   return fact('priority',
-    `Lowest effectiveness results: ${tiers.map(tierText).join('; then, ')}.`,
+    `${coverage}. Lowest effectiveness results: ${tiers.map(tierText).join('; then, ')}.`,
     low.map(e => e.indicatorId),
     {
       fallback: null,
+      ...counts,
       tiers: tiers.map(tier => ({
         score: tier[0].score,
         level: SCORE_LEVEL_LABELS[tier[0].score],

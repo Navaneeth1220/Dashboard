@@ -47,7 +47,7 @@ Sections:
 - headline: one sentence stating the most important finding, not a title.
   Do not repeat the client name or date.
 - overview: what was assessed, the dimension results, and the critical and
-  high flags.`;
+  high flags; mention every flag given.`;
 
 /**
  * The Sections block as data, for single-part repair calls. Must match
@@ -55,7 +55,7 @@ Sections:
  */
 export const SECTION_DESCRIPTIONS = {
   headline: 'one sentence stating the most important finding, not a title. Do not repeat the client name or date.',
-  overview: 'what was assessed, the dimension results, and the critical and high flags.',
+  overview: 'what was assessed, the dimension results, and the critical and high flags; mention every flag given.',
 };
 
 const MODEL_KINDS = new Set(['context', 'scale', 'dim_complete', 'dim_incomplete', 'priority']);

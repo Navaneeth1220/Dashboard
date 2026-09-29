@@ -128,7 +128,7 @@ describe('Westmaas baseline', () => {
       { id: 'F19', kind: 'advisory', refs: ['L0-multi-homed', 'BC-02'],
         text: 'Uncontrolled multi-homed devices were found while Zone Availability Rate is poor (score 2). A segmentation bypass of this kind can be directly implicated in this outcome — these may be related; review them together.' },
       { id: 'F20', kind: 'priority', refs: ['BC-09', 'IH-07', 'BC-02', 'BC-04', 'BC-08'],
-        text: 'Lowest effectiveness results: RPO Achievement Rate (programme gap, 0); then, at score 2 and of equal priority, listed in catalogue order: Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate.' },
+        text: 'Only 7 of 8 effectiveness indicators have a score. Lowest effectiveness results: RPO Achievement Rate (programme gap, 0); then, at score 2 and of equal priority, listed in catalogue order: Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate.' },
     ]);
   });
 
@@ -180,6 +180,8 @@ describe('Westmaas baseline', () => {
       F19: { rule: 'C', variant: 'bypass', ...multiHomed, relatedId: 'BC-02', relatedName: 'Zone Availability Rate', relatedScore: 2, relatedProgrammeGap: false },
       F20: {
         fallback: null,
+        scoredCount: 7,
+        indicatorCount: 8,
         tiers: [
           { score: 0, level: 'None', items: [{ name: 'RPO Achievement Rate', programmeGap: true }] },
           {
@@ -435,20 +437,42 @@ describe('advisory facts', () => {
 // ─── 7. Priority ──────────────────────────────────────────────────────────────
 
 describe('priority fact', () => {
-  it('nothing below 3 gives the fallback', () => {
-    const facts = buildAssessmentFacts(healthyRecord());
-    expect(factsOf(facts, 'priority')).toMatchObject([{
-      text: 'No scored effectiveness indicator is below 3 (Good).',
-      data: { fallback: 'none_below', threshold: 3, thresholdLevel: 'Good', tiers: [] },
-    }]);
+  /** healthyRecord with only the given indicators kept; the rest not yet assessed. */
+  function onlyScored(...ids) {
+    const rec = healthyRecord();
+    const blank = createBlankAssessment().indicators;
+    return { ...rec, indicators: { ...blank, ...Object.fromEntries(ids.map(id => [id, rec.indicators[id]])) } };
+  }
+  const priorityOf = rec => factsOf(buildAssessmentFacts(rec), 'priority')[0];
+
+  it('nothing below 3, all scored: coverage "All 8", then "none is below"', () => {
+    expect(priorityOf(healthyRecord())).toMatchObject({
+      text: 'All 8 effectiveness indicators have a score; none is below 3 (Good).',
+      data: { fallback: 'none_below', threshold: 3, thresholdLevel: 'Good', tiers: [], scoredCount: 8, indicatorCount: 8 },
+    });
   });
 
-  it('nothing scored gives the fallback', () => {
+  it('nothing below 3, 2 scored (sparse-scenario manual check): "Only 2 of 8 …; neither is below"', () => {
+    expect(priorityOf(onlyScored('IH-06', 'BC-01'))).toMatchObject({
+      text: 'Only 2 of 8 effectiveness indicators have a score; neither is below 3 (Good).',
+      data: { fallback: 'none_below', scoredCount: 2, indicatorCount: 8 },
+    });
+  });
+
+  it('nothing below 3, 1 scored: "Only 1 of 8 … has a score; it is not below"', () => {
+    expect(priorityOf(onlyScored('BC-01')).text).toBe('Only 1 of 8 effectiveness indicators has a score; it is not below 3 (Good).');
+  });
+
+  it('nothing below 3, 3 scored: "none is below"', () => {
+    expect(priorityOf(onlyScored('IH-06', 'IH-07', 'BC-01')).text).toBe('Only 3 of 8 effectiveness indicators have a score; none is below 3 (Good).');
+  });
+
+  it('nothing scored gives the fallback, unchanged, with the counts in data', () => {
     const facts = buildAssessmentFacts({ ...healthyRecord(), indicators: createBlankAssessment().indicators });
     expect(factsOf(facts, 'priority')).toEqual([{
       id: expect.any(String), kind: 'priority', refs: [],
       text: 'No effectiveness indicator has a score, so there is no ranking of results.',
-      data: { fallback: 'none_scored', tiers: [] },
+      data: { fallback: 'none_scored', tiers: [], scoredCount: 0, indicatorCount: 8 },
     }]);
   });
 
@@ -457,8 +481,28 @@ describe('priority fact', () => {
       indicators: { 'BC-02': meas(0), 'BC-09': { state: STATE.NO_RPO_DEFINED } },
     }));
     expect(factsOf(facts, 'priority')[0].text).toBe(
-      'Lowest effectiveness results: at score 0 and of equal priority, listed in catalogue order: Zone Availability Rate (measured failure), RPO Achievement Rate (programme gap).'
+      'All 8 effectiveness indicators have a score. Lowest effectiveness results: at score 0 and of equal priority, listed in catalogue order: Zone Availability Rate (measured failure), RPO Achievement Rate (programme gap).'
     );
+  });
+
+  it('tiers with partial coverage: "Only N of 8 ….  Lowest effectiveness results: …"', () => {
+    const rec = onlyScored('IH-06', 'BC-02');
+    rec.indicators['BC-02'] = meas(0);
+    expect(priorityOf(rec).text).toBe(
+      'Only 2 of 8 effectiveness indicators have a score. Lowest effectiveness results: Zone Availability Rate (measured failure, 0).'
+    );
+  });
+
+  it('the counts come from the engine: scored = indicators with a score, a programme-gap 0 included', () => {
+    fc.assert(fc.property(assessmentArb, rec => {
+      const scored = Object.values(computeAssessment(rec).indicators).filter(r => r.score !== null).length;
+      const { text, data } = priorityOf(rec);
+      expect(data.scoredCount).toBe(scored);
+      expect(data.indicatorCount).toBe(8);
+      if (scored === 0) expect(text).toBe('No effectiveness indicator has a score, so there is no ranking of results.');
+      else if (scored === 8) expect(text).toMatch(/^All 8 effectiveness indicators have a score[.;]/);
+      else expect(text).toMatch(new RegExp(`^Only ${scored} of 8 effectiveness indicators ha(s|ve) a score[.;]`));
+    }), { numRuns: 200 });
   });
 });
 

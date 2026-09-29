@@ -59,7 +59,7 @@ Sections:
 - headline: one sentence stating the most important finding, not a title.
   Do not repeat the client name or date.
 - overview: what was assessed, the dimension results, and the critical and
-  high flags.`
+  high flags; mention every flag given.`
     );
   });
 });
@@ -90,7 +90,7 @@ describe('selectModelFacts', () => {
       'F13: CRITICAL. Uncontrolled inter-zone multi-homed devices were identified.',
       'F14: HIGH. Asset interdependency documentation is incomplete or outdated.',
       'F15: HIGH. No BC plan test was performed during the assessment period — a scheduled action was not completed.',
-      'F20: Lowest effectiveness results: RPO Achievement Rate (programme gap, 0); then, at score 2 and of equal priority, listed in catalogue order: Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate.',
+      'F20: Only 7 of 8 effectiveness indicators have a score. Lowest effectiveness results: RPO Achievement Rate (programme gap, 0); then, at score 2 and of equal priority, listed in catalogue order: Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate.',
     ].join('\n'));
   });
 
@@ -132,7 +132,7 @@ describe('buildUserMessage', () => {
       'F17: Mean Time to Remediate: 75 days. Mean time to remediate is satisfactory (31–90 days) — continue monitoring. Process evidence, not scored.',
       'F18: Zero uncontrolled multi-homed devices is in a weak state (Uncontrolled multi-homing found) and Mean Time to Contain is not measurable. Establishing the architecture foundation and the evidence needed to measure Mean Time to Contain are both measurement-readiness actions — address them together.',
       'F19: Uncontrolled multi-homed devices were found while Zone Availability Rate is poor (score 2). A segmentation bypass of this kind can be directly implicated in this outcome — these may be related; review them together.',
-      'F20: Lowest effectiveness results: RPO Achievement Rate (programme gap, 0); then, at score 2 and of equal priority, listed in catalogue order: Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate.',
+      'F20: Only 7 of 8 effectiveness indicators have a score. Lowest effectiveness results: RPO Achievement Rate (programme gap, 0); then, at score 2 and of equal priority, listed in catalogue order: Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate.',
     ].join('\n'));
   });
 
