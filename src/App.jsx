@@ -15,6 +15,9 @@ import PriorityView from './components/PriorityView.jsx';
 import CrossIndicatorPanel from './components/CrossIndicatorPanel.jsx';
 import GapProjectionPanel from './components/GapProjectionPanel.jsx';
 import TimelineView from './components/TimelineView.jsx';
+import NarrativePanel from './components/NarrativePanel.jsx';
+import { useNarrative } from './hooks/useNarrative.js';
+import { DEFAULT_MODEL } from './report/generate.js';
 
 function App() {
   const [assessment, setAssessment] = useState(() => ({
@@ -59,6 +62,15 @@ function App() {
     () => computeCrossIndicator(assessment, results, layer0Result),
     [assessment, results, layer0Result]
   );
+
+  // AI-drafted narrative (Step 5): the snapshot the report is generated from;
+  // a draft is stale once the assessment no longer matches its snapshot.
+  const narrative = useNarrative();
+  const narrativeSnapshot = useMemo(
+    () => ({ meta: { clientId, assessmentDate }, indicators: assessment.indicators, layer0: assessment.layer0 }),
+    [clientId, assessmentDate, assessment]
+  );
+  const narrativeStale = narrative.phase === 'done' && narrative.snapshot !== JSON.stringify(narrativeSnapshot);
 
   // Rule A notes grouped by target indicator; Rule D hints keyed by target indicator
   const aNotesByIndicator = useMemo(() => {
@@ -342,6 +354,20 @@ function App() {
             gapResult={gapResult}
             projectionResult={projectionResult}
             onTargetChange={handleTargetChange}
+          />
+        </div>
+
+        {/* AI-drafted narrative report (Step 5) */}
+        <div style={{ marginTop: '20px' }}>
+          <NarrativePanel
+            phase={narrative.phase}
+            attempt={narrative.attempt}
+            maxAttempts={narrative.maxAttempts}
+            result={narrative.result}
+            model={DEFAULT_MODEL}
+            stale={narrativeStale}
+            onGenerate={() => narrative.generate(narrativeSnapshot)}
+            onCancel={narrative.cancel}
           />
         </div>
         </>

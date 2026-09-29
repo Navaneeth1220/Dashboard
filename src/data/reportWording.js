@@ -90,3 +90,51 @@ export const LEAD_IN = {
   advisories: 'Read together (advisory only; no scores change): ',
   priorities: 'Ranked by score, where a lower score is more urgent: ',
 };
+
+// ---------------------------------------------------------------------------
+// Narrative panel (docs/ai-report-spec.md, Step 5)
+// ---------------------------------------------------------------------------
+
+/** The title of each part of the report, in reading order. */
+export const SECTION_TITLES = {
+  headline:               'Headline',
+  overview:               'Overview',
+  measuredPerformance:    'Measured performance',
+  gapsAndMissingEvidence: 'Gaps and missing evidence',
+  foundationsAndFlags:    'Foundations and flags',
+  priorities:             'Priorities',
+};
+
+/** Fixed wording of the narrative panel and of its Copy footer. */
+export const NARRATIVE_WORDING = {
+  title:       'Narrative report',
+  generate:    'Generate narrative',
+  cancel:      'Cancel',
+  copy:        'Copy',
+  copied:      'Copied to the clipboard.',
+  copyFailed:  'Copying failed; select the text and copy it by hand.',
+  generating:  'Generating…',
+  attempt:     (attempt, maxAttempts) => `Generating… attempt ${attempt} of ${maxAttempts}`,
+  label: {
+    ai:        'AI-drafted — review before use',
+    generated: 'Generated from the assessment',
+    edited:    'Edited',
+  },
+  basedOnFacts: 'Based on facts',
+  failed:       'The draft did not pass validation',
+  draft:        'Draft',   // title for an error that belongs to no part
+  stale:        'The assessment has changed since this draft was generated. Generate again to update it.',
+  unavailable: {
+    notRunning:   'Ollama is not running at localhost:11434.',
+    startWith:    'Start it with:',
+    startCommand: 'ollama serve',
+    pullWith:     'Download the model with:',
+    pullCommand:  model => `ollama pull ${model}`,
+    cancelled:    'Generation cancelled.',
+  },
+  footer: {
+    ai:        (model, titles) => `AI-drafted with ${model}, review before use: ${titles.join(', ')}.`,
+    generated: titles => `Generated from the assessment: ${titles.join(', ')}.`,
+    edited:    titles => `Edited after generation: ${titles.join(', ')}.`,
+  },
+};
