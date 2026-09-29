@@ -22,7 +22,7 @@ import { buildAssessmentFacts } from './facts.js';
 import { SYSTEM_PROMPT, SECTION_DESCRIPTIONS, buildUserMessage, selectModelFacts } from './prompt.js';
 import { buildOutputSchema, buildSectionSchema, MODEL_PARTS, GENERATED_KEYS } from './schema.js';
 import { buildGeneratedSections } from './templates.js';
-import { validateNarrative } from './validator.js';
+import { validateNarrative, CONTEXT_KINDS } from './validator.js';
 import { callOllama, OLLAMA_OPTIONS, ProviderUnavailableError } from './providers/ollama.js';
 
 export const DEFAULT_MODEL = 'qwen2.5:7b';
@@ -98,11 +98,15 @@ function buildSectionMessage(sectionFacts, key, errors) {
   ].join('\n');
 }
 
-/** The facts a part cited (existing IDs, in fact order); all given facts if it cited none. */
+/**
+ * The facts a part cited (existing IDs, in fact order); all given facts if it
+ * cited none, or only context and scale facts (a headline that failed check
+ * 12 could not otherwise cite a finding in its repair).
+ */
 function factsOfPart(part, facts) {
   const cited = new Set(Array.isArray(part?.factIds) ? part.factIds : []);
   const own = facts.filter(f => cited.has(f.id));
-  return own.length > 0 ? own : facts;
+  return own.some(f => !CONTEXT_KINDS.has(f.kind)) ? own : facts;
 }
 
 function record(attempt, section, errors, response) {

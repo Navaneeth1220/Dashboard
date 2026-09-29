@@ -32,8 +32,12 @@ const clone = value => JSON.parse(JSON.stringify(value));
 const asSentence = t => (/[.!?]$/.test(t) ? t : `${t}.`);
 const partOf = facts => ({ factIds: facts.map(f => f.id), text: facts.map(f => asSentence(f.text)).join(' ') });
 
-/** Both model parts from the model facts' own text. */
-const VALID = { headline: partOf(MODEL_FACTS.slice(0, 1)), overview: partOf(MODEL_FACTS.slice(1)) };
+/** Both model parts from the model facts' own text; the headline cites a finding (F2), not only context (check 12). */
+const HEADLINE_FACTS = MODEL_FACTS.filter(f => f.id === 'F2');
+const VALID = {
+  headline: partOf(HEADLINE_FACTS),
+  overview: partOf(MODEL_FACTS.filter(f => !HEADLINE_FACTS.includes(f))),
+};
 
 function withText(reply, key, extra) {
   const r = clone(reply);
@@ -117,6 +121,26 @@ describe('ok', () => {
     ]);
   });
 
+  it('a title-only headline (check 12) is repaired with all model facts, so it can cite a finding', async () => {
+    const title = { factIds: ['C1'], text: 'OT Cybersecurity Assessment of Westmaas as of 2026-01-01.' };
+    const provider = scripted(reply({ ...VALID, headline: title }), reply(VALID.headline));
+    const result = await generateNarrative(ASSESSMENT, { provider });
+
+    expect(result.attempts[0].errors).toEqual([expect.objectContaining({ section: 'headline', rule: 'headlineFacts' })]);
+    const repair = provider.mock.calls[1][0];
+    expect(repair.schema).toEqual(buildSectionSchema(MODEL_FACTS.map(f => f.id)));
+    expect(repair.user.startsWith(`${BASE_MESSAGE}\n\nWrite only the headline part:`)).toBe(true);
+    expect(result.status).toBe('ok');
+    expect(result.narrative.headline).toEqual(VALID.headline);
+  });
+
+  it('a headline citing only context and scale facts is repaired with all model facts too', async () => {
+    const title = { factIds: ['C1', 'C3'], text: 'OT Cybersecurity Assessment of Westmaas as of 2026-01-01.' };
+    const provider = scripted(reply({ ...VALID, headline: title }), reply(VALID.headline));
+    await generateNarrative(ASSESSMENT, { provider });
+    expect(provider.mock.calls[1][0].schema).toEqual(buildSectionSchema(MODEL_FACTS.map(f => f.id)));
+  });
+
   it('the part that passed is kept exactly as it was', async () => {
     const provider = scripted(reply(INVALID), reply(VALID.overview));
     const result = await generateNarrative(ASSESSMENT, { provider });
@@ -132,7 +156,8 @@ describe('ok', () => {
 
     expect(result.status).toBe('ok');
     expect(provider).toHaveBeenCalledTimes(3);
-    expect(provider.mock.calls[1][0].user).toContain('Write only the headline part: one sentence with the most important point.');
+    expect(provider.mock.calls[1][0].user).toContain(
+      'Write only the headline part: one sentence stating the most important finding, not a title. Do not repeat the client name or date.');
     expect(provider.mock.calls[2][0].user).toContain('Write only the overview part:');
     expect(result.attempts.map(a => [a.attempt, a.section])).toEqual([[1, null], [2, 'headline'], [2, 'overview']]);
     expect(onAttempt).toHaveBeenCalledTimes(2);

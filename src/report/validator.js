@@ -21,7 +21,8 @@
  * date, C2 counts) as cited for every section safe in the numbers check; the
  * scale fact (C3) follows normal citation. Rule 9 (severity) keeps
  * "critical" on items whose fact is CRITICAL. Rule 10 flags "respectively".
- * Rule 11 holds "N dimensions" to the count C2 states.
+ * Rule 11 holds "N dimensions" to the count C2 states. Rule 12 makes the
+ * headline cite a finding, not only context and scale facts.
  */
 
 import { INDICATORS, ALL_INDICATOR_IDS } from '../data/indicatorDefinitions.js';
@@ -33,8 +34,11 @@ import { quotedUserText } from './facts.js';
 export const VALIDATOR_RULES = [
   'shape', 'factIds', 'numbers', 'leakedIds',
   'noScoreWording', 'unscoredScore', 'programmeGap', 'causal', 'attribution', 'severity', 'respectively',
-  'dimensionCount',
+  'dimensionCount', 'headlineFacts',
 ];
+
+/** Fact kinds that set the scene rather than state a finding (C1–C3). */
+export const CONTEXT_KINDS = new Set(['context', 'scale']);
 
 // ---------------------------------------------------------------------------
 // Item names (full catalogue): masking, subjects, bare-code exceptions
@@ -377,6 +381,13 @@ function checkSection(section, part, ctx) {
   // Context facts (C1, C2) count as cited everywhere; safe only with check 8.
   const allowedNumbers = new Set([...cited, ...ctx.contextFacts].flatMap(f => extractNumbers(maskNames(f.text))));
   const mayBeRelated = cited.some(f => MAY_BE_RELATED.test(f.text));
+
+  // Check 12: a headline that cites only context and scale facts is a title,
+  // not a finding (first hybrid run set: all five headlines).
+  if (section === 'headline' && !cited.some(f => !CONTEXT_KINDS.has(f.kind))) {
+    add('headlineFacts', 'The headline cites only the assessment context. ' +
+      'State the most important finding and cite the fact it comes from.');
+  }
 
   const text = removeExemptQuotes(part.text.replace(/\s+/g, ' ').trim(), cited);
 

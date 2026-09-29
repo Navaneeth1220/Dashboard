@@ -556,6 +556,42 @@ describe('manual check 2: dimension count (check 11)', () => {
   });
 });
 
+// ─── 12. Headline facts ───────────────────────────────────────────────────────
+
+describe('hybrid run set 1: the headline cites a finding (check 12)', () => {
+  const HEADLINE_FACTS_ERROR = {
+    section: 'headline', sentence: null, rule: 'headlineFacts',
+    detail: 'The headline cites only the assessment context. State the most important finding and cite the fact it comes from.',
+  };
+  const TITLE = 'OT Cybersecurity Assessment of Westmaas as of 2026-01-01.';
+
+  it('a title citing only C1 fails with one section-level error (all five runs)', () => {
+    expect(validate(withPart('headline', ['C1'], TITLE)).errors).toEqual([HEADLINE_FACTS_ERROR]);
+  });
+
+  it('citing C1–C3 (context and scale) still fails', () => {
+    expect(validate(withPart('headline', ['C1', 'C2', 'C3'], TITLE)).errors).toEqual([HEADLINE_FACTS_ERROR]);
+  });
+
+  it('C1 with a finding fact passes', () => {
+    expect(validate(withPart('headline', ['C1', 'F2'], 'Business Continuity is complete at 1.80 out of 4.')).ok).toBe(true);
+  });
+
+  it('headline only: an overview citing only C1 does not fail it', () => {
+    expect(rulesOf(overview('This is the 2026-01-01 assessment of "Westmaas".'))).toEqual([]);
+    expect(validate(withPart('overview', ['C1'], 'This is the 2026-01-01 assessment of "Westmaas".')).ok).toBe(true);
+  });
+
+  it('applies when only the model parts are checked', () => {
+    const narrative = { headline: { factIds: ['C1'], text: TITLE }, sections: { overview: GOOD.sections.overview } };
+    expect(validateNarrative(narrative, FACTS, { parts: ['headline', 'overview'] }).errors).toEqual([HEADLINE_FACTS_ERROR]);
+  });
+
+  it('an unknown cited ID is not a finding', () => {
+    expect(rulesOf(validate(withPart('headline', ['C1', 'F99'], TITLE)))).toEqual(['factIds', 'headlineFacts']);
+  });
+});
+
 describe('manual check 2: "respectively" (check 10)', () => {
   const detail = 'Give each item its own number or label; do not write "respectively".';
 
