@@ -60,5 +60,15 @@ Now a hobby project, developed on feature branches.
 
 ## Current work
 
-AI-drafted narrative reports via a local Ollama model:
-see `docs/ai-report-spec.md`. Branch: `feature/ai-reports`.
+The assessment report (AI-drafted headline and overview via a local Ollama
+model, four generated sections; `src/report/`, `NarrativePanel.jsx`) is
+merged into `main` (tag `v1.1`). Its design, validator checks and known
+limitations are in `docs/ai-report-spec.md`; manual-check runs are logged
+in `docs/ai-report-manual-check.md` (`npm run check:narrative -- --scenario
+<file>`). Any change to the prompt, facts or validator follows the spec's
+rule: spec first, tests first, replay the logged drafts, re-run the check.
+
+Next: the "Cleanup backlog" section at the end of `docs/ai-report-spec.md`
+(`SCORE_LEVEL` duplicate in `Layer0ItemCard`, "poor" vs "Developing" in the
+cross-indicator advisories, 18 pre-existing lint warnings), on `main` or a
+short-lived branch from it.

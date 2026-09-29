@@ -1,7 +1,8 @@
 # AI-drafted narrative reports: spec
 
-Status: design agreed, not yet implemented. Work through the steps in order;
-stop after each step for review before starting the next.
+Status: implemented (Steps 0–5), merged into `main` as `v1.1`. Shown in the
+UI as the "Assessment report". Changes follow the same order as the steps:
+spec first, tests first, replay the logged drafts, then the manual check.
 
 ## Goal
 
