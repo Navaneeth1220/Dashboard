@@ -28,6 +28,7 @@ import {
   LEAD_IN,
   TARGET_WORDING,
   ACTION_WORDING,
+  NO_SCORE_GROUP,
 } from '../data/reportWording.js';
 import { ACTION_CATALOGUE, ACTION_AREAS, NIS2_ARTICLE } from '../data/actionCatalogue.js';
 
@@ -140,16 +141,75 @@ function noScoreSentence({ data: d }) {
   }
 }
 
-/** "This says nothing about how X performs, but without it Incident Handling has no score, …" */
-function consequenceSentence(noScore, incomplete) {
+/**
+ * "This says nothing about how X performs, but without it Incident Handling
+ * has no score, …"; `subject` replaces the names after grouped sentences
+ * ("they perform").
+ */
+function consequenceSentence(noScore, incomplete, subject = null) {
   const names = noScore.map(f => f.data.name);
   const one = names.length === 1;
-  const lead = `This says nothing about how ${joinNames(names)} ${one ? 'performs' : 'perform'}`;
+  const lead = `This says nothing about how ${subject ?? `${joinNames(names)} ${one ? 'performs' : 'perform'}`}`;
   const dimensions = incomplete.filter(f => f.data.dimension !== 'OVERALL').map(f => f.data.name);
   if (dimensions.length === 0) return `${lead}.`;
   const overall = incomplete.some(f => f.data.dimension === 'OVERALL') ? ', so there is no overall score either' : '';
   return `${lead}, but without ${one ? 'it' : 'them'} ${joinNames(dimensions)} ` +
     `${dimensions.length === 1 ? 'has' : 'have'} no score${overall}.`;
+}
+
+/** Count words for group sizes (at most the number of indicators); the validator reads them as numbers. */
+const COUNT_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+
+/** A not-measurable item's own reason, as its own sentence inside a group. */
+function reasonSentence({ name, rootCause, note }) {
+  if (rootCause && note) return `For ${name}, the recorded root cause is ${rootCause}, and the assessor noted "${note}".`;
+  if (rootCause) return `For ${name}, the recorded root cause is ${rootCause}.`;
+  return `For ${name}, the assessor noted "${note}".`;
+}
+
+/**
+ * Several no-score indicators in the same state, in one sentence counted
+ * with the facts' group size ("Six indicators are not yet assessed: …").
+ */
+function groupSentences(group) {
+  const status = group[0].data.status;
+  const count = group[0].data.groupCount;
+  const names = joinNames(group.map(f => f.data.name));
+  const lead = NO_SCORE_GROUP.lead(capitalize(COUNT_WORDS[count]), status, names);
+  switch (status) {
+    case STATE.NOT_MEASURABLE: {
+      const withReason = group.filter(f => f.data.rootCause || f.data.note);
+      const without = group.filter(f => !f.data.rootCause && !f.data.note);
+      return [
+        lead,
+        NO_SCORE_GROUP.forEach(lowerFirst(STATE_PRIORITY_LABELS[status].detail)),
+        ...withReason.map(f => reasonSentence(f.data)),
+        ...(without.length === group.length ? [NO_SCORE_GROUP.noReasonForAny] : []),
+        ...(without.length > 0 && without.length < group.length ? [NO_SCORE_GROUP.noReason(joinNames(without.map(f => f.data.name)))] : []),
+      ];
+    }
+    case STATE.NO_QUALIFYING_EVENT:
+    case STATE.NO_QUALIFYING_DISRUPTION:
+      return [lead, NO_SCORE_GROUP.forEach(lowerFirst(STATE_PRIORITY_LABELS[status].detail)), NO_SCORE_GROUP.nothingToAssess];
+    case 'invalid':
+      return [NO_SCORE_GROUP.invalid(COUNT_WORDS[count], names)];
+    default:
+      return [lead];
+  }
+}
+
+/** The no-score indicators, grouped by state in fact order; a single indicator keeps its own sentence. */
+function missingParagraph(noScore, incomplete) {
+  const groups = [];
+  for (const f of noScore) {
+    const group = groups.find(g => g[0].data.status === f.data.status);
+    if (group) group.push(f);
+    else groups.push([f]);
+  }
+  const sentences = groups.flatMap(g => (g.length === 1 ? [noScoreSentence(g[0])] : groupSentences(g)));
+  if (groups.every(g => g.length === 1)) return [...sentences, consequenceSentence(noScore, incomplete)].join(' ');
+  const subject = groups.length === 1 ? 'they perform' : 'any of these indicators performs';
+  return [...sentences, consequenceSentence(noScore, incomplete, subject)].join(' ');
 }
 
 function gapsAndMissingEvidence(facts) {
@@ -162,9 +222,7 @@ function gapsAndMissingEvidence(facts) {
       ['No evidence is missing and no programme gaps were found: every effectiveness indicator has a score.']);
   }
 
-  const missing = noScore.length > 0
-    ? [...noScore.map(noScoreSentence), consequenceSentence(noScore, incomplete)].join(' ')
-    : null;
+  const missing = noScore.length > 0 ? missingParagraph(noScore, incomplete) : null;
   const programmeGaps = gaps.map(({ data: d }) =>
     `${PROGRAMME_GAP_WORDING[d.state](d.name)}, so it scores 0 as a programme gap; this is not a measured failure.`).join(' ');
 

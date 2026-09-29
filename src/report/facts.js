@@ -38,7 +38,7 @@ import {
   L0_SEVERITY_LABELS,
 } from '../data/layer0Definitions.js';
 import { displayName, formatScore, DIMENSION_NAMES } from '../data/displayNames.js';
-import { CAPABILITY_BY_INDICATOR, TARGET_WORDING } from '../data/reportWording.js';
+import { CAPABILITY_BY_INDICATOR, TARGET_WORDING, NO_SCORE_GROUP } from '../data/reportWording.js';
 
 export const FACT_KINDS = [
   'context', 'scale', 'dim_complete', 'dim_incomplete', 'scored', 'gap_zero', 'no_score',
@@ -235,9 +235,11 @@ function reasonText(group, input) {
   }
 }
 
+const noScoreTail = name => `No score. This says nothing about how ${name} performs.`;
+
 function noScoreFact(id, input, priority) {
   const name = displayName(id);
-  const tail = `No score. This says nothing about how ${name} performs.`;
+  const tail = noScoreTail(name);
   const noScore = (text, status, rootCause = null, note = null) =>
     fact('no_score', text, [id], { name, dimension: INDICATORS[id].measure, status, rootCause, note });
 
@@ -277,8 +279,27 @@ function targetOf(def, gap) {
   return { score: targetScore, level: SCORE_LEVEL_LABELS[targetScore], value: withUnit(thresholdValue, def.unit), bound };
 }
 
+/**
+ * Several no-score indicators in the same state: each fact states the group
+ * size after its "This says nothing about …" sentence, before any reason
+ * (an assessor note stays last). The Gaps section counts the group with it,
+ * and check 8 finds the number in each named item's own fact.
+ */
+function withGroupCounts(facts) {
+  const sizes = new Map();
+  for (const f of facts.filter(f => f.kind === 'no_score')) sizes.set(f.data.status, (sizes.get(f.data.status) ?? 0) + 1);
+  return facts.map(f => {
+    if (f.kind !== 'no_score') return f;
+    const size = sizes.get(f.data.status);
+    if (size < 2) return { ...f, data: { ...f.data, groupCount: null } };
+    const tail = noScoreTail(f.data.name);
+    const text = f.text.replace(tail, `${tail} ${NO_SCORE_GROUP.fact(size, f.data.status)}`);
+    return { ...f, text, data: { ...f.data, groupCount: size } };
+  });
+}
+
 function indicatorFacts(assessment, results, priority, gaps) {
-  return ALL_INDICATOR_IDS.map(id => {
+  return withGroupCounts(ALL_INDICATOR_IDS.map(id => {
     const def = INDICATORS[id];
     const name = displayName(id);
     const input = assessment?.indicators?.[id] ?? {};
@@ -308,7 +329,7 @@ function indicatorFacts(assessment, results, priority, gaps) {
     }
 
     return noScoreFact(id, input, priority);
-  });
+  }));
 }
 
 function layer0Facts(assessment, layer0) {

@@ -718,11 +718,29 @@ describe('baseline re-run: "missing" for an item with no score (check 15)', () =
     expect(rulesOf(overview('Both dimensions are incomplete due to missing effectiveness indicators.'))).toEqual(['missing']);
   });
 
-  it('"missing" with a no-score item as subject fails', () => {
+  it('"missing" with a no-score item as subject fails; the hint matches its state (not measurable)', () => {
     expect(gaps('Mean Time to Contain is missing.').errors).toEqual([expect.objectContaining({
       rule: 'missing',
-      detail: 'Do not call Mean Time to Contain missing: it exists and has no score. Say it has no score.',
+      detail: 'Do not call Mean Time to Contain missing: it exists and has no score. Say it could not be measured.',
     })]);
+  });
+
+  it('the hint matches the state: not yet assessed (indicator and foundational item), otherwise "has no score"', () => {
+    const rec = loadScenario(sparseJson);
+    rec.indicators = { ...rec.indicators, 'IH-08': { state: STATE.NO_QUALIFYING_EVENT } };
+    const facts = buildAssessmentFacts(rec);
+    const cite = facts.filter(f => f.kind === 'no_score' || f.kind === 'l0_unset').map(f => f.id);
+    const detailFor = text => validateNarrative({ sections: { gapsAndMissingEvidence: { factIds: cite, text } } }, facts,
+      { parts: ['gapsAndMissingEvidence'] }).errors.filter(e => e.rule === 'missing').map(e => e.detail);
+    expect(detailFor('Mean Time to Respond is missing.')).toEqual([
+      'Do not call Mean Time to Respond missing: it exists and has no score. Say it is not yet assessed.',
+    ]);
+    expect(detailFor('The risk assessment is missing.')).toEqual([
+      'Do not call Risk assessment per zone missing: it exists and has no score. Say it is not yet assessed.',
+    ]);
+    expect(detailFor('Mean Time to Contain is missing.')).toEqual([
+      'Do not call Mean Time to Contain missing: it exists and has no score. Say it has no score.',
+    ]);
   });
 
   it('"missing data", "missing scores", "missing evidence" pass', () => {

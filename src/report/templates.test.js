@@ -611,3 +611,82 @@ describe('recommended actions', () => {
     }), { numRuns: 200 });
   });
 });
+
+// ─── Grouped no-score states (Oudendijk manual check) ─────────────────────────
+
+describe('gapsAndMissingEvidence groups', () => {
+  it('Oudendijk: six unassessed indicators in one sentence, counted from the facts', () => {
+    const { facts, generated } = sectionsOf(loadScenario(sparseJson));
+    expect(generated.gapsAndMissingEvidence).toEqual({
+      factIds: facts.filter(f => ['dim_incomplete', 'no_score'].includes(f.kind)).map(f => f.id),
+      text: 'Six indicators are not yet assessed: Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, ' +
+        'Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate. This says nothing about how they perform, ' +
+        'but without them Incident Handling and Business Continuity have no score, so there is no overall score either.',
+    });
+    expect(validGenerated(facts, generated).errors).toEqual([]);
+  });
+
+  it('several groups: each state once, reasons kept per item, one consequence sentence', () => {
+    const { facts, generated } = generatedFor({ indicators: {
+      'IH-06': { state: STATE.NOT_MEASURABLE, reason: { layer0ItemId: 'L0-asset-inventory', text: '' } },
+      'IH-07': { state: STATE.NOT_MEASURABLE },
+      'BC-01': { state: STATE.NO_QUALIFYING_DISRUPTION }, 'BC-02': { state: STATE.NO_QUALIFYING_DISRUPTION },
+      'BC-04': ratio(5, 2), 'BC-08': ratio(-1, 2),
+    } });
+    expect(generated.gapsAndMissingEvidence.text.split('\n\n')[0]).toBe([
+      'Three indicators are not measurable: Mean Time to Detect, Mean Time to Respond and Mean Time to Contain.',
+      'For each, evidence to compute the value is absent or unreliable.',
+      'For Mean Time to Detect, the recorded root cause is Asset inventory maintained.',
+      'No reason was recorded for Mean Time to Respond and Mean Time to Contain.',
+      'Two indicators had no qualifying disruption: Network Operability Under Disruption and Zone Availability Rate.',
+      'For each, no qualifying disruption occurred this period. Nothing occurred to assess them.',
+      'Invalid values were entered for two indicators: Operational Threshold Violation Rate and RTO Achievement Rate, so they could not be scored.',
+      'This says nothing about how any of these indicators performs, but without them Incident Handling and Business Continuity have no score, so there is no overall score either.',
+    ].join(' '));
+    expect(validGenerated(facts, generated).errors).toEqual([]);
+  });
+
+  it('a not-measurable group without any reason: "No reason was recorded for them."', () => {
+    const { facts, generated } = generatedFor({ indicators: { 'IH-06': { state: STATE.NOT_MEASURABLE } } });
+    expect(generated.gapsAndMissingEvidence.text.split('\n\n')[0]).toBe(
+      'Two indicators are not measurable: Mean Time to Detect and Mean Time to Contain. ' +
+      'For each, evidence to compute the value is absent or unreliable. No reason was recorded for them. ' +
+      'This says nothing about how they perform, but without them Incident Handling has no score, so there is no overall score either.'
+    );
+    expect(validGenerated(facts, generated).errors).toEqual([]);
+  });
+
+  it('two with an assessor note each, and no qualifying event', () => {
+    const { facts, generated } = generatedFor({ indicators: {
+      'IH-06': { state: STATE.NO_QUALIFYING_EVENT }, 'IH-07': { state: STATE.NO_QUALIFYING_EVENT },
+      'BC-01': { state: STATE.NOT_MEASURABLE, reason: { text: 'logger offline' } },
+      'BC-02': { state: STATE.NOT_MEASURABLE, reason: { layer0ItemId: 'L0-asset-inventory', text: 'CMDB stale' } },
+    } });
+    const text = generated.gapsAndMissingEvidence.text;
+    expect(text).toContain('Two indicators had no qualifying event: Mean Time to Detect and Mean Time to Respond. ' +
+      'For each, no qualifying incident, exercise, or disruption occurred. Nothing occurred to assess them.');
+    expect(text).toContain('Three indicators are not measurable: Mean Time to Contain, Network Operability Under Disruption and Zone Availability Rate.');
+    expect(text).toContain('For Network Operability Under Disruption, the assessor noted "logger offline".');
+    expect(text).toContain('For Zone Availability Rate, the recorded root cause is Asset inventory maintained, and the assessor noted "CMDB stale".');
+    expect(text).toContain('No reason was recorded for Mean Time to Contain.');
+    expect(validGenerated(facts, generated).errors).toEqual([]);
+  });
+
+  it('property: every no-score indicator is named exactly once in the missing-evidence paragraph', () => {
+    fc.assert(fc.property(assessmentArb, rec => {
+      const { facts, generated } = sectionsOf(rec);
+      const noScore = facts.filter(f => f.kind === 'no_score');
+      if (noScore.length === 0) return;
+      const paragraph = stripAssessorNote(generated.gapsAndMissingEvidence.text.split('\n\n')[0]).replace(/"[^"]*"/g, '""');
+      const listing = paragraph.slice(0, paragraph.indexOf('This says nothing'));
+      for (const f of noScore) {
+        const mentions = listing.split(f.data.name).length - 1;
+        // In a not-measurable group with some reasons, each item is named again: "For A, …" or "No reason was recorded for B".
+        const group = noScore.filter(g => g.data.status === f.data.status);
+        const someReasons = group.some(g => g.data.rootCause || g.data.note);
+        const again = f.data.groupCount !== null && f.data.status === STATE.NOT_MEASURABLE && someReasons;
+        expect(mentions, f.data.name).toBe(again ? 2 : 1);
+      }
+    }), { numRuns: 200 });
+  });
+});

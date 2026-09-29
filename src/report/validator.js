@@ -7,8 +7,8 @@
  * narrative against the facts it was written from; `parts` (default: headline
  * and every section) limits the check to some parts, e.g. the two the model
  * writes. Categories always come from all facts. It reads only the facts
- * (kind, text, refs) and the data definitions; it re-derives no score or
- * state. `detail` uses descriptive names only: it is sent back to the model
+ * (kind, text, refs; a no-score fact's data.status for check 15's hint) and
+ * the data definitions; it re-derives no score or state. `detail` uses descriptive names only: it is sent back to the model
  * on retry and shown in the UI when validation fails.
  *
  * Per section: quoted client name / assessor notes are removed (when their
@@ -31,7 +31,7 @@
  * its own fact.
  */
 
-import { INDICATORS, ALL_INDICATOR_IDS, SCORE_LEVEL_LABELS } from '../data/indicatorDefinitions.js';
+import { INDICATORS, ALL_INDICATOR_IDS, SCORE_LEVEL_LABELS, STATE } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS, LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
 import { displayName, DIMENSION_NAMES } from '../data/displayNames.js';
 import { SECTION_KEYS, MODEL_PARTS, TARGETS_KEY, CATALOGUE_KEYS } from './schema.js';
@@ -233,6 +233,16 @@ const QUOTED = /"([^"]*)"|“([^”]*)”/g;
 
 const OWN_FACT_KINDS = new Set(['scored', 'gap_zero', 'no_score', 'process']);
 
+/**
+ * Check 15's repair hint, matching the item's state (Oudendijk manual check).
+ * The one place the validator reads a fact's data: a no-score fact's status.
+ */
+function missingHint(f) {
+  if (f.kind === 'l0_unset' || f.data?.status === 'unset') return 'Say it is not yet assessed.';
+  if (f.data?.status === STATE.NOT_MEASURABLE) return 'Say it could not be measured.';
+  return 'Say it has no score.';
+}
+
 function categorize(facts) {
   const noJudgement = new Map();   // rule 4: id → why it cannot be judged
   const noScore = new Set();       // rule 4 "measured": no-score indicators
@@ -241,7 +251,7 @@ function categorize(facts) {
   const ownFacts = new Map();      // rule 8: id → the item's own fact
   const criticalItems = new Set(); // rule 9: items whose flag / process fact is CRITICAL
   const flaggedItems = new Set();  // rule 9, per sentence: items with any flag
-  const notScored = new Set();     // rule 15: no-score indicators and unassessed Layer 0 items
+  const notScored = new Map();     // rule 15: no-score indicators and unassessed Layer 0 items → repair hint
   const scored = new Set();        // rule 16: scored indicators and complete dimensions
   const dimensionScores = new Map(); // rule 8: complete dimension → its score as the fact writes it
   const contextNumbers = new Set(facts.filter(f => f.kind === 'context').flatMap(f => extractNumbers(maskNames(f.text))));
@@ -264,7 +274,7 @@ function categorize(facts) {
       const score = f.text.match(DIMENSION_SCORE)?.[1];
       if (score !== undefined) dimensionScores.set(f.refs[0], score);
     }
-    if (f.kind === 'no_score' || f.kind === 'l0_unset') for (const id of f.refs) notScored.add(id);
+    if (f.kind === 'no_score' || f.kind === 'l0_unset') for (const id of f.refs) notScored.set(id, missingHint(f));
     if (f.kind === 'no_score') {
       for (const id of f.refs) {
         noJudgement.set(id, 'has no score');
@@ -608,7 +618,7 @@ function checkSection(section, part, ctx) {
       for (const [rule, detail] of checkClause(clause, subjects, ctx.categories)) add(rule, detail, sentence);
       if (!missingPhrase && MISSING_WORD.test(maskNames(clause))) {
         for (const id of subjects.filter(s => ctx.categories.notScored.has(s))) {
-          add('missing', `Do not call ${nameOf(id)} missing: it exists and has no score. Say it has no score.`, sentence);
+          add('missing', `Do not call ${nameOf(id)} missing: it exists and has no score. ${ctx.categories.notScored.get(id)}`, sentence);
         }
       }
       if (respectively) continue;

@@ -21,6 +21,30 @@ export const NOTHING_TO_ASSESS = 'Nothing occurred to assess this indicator.';
 /** An indicator or Layer 0 item with no state recorded. */
 export const NOT_YET_ASSESSED = 'not yet assessed';
 
+/**
+ * Several indicators with the same no-score state (Oudendijk manual check):
+ * the fact states the group size, the Gaps section groups them in one
+ * sentence with a count word taken from that size. Keys: no_score statuses.
+ */
+export const NO_SCORE_GROUP = {
+  predicate: {
+    [STATE.NOT_MEASURABLE]:           'are not measurable',
+    [STATE.NO_QUALIFYING_EVENT]:      'had no qualifying event',
+    [STATE.NO_QUALIFYING_DISRUPTION]: 'had no qualifying disruption',
+    unset:                            `are ${NOT_YET_ASSESSED}`,
+    invalid:                          'have an invalid value',
+  },
+  /** The sentence in each fact of a group, e.g. "It is one of 6 effectiveness indicators that are not yet assessed." */
+  fact: (count, status) => `It is one of ${count} effectiveness indicators that ${NO_SCORE_GROUP.predicate[status]}.`,
+  /** "Six indicators are not yet assessed: A, B and C." */
+  lead: (countWord, status, names) => `${countWord} indicators ${NO_SCORE_GROUP.predicate[status]}: ${names}.`,
+  invalid: (countWord, names) => `Invalid values were entered for ${countWord} indicators: ${names}, so they could not be scored.`,
+  forEach: detail => `For each, ${detail}.`,
+  nothingToAssess: 'Nothing occurred to assess them.',
+  noReason: names => `No reason was recorded for ${names}.`,
+  noReasonForAny: 'No reason was recorded for them.',
+};
+
 // ---------------------------------------------------------------------------
 // Programme gaps: the objective or capability does not exist yet
 // ---------------------------------------------------------------------------
