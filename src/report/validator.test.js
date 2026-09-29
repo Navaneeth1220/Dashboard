@@ -57,6 +57,10 @@ const GOOD = {
       factIds: ['F20'],
       text: 'The lowest effectiveness result is RPO Achievement Rate, a programme gap at 0. Next, at score 2 and of equal priority, are Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate and RTO Achievement Rate.',
     },
+    targets: {
+      factIds: [...MEASURED, ...GAPS],
+      text: 'Mean Time to Detect, now 18 hours, reaches score 4 at 6 hours or less. Zone Availability Rate reaches score 3 (Good) at 70% or more. RPO Achievement Rate has no numeric target yet: no recovery point objective has been established.',
+    },
   },
 };
 
@@ -1122,4 +1126,53 @@ describe('property-based tests (fast-check)', () => {
       expect(Array.isArray(result.errors)).toBe(true);
     }), { numRuns: 300 });
   }, PROPERTY_TIMEOUT_MS);
+});
+
+// ─── Step 7: target sentences in check 8 ──────────────────────────────────────
+
+describe('Step 7: a target score is not the current score (check 8)', () => {
+  const TARGET_SENTENCE = 'Zone Availability Rate, now 40% (score 2, Developing), reaches score 3 (Good) at 70% or more.';
+
+  it('the own fact of Zone Availability Rate now contains its target score 3', () => {
+    expect(FACTS.find(f => f.id === 'F8').text).toContain('Next level: score 3 at 70% or more.');
+  });
+
+  it('"Zone Availability Rate is at 3" fails in the overview (3 is in C2, so only check 8 can catch it)', () => {
+    const result = overview('Zone Availability Rate is at 3.');
+    expect(rulesOf(result)).toEqual(['attribution']);
+    expect(result.errors[0].detail).toBe('The number "3" is not in the fact about Zone Availability Rate.');
+  });
+
+  it('the logged 2026-09-28 sentence still fails in Measured performance', () => {
+    const logged = 'Measurable performance indicators showed Mean Time to Detect at 3, Mean Time to Respond at 2, Network Operability Under Disruption at 3, Zone Availability Rate at 3, Operational Threshold Violation Rate at 2, RTO Achievement Rate at 2, and RPO Achievement Rate at 0 due to a programme gap.';
+    const details = validate(withPart('measuredPerformance', [...MEASURED, 'F11'], logged)).errors.map(e => e.detail);
+    expect(details).toContain('The number "3" is not in the fact about Zone Availability Rate.');
+  });
+
+  it('the Targets sentence passes in the Targets section and fails in any other: 70 is only in the target sentence', () => {
+    expect(validate(withPart('targets', ['F8'], TARGET_SENTENCE))).toEqual({ ok: true, errors: [] });
+    for (const key of ['overview', 'measuredPerformance', 'priorities']) {
+      const result = validate(withPart(key, ['C1', 'C2', 'C3', 'F8', 'F20'], TARGET_SENTENCE));
+      expect(result.errors.map(e => e.detail), key).toContain('The number "70" does not appear in any fact cited by this section.');
+    }
+  });
+
+  it('copying the target sentence verbatim is no exemption outside the Targets section', () => {
+    const result = validate(withPart('measuredPerformance', ['F8'], 'Zone Availability Rate: next level: score 3 at 70% or more.'));
+    expect(rulesOf(result)).toContain('numbers');
+  });
+
+  it('property: an overview claiming a scored indicator already has its target score always fails', () => {
+    fc.assert(fc.property(assessmentArb, assessment => {
+      const facts = buildAssessmentFacts(assessment);
+      const cited = facts.filter(f => f.kind === 'context' || f.kind === 'scale').map(f => f.id);
+      for (const f of facts.filter(x => x.kind === 'scored' && x.data.target)) {
+        const narrative = { sections: { overview: { factIds: cited, text: `${f.data.name} scored ${f.data.target.score}.` } } };
+        const result = validateNarrative(narrative, facts, { parts: ['overview'] });
+        expect(result.ok).toBe(false);
+        // 2, 3 and 4 are in the context and scale facts: only check 8 stands between them and a pass.
+        if (f.data.target.score >= 2) expect(rulesOf(result)).toContain('attribution');
+      }
+    }), { numRuns: 100 });
+  });
 });

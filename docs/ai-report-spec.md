@@ -42,7 +42,7 @@ cloud provider.
 
 ```
 src/report/facts.js            buildAssessmentFacts(assessment) → facts
-src/report/templates.js        buildGeneratedSections(facts) → the four generated sections
+src/report/templates.js        buildGeneratedSections(facts) → the generated sections (five since Step 7)
 src/report/prompt.js           SYSTEM_PROMPT, selectModelFacts(facts), buildUserMessage(facts)
 src/report/schema.js           buildOutputSchema(factIds)  (headline + overview)
 src/report/validator.js        validateNarrative(narrative, facts, { parts }) → { ok, errors }
@@ -99,7 +99,7 @@ plus the indicators involved. IDs are assigned in a stable order: C-facts
 | `scale` | C3: the 0–4 scale and the incomplete-dimension rule. Normal citation rules |
 | `dim_complete` | dimension with a score |
 | `dim_incomplete` | dimension with no score (incl. Overall) |
-| `scored` | Layer 1 indicator, measured, with a score |
+| `scored` | Layer 1 indicator, measured, with a score; below 4 it ends with the next level's target (Step 7) |
 | `gap_zero` | programme gap: score 0 because objective/capability absent |
 | `no_score` | not measurable / no qualifying event / unset: no score |
 | `l0_ok` | Layer 0 items in a satisfactory state (one grouped fact) |
@@ -181,19 +181,24 @@ F2  dim_complete    Business Continuity: complete, score 1.80 out of 4 (5
 F3  dim_incomplete  Overall score: not available, because Incident Handling
                     is incomplete.
 F4  scored          Mean Time to Detect: measured at 18 hours (lower is
-                    better); score 3.
+                    better); score 3. Next level: score 4 at 6 hours or
+                    less.
 F5  scored          Mean Time to Respond: measured at 30 hours (lower is
-                    better); score 2.
+                    better); score 2. Next level: score 3 at 24 hours or
+                    less.
 F6  no_score        Mean Time to Contain: not measurable. The evidence needed
                     to compute it is absent or unreliable. No score. This says
                     nothing about how Mean Time to Contain performs. No reason
                     was recorded.
 F7  scored          Network Operability Under Disruption: measured at 85%;
-                    score 3.
-F8  scored          Zone Availability Rate: measured at 40%; score 2.
+                    score 3. Next level: score 4 at 90% or more.
+F8  scored          Zone Availability Rate: measured at 40%; score 2. Next
+                    level: score 3 at 70% or more.
 F9  scored          Operational Threshold Violation Rate: measured at 12.5%
-                    (lower is better); score 2.
-F10 scored          RTO Achievement Rate: measured at 50%; score 2.
+                    (lower is better); score 2. Next level: score 3 at 5% or
+                    less.
+F10 scored          RTO Achievement Rate: measured at 50%; score 2. Next
+                    level: score 3 at 75% or more.
 F11 gap_zero        RPO Achievement Rate: no recovery point objective defined.
                     Scored 0 as a programme gap: the objective does not exist
                     yet. Not a measured failure.
@@ -374,8 +379,9 @@ All fields required; `factIds` `minItems: 1`; `text` `minLength: 1`;
 `additionalProperties: false` on every object. `factIds` comes first in both
 `properties` and `required`. No `uniqueItems`: llama.cpp grammars do not
 enforce it, so duplicates are caught by the validator instead. Exported:
-`MODEL_PARTS` (`headline`, `overview`), `GENERATED_KEYS` (the four generated
-sections) and `SECTION_KEYS` (all five sections of the assembled report,
+`MODEL_PARTS` (`headline`, `overview`), `GENERATED_KEYS` (the generated
+sections: four, five with Targets since Step 7) and `SECTION_KEYS` (all
+sections of the assembled report except the headline,
 shared with the validator and the UI).
 
 Tests: schema enum equals the model's fact IDs; field order is `factIds`,
@@ -509,7 +515,19 @@ categories still come from all facts.
    times on forward references ("RPO Achievement Rate and several areas
    with scores of 2, including…"). Verbatim-exempt like checks 4–6. Found
    in the first manual check: "Zone Availability Rate (3)" passed check 2
-   because 3 was in other cited facts. Complete dimensions (the dimension
+   because 3 was in other cited facts. In every part except the Targets
+   section, the validator reads a `scored` fact without its "Next level:
+   …" target sentence (Step 7), in check 8 and also in check 2 and the
+   verbatim exemption: a target score is not the current score, so "Zone
+   Availability Rate (3)" still fails although its fact now contains
+   "score 3 at 70% or more", and a target sentence copied into another
+   section fails check 2. The sentence is stripped with the prefix
+   constant the fact builder writes it with
+   (`TARGET_WORDING.nextLevelPrefix`, via `stripTargetSentence` in
+   `facts.js`), so the two cannot drift apart. Only the Targets section,
+   which states those numbers, reads the whole fact; the other generated
+   sections keep the full safety net against a template error. Complete
+   dimensions (the dimension
    of a `dim_complete` fact, the overall score included) count as items
    with an own fact: a number in a clause that names exactly one complete
    dimension must be in its `dim_complete` fact. And a score claim about a
@@ -751,7 +769,7 @@ violation of checks 3–6 is always caught; malformed input never throws.
 ## Step 3b: Generated sections (`templates.js`, `reportWording.js`)
 
 `buildGeneratedSections(facts)` → `{ measuredPerformance, gapsAndMissingEvidence,
-foundationsAndFlags, priorities }`, each `{ factIds, text }` (paragraphs
+foundationsAndFlags, priorities, targets }` (targets: Step 7), each `{ factIds, text }` (paragraphs
 separated by a blank line). Pure; written from the facts' `data` only.
 
 Wording sources, so the report and the dashboard never disagree:
@@ -966,7 +984,7 @@ reports progress (an exception it throws is logged as a warning and ignored).
 4. Returns `{ status: 'ok' | 'failed' | 'unavailable', reason?, message?, narrative, generated, origin, errors, facts, attempts, model }`.
    - `narrative` (only on `ok`): `{ headline, sections: { overview,
      ...generated } }`, the assembled report.
-   - `generated`: the four generated sections, always present (also on
+   - `generated`: the generated sections, always present (also on
      `failed` and `unavailable`), so the report stays useful when the model
      part fails. `origin`: `{ headline: 'ai', overview: 'ai',
      measuredPerformance: 'generated', … }`.
@@ -1097,13 +1115,13 @@ existing panels):
   - "Generated from the assessment: Measured performance, …";
   - "Edited after generation: …" (only when a part was edited).
 - `failed`: "The draft did not pass validation" and the error list (the
-  part's title and the `detail`; never a sentence), then the four generated
+  part's title and the `detail`; never a sentence), then the generated
   sections with their label. No model text.
 - `unavailable`: by reason. `not_running`: "Ollama is not running at
   localhost:11434." and "Start it with: ollama serve". `model_missing`: the
   reason's message and "Download the model with: ollama pull <model>".
   `cancelled`: "Generation cancelled." (neutral, not an error). `timeout`,
-  `provider_error`: the reason's message. Then the four generated sections.
+  `provider_error`: the reason's message. Then the generated sections.
 - Stale: "The assessment has changed since this draft was generated.
   Generate again to update it." above the parts; the draft stays.
 - The panel computes nothing: it renders the hook's state, the result and
@@ -1182,7 +1200,7 @@ their label.
 - The parts, in panel order: the title, its label ("AI-drafted — review
   before use", "Generated from the assessment" or "Edited") in small grey
   type, and the current on-screen text, edits included. `ok`: all six.
-  `failed` and `unavailable`: the four generated sections only; the builder
+  `failed` and `unavailable`: the generated sections only; the builder
   enforces this from the result's status, whatever the caller passes. The
   validation errors, the unavailable messages and the "Based on facts" lists
   are on-screen status and are not printed.
@@ -1223,7 +1241,7 @@ never split. Page numbers are added once the page count is known.
   scripted provider:
   - `ok`: six parts with labels; an edit changes the text and the label to
     "Edited"; the model footer is present.
-  - `failed` and each unavailable reason: only the four generated sections,
+  - `failed` and each unavailable reason: only the generated sections,
     no model footer, no draft text anywhere (marker sentence), even when the
     caller passes edits for the AI keys.
   - Header from the result's context fact: a result for client A with an
@@ -1252,6 +1270,140 @@ never split. Page numbers are added once the page count is known.
   client field makes the draft stale and disables the button.
 - `useNarrative`: `generatedAt` is set when the result arrives.
 - The shared-wording test covers the new strings.
+
+---
+
+## Step 7: Targets section (`facts.js`, `templates.js`)
+
+A fifth generated section, "Targets", after Priorities: for each measured
+indicator below score 4, the value it needs for the next score level. No
+model is involved; it is labelled "Generated from the assessment" like the
+other generated sections and shown in the panel, Copy and the PDF (through
+`GENERATED_KEYS` and `reportParts`). The catalogue's recommended actions
+will follow after Targets in a later step.
+
+### Where the numbers come from
+
+`computeGapAnalysis(assessment, results)` (`src/engine/projection.js`, also
+behind the dashboard's gap panel) gives each scored indicator
+`nextBand: { targetScore, thresholdValue }`, read from the band
+definitions: lower is better → the next band's inclusive upper bound
+(`lte`), "X or less"; higher is better → its inclusive lower bound (`gte`),
+"X or more". Operational Threshold Violation Rate is direction-inverted:
+its bands already map to 4 = best, so its target is a maximum (score 3 at
+5% or less) with no second reversal. A lower-is-better target of 0 (score 4
+for Operational Threshold Violation Rate) is written "at 0%", without "or
+less". No new engine logic; the engine's targets for programme-gap zeros
+are not used.
+
+### Facts
+
+The validator checks generated sections too: every number must be in a
+cited fact, and a number next to an indicator's name must be in that
+indicator's own fact (check 8). So each `scored` fact below 4 ends with one
+more sentence: "Next level: score N at X or less." / "… or more." /
+"… at 0%." (Westmaas F4–F10 in the Step 1 fixture). `data.target`:
+`{ score, level, value, bound: 'max' | 'min' | 'exact' }`, or null at
+score 4. `gap_zero` facts for capability absent get `data.capability`
+(`'detection'` for Mean Time to Detect, `'response'` for Mean Time to
+Respond and Mean Time to Contain, from `CAPABILITY_BY_INDICATOR` in
+`reportWording.js`). No fact is added or removed; fact IDs do not move.
+
+`scored` facts are never sent to the model (`MODEL_KINDS`), so the prompt
+is unchanged. The validator's categories are unchanged, but check 8 reads
+an indicator's own fact text, looked up in all facts: with the target
+sentence in it, a false score claim equal to the target score ("Zone
+Availability Rate at 3", logged in the 2026-09-28 run set and caught
+before) would pass, because C2's and C3's numbers are allowed by check 2.
+Found by the replay; fixed in check 8 (Step 3): in every part except
+Targets, the validator reads a scored fact without the target sentence
+(checks 2 and 8 and the verbatim exemption).
+
+Per the rule for fact and validator changes, the drafts logged in
+`ai-report-manual-check.md` are replayed through the validator with the
+old and the new facts and validator (the verdicts must be identical), and
+the manual check is re-run.
+
+### Wording (`TARGET_WORDING` in `reportWording.js`)
+
+- Lead-in: "Each target is the value an indicator needs for its next score
+  level, taken from the scoring bands."
+- One sentence per indicator (so check 8 ties each number to one fact),
+  grouped by dimension like Measured performance: "In Incident Handling,
+  Mean Time to Detect, now 18 hours (score 3, Good), reaches score 4
+  (Excellent) at 6 hours or less." Later sentences in the dimension start
+  with the name.
+- Score 4: one sentence, "Already at the highest level (score 4,
+  Excellent): A and B."
+- Programme gaps, one sentence per indicator, by state:
+  - no recovery point / time objective: "<name> has no numeric target yet:
+    no recovery point (time) objective has been established. Define the
+    objective first; the scoring bands apply once it exists."
+  - no operational thresholds: "… no operational thresholds have been
+    established. Define the thresholds first; …"
+  - capability absent: "… no detection capability exists yet. Establish it
+    first; …" (Mean Time to Detect) / "… no response capability exists yet.
+    Establish it first; …" (Mean Time to Respond, Mean Time to Contain).
+- No score (not measurable, no qualifying event or disruption, not yet
+  assessed, invalid value): "A has no score, so it has no target." / "A and
+  B have no score, so they have no target." Never a number or a judgement.
+- Fallbacks: no scored indicator below 4 and no programme gap: "No measured
+  indicator is below score 4." Nothing scored: "No indicator has a score,
+  so there are no targets."
+- Paragraphs: lead-in; Incident Handling; Business Continuity; score 4;
+  programme gaps; no score (empty paragraphs are left out; the lead-in only
+  when a numeric target follows).
+
+Westmaas baseline, targets (F4, F5, F6, F7, F8, F9, F10, F11):
+
+> Each target is the value an indicator needs for its next score level,
+> taken from the scoring bands.
+>
+> In Incident Handling, Mean Time to Detect, now 18 hours (score 3, Good),
+> reaches score 4 (Excellent) at 6 hours or less. Mean Time to Respond, now
+> 30 hours (score 2, Developing), reaches score 3 (Good) at 24 hours or less.
+>
+> In Business Continuity, Network Operability Under Disruption, now 85%
+> (score 3, Good), reaches score 4 (Excellent) at 90% or more. Zone
+> Availability Rate, now 40% (score 2, Developing), reaches score 3 (Good) at
+> 70% or more. Operational Threshold Violation Rate, now 12.5% (score 2,
+> Developing), reaches score 3 (Good) at 5% or less. RTO Achievement Rate,
+> now 50% (score 2, Developing), reaches score 3 (Good) at 75% or more.
+>
+> RPO Achievement Rate has no numeric target yet: no recovery point
+> objective has been established. Define the objective first; the scoring
+> bands apply once it exists.
+>
+> Mean Time to Contain has no score, so it has no target.
+
+### Tests
+
+- `facts.test.js`: the Westmaas `scored` facts exactly; score 4 has no
+  target; a measured 0 targets score 1; Operational Threshold Violation Rate
+  at score 3 → "score 4 at 0%" (`exact`), at 2 → 5% or less (`max`), at 0 →
+  50% or less; programme-gap and no-score facts have no target;
+  `data.capability` per capability-absent indicator. Property (fast-check,
+  random assessments): every target equals the engine's `nextBand`; its
+  bound is `max` or `exact` exactly when the indicator is lower-is-better;
+  a value at the target scores exactly the target score with
+  `scoreIndicator`, and a value just past it on the wrong side scores below
+  it.
+- `prompt.test.js`: the reduced Westmaas message the model receives is
+  unchanged (pinned); the full message shows the target sentences.
+- `validator.test.js`: "Zone Availability Rate at 3" (the logged
+  sentence) fails check 8 in the overview and in Measured performance; the
+  Targets sentence for Zone Availability Rate passes in the Targets
+  section and fails in any other; property: for random assessments, an
+  overview claiming that a scored indicator below 4 has its target score
+  always fails.
+- `templates.test.js`: the Westmaas text above exactly; the June follow-up
+  (Mean Time to Contain now has a target, RPO Achievement Rate at the
+  highest level); each programme-gap state and capability wording; no
+  score never gets a number; a measured 0; both fallbacks; the property
+  test covers Targets (validator, no "poor", no codes).
+- Panel, Copy, PDF: the Targets part with the generated label; Copy and the
+  PDF closing name it; present on `failed` and `unavailable`.
+- Replay and manual check as above.
 
 ---
 

@@ -26,6 +26,7 @@ const GENERATED = buildGeneratedSections(FACTS);
 const ORIGIN = {
   headline: 'ai', overview: 'ai',
   measuredPerformance: 'generated', gapsAndMissingEvidence: 'generated', foundationsAndFlags: 'generated', priorities: 'generated',
+  targets: 'generated',
 };
 
 const clone = value => JSON.parse(JSON.stringify(value));

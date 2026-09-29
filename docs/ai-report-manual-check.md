@@ -4967,3 +4967,149 @@ time. Run 2 failed on "respectively" in its last overview repair.
 **Performance**: 14.5–15.1 tokens/s; max prompt_eval_count 947; run 1
 78.8 s (model load).
 
+## Run set 2026-09-29 16:13 UTC: Westmaas_2026-01-01_assessment.json
+
+- Model: qwen2.5:7b · Ollama 0.34.4 · options `{"temperature":0.2,"num_ctx":4096,"num_predict":1024}`
+- Timeout 300.0 s per call · 60.0 s cooldown between runs · retries at temperature 0.5, repairing failing sections only
+- Scenario: scenarios/Westmaas_2026-01-01_assessment.json (23 facts)
+
+| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |
+|---|---|---|---|---|---|
+| before | (no model loaded) | | | | |
+| after | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+
+### Summary
+
+| Measure | Value |
+|---|---|
+| ok | 2 of 5 |
+| generated sections identical and valid | 5 of 5 |
+| attempts per run (calls) | 0 (0), 0 (0), 0 (0), 1 (1), 2 (2) |
+| errors by rule (all attempts) | missing ×1 |
+| max prompt_eval_count | 875 (warning above 3000) |
+| generation speed (tokens/s, eval_duration) | first 14.2, last 11.9, min 11.9, max 14.2 |
+
+### Generated sections
+
+Built from the facts by templates (no model); every run asserts it gets exactly this.
+
+The reference copy passes the validator.
+
+**measuredPerformance** (C3, F4, F5, F7, F8, F9, F10): Each effectiveness indicator is scored from 0 to 4, where 4 is best. In Incident Handling, Mean Time to Detect was 18 hours (score 3, Good) and Mean Time to Respond was 30 hours (score 2, Developing). In Business Continuity, Network Operability Under Disruption was 85% (score 3, Good), Zone Availability Rate was 40% (score 2, Developing), Operational Threshold Violation Rate was 12.5% (score 2, Developing) and RTO Achievement Rate was 50% (score 2, Developing). For Mean Time to Detect, Mean Time to Respond and Operational Threshold Violation Rate, lower values are better.
+
+**gapsAndMissingEvidence** (F1, F3, F6, F11): Mean Time to Contain is not measurable: evidence to compute the value is absent or unreliable, and no reason was recorded. This says nothing about how Mean Time to Contain performs, but without it Incident Handling has no score, so there is no overall score either.
+
+No recovery point objective has been established for RPO Achievement Rate, so it scores 0 as a programme gap; this is not a measured failure.
+
+**foundationsAndFlags** (F12, F13, F14, F15, F16, F17, F18, F19): In place: Asset inventory maintained, Risk assessment per zone, Controlled IT/OT boundary separation and BC plan documented for critical processes.
+
+The following issues were flagged (listed by severity; this is not an order of action). Critical: uncontrolled inter-zone multi-homed devices were identified. High: asset interdependency documentation is incomplete or outdated, and no BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+Process evidence is reported without a score. Vulnerability Remediation Rate is 60%, in the 50–69% band, which is below target — moderate programme improvement warranted (medium note). Mean Time to Remediate is 75 days, in the 31–90 days band, which is satisfactory — continue monitoring.
+
+Read together (advisory only; no scores change): the uncontrolled multi-homed devices and Zone Availability Rate (score 2, Developing) may be related, because a segmentation bypass can affect zone availability; review them together. Removing the multi-homed devices and establishing the evidence to measure Mean Time to Contain are both measurement-readiness actions; address them together.
+
+**priorities** (F6, F20): Ranked by score, where a lower score is more urgent: the lowest effectiveness result is RPO Achievement Rate, a programme gap at score 0. Next, at score 2 and of equal priority, are Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate and RTO Achievement Rate, listed in catalogue order. Mean Time to Contain is not ranked because it has no score.
+
+**targets** (F4, F5, F6, F7, F8, F9, F10, F11): Each target is the value an indicator needs for its next score level, taken from the scoring bands.
+
+In Incident Handling, Mean Time to Detect, now 18 hours (score 3, Good), reaches score 4 (Excellent) at 6 hours or less. Mean Time to Respond, now 30 hours (score 2, Developing), reaches score 3 (Good) at 24 hours or less.
+
+In Business Continuity, Network Operability Under Disruption, now 85% (score 3, Good), reaches score 4 (Excellent) at 90% or more. Zone Availability Rate, now 40% (score 2, Developing), reaches score 3 (Good) at 70% or more. Operational Threshold Violation Rate, now 12.5% (score 2, Developing), reaches score 3 (Good) at 5% or less. RTO Achievement Rate, now 50% (score 2, Developing), reaches score 3 (Good) at 75% or more.
+
+RPO Achievement Rate has no numeric target yet: no recovery point objective has been established. Define the objective first; the scoring bands apply once it exists.
+
+Mean Time to Contain has no score, so it has no target.
+
+### Runs
+
+| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |
+|---|---|---|---|---|---|---|---|---|---|
+| 4 | ok | 1 | whole | 91.3 s | 875 | 174 | 14.2 | stop | — |
+| 5 | ok | 1 | whole | 14.1 s | 875 | 190 | 13.9 | stop | missing ×1 |
+| 5 | ok | 2 | overview | 14.8 s | 825 | 165 | 11.9 | stop | — |
+
+#### Run 1: unavailable (0 attempt(s), 0 call(s), 162.1 s)
+
+Unavailable: `provider_error`: llama-server process has terminated: exit status 0xc0000409: The system detected an overrun of a stack-based buffer in this application. This overrun could potentially allow a malicious user to gain control of this application.: CUDA error: shared object initialization failed
+
+Generated sections: identical to the reference copy, pass the validator.
+
+#### Run 2: unavailable (0 attempt(s), 0 call(s), 154.4 s)
+
+Unavailable: `provider_error`: llama-server process has terminated: exit status 0xc0000409: The system detected an overrun of a stack-based buffer in this application. This overrun could potentially allow a malicious user to gain control of this application.: CUDA error: shared object initialization failed
+
+Generated sections: identical to the reference copy, pass the validator.
+
+#### Run 3: unavailable (0 attempt(s), 0 call(s), 88.4 s)
+
+Unavailable: `provider_error`: llama-server process has terminated: exit status 0xc0000409: The system detected an overrun of a stack-based buffer in this application. This overrun could potentially allow a malicious user to gain control of this application.: CUDA error: shared object initialization failed
+
+Generated sections: identical to the reference copy, pass the validator.
+
+#### Run 4: ok (1 attempt(s), 1 call(s), 91.4 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 174, 14.2 tokens/s, done_reason stop, 91.3 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across 2 dimensions. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80. The overall score is not available. Critical and high severity flags were raised for uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and lack of BC plan testing.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across 2 dimensions. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80. The overall score is not available. Critical and high severity flags were raised for uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and lack of BC plan testing.
+
+</details>
+
+#### Run 5: ok (2 attempt(s), 2 call(s), 28.9 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 190, 13.9 tokens/s, done_reason stop, 14.1 s
+- `missing` overview, "Incident Handling is incomplete due to a missing indicator, resulting in no dimension score.": Do not write "missing indicator": the indicator exists; say it has no score.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to a missing indicator, resulting in no dimension score. Business Continuity scored 1.80 out of 4. The overall score is not available. Critical and high severity flags were identified for uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and lack of BC plan testing.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 825, eval_count 165, 11.9 tokens/s, done_reason stop, 14.8 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Business Continuity is complete with a score of 1.80 out of 4, including a programme gap of 0 for RPO Achievement Rate. Incident Handling is incomplete due to the absence of a score for Mean Time to Contain, resulting in no dimension score. The overall score is not available. The assessment flagged three issues: CRITICAL for uncontrolled inter-zone multi-homed devices, HIGH for incomplete or outdated asset interdependency documentation, and HIGH for the lack of a BC plan test during the assessment period.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Business Continuity is complete with a score of 1.80 out of 4, including a programme gap of 0 for RPO Achievement Rate. Incident Handling is incomplete due to the absence of a score for Mean Time to Contain, resulting in no dimension score. The overall score is not available. The assessment flagged three issues: CRITICAL for uncontrolled inter-zone multi-homed devices, HIGH for incomplete or outdated asset interdependency documentation, and HIGH for the lack of a BC plan test during the assessment period.
+
+</details>
+
+### Review
+
+Run set for Step 7 (Targets): facts gain "Next level" target sentences; the prompt is unchanged (reduced message pinned), the validator reads scored facts without them outside Targets.
+
+0. Runs 1–3: Ollama's llama-server crashed while loading the model (CUDA 0xc0000409), before any draft; environment, not the change. Generated sections, Targets included, identical and valid in 5 of 5 runs.
+1. Invariant breaks the validator missed: none. No target number or target score appears in either accepted headline or overview.
+2. Validator errors that look wrong: none. Run 5, attempt 1, "due to a missing indicator" is a correct check 15 catch; the repair says Mean Time to Contain has no score.
+3. Paraphrased item names (alias candidates): none new.
+4. Prompt conformance: both headlines one sentence; overviews 4–5 sentences, no bullets. Run 4 "incomplete due to missing data" is acceptable (no judgement), vaguer than naming Mean Time to Contain.
+5. Items named without their fact cited: none.
+6. Band ranges read as the band the value falls in, not a missed target: not applicable (no process evidence in the model parts).

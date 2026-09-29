@@ -20,6 +20,7 @@ import { computeAssessment } from '../engine/scoring.js';
 import { computeLayer0 } from '../engine/layer0.js';
 import { computeCrossIndicator, BC_LOW_THRESHOLD } from '../engine/crossIndicator.js';
 import { computePriorityView } from '../engine/priorityView.js';
+import { computeGapAnalysis } from '../engine/projection.js';
 import {
   INDICATORS,
   IH_INDICATOR_IDS,
@@ -37,6 +38,7 @@ import {
   L0_SEVERITY_LABELS,
 } from '../data/layer0Definitions.js';
 import { displayName, formatScore, DIMENSION_NAMES } from '../data/displayNames.js';
+import { CAPABILITY_BY_INDICATOR, TARGET_WORDING } from '../data/reportWording.js';
 
 export const FACT_KINDS = [
   'context', 'scale', 'dim_complete', 'dim_incomplete', 'scored', 'gap_zero', 'no_score',
@@ -112,6 +114,17 @@ function assessorNote(text) {
  */
 export function stripAssessorNote(text) {
   const i = text.indexOf(ASSESSOR_NOTE_PREFIX);
+  return i === -1 ? text : text.slice(0, i);
+}
+
+/**
+ * A scored fact's text without its "Next level: …" target sentence (always
+ * last), found by the same prefix the builder writes it with. Check 8 reads
+ * own facts this way outside the Targets section: a target score is not the
+ * current score (Step 7).
+ */
+export function stripTargetSentence(text) {
+  const i = text.indexOf(` ${TARGET_WORDING.nextLevelPrefix}`);
   return i === -1 ? text : text.slice(0, i);
 }
 
@@ -250,7 +263,21 @@ function noScoreFact(id, input, priority) {
   return noScore(`${name}: not yet assessed. No state was recorded. ${tail}`, 'unset');
 }
 
-function indicatorFacts(assessment, results, priority) {
+/**
+ * The next score level's target from the engine's gap analysis (Step 7), or
+ * null at score 4. The engine reads the next band's inclusive bound in the
+ * indicator's own direction; a lower-is-better bound is a maximum ("or
+ * less"), a maximum of 0 is exact. Operational Threshold Violation Rate's
+ * bands already map to 4 = best: no second reversal here.
+ */
+function targetOf(def, gap) {
+  if (gap.atMaximum) return null;
+  const { targetScore, thresholdValue } = gap.nextBand;
+  const bound = def.direction === 'lower_is_better' ? (thresholdValue === 0 ? 'exact' : 'max') : 'min';
+  return { score: targetScore, level: SCORE_LEVEL_LABELS[targetScore], value: withUnit(thresholdValue, def.unit), bound };
+}
+
+function indicatorFacts(assessment, results, priority, gaps) {
   return ALL_INDICATOR_IDS.map(id => {
     const def = INDICATORS[id];
     const name = displayName(id);
@@ -259,22 +286,25 @@ function indicatorFacts(assessment, results, priority) {
 
     if (result.score !== null && result.programmeGap) {
       const { detail } = STATE_PRIORITY_LABELS[input.state];
+      const capability = input.state === STATE.CAPABILITY_ABSENT ? { capability: CAPABILITY_BY_INDICATOR[id] } : {};
       return fact('gap_zero',
         `${name}: ${lowerFirst(detail)}. Scored 0 as a programme gap: the objective or capability ` +
         'does not exist yet. Not a measured failure.',
         [id],
-        { name, dimension: def.measure, state: input.state });
+        { name, dimension: def.measure, state: input.state, ...capability });
     }
 
     if (result.score !== null) {
       const lowerIsBetter = def.direction === 'lower_is_better';
       const value = withUnit(measuredValue(def, input, result), def.unit);
+      const target = targetOf(def, gaps.find(g => g.indicatorId === id));
       let text = `${name}: measured at ${value}${lowerIsBetter ? ' (lower is better)' : ''}; score ${result.score}.`;
       if (result.score === 0) {
         text += ` ${STATE_PRIORITY_LABELS.measured_zero.chip}: a measured result, not a programme gap.`;
       }
+      if (target) text += ` ${TARGET_WORDING.nextLevel(target)}`;
       return fact('scored', text, [id],
-        { name, dimension: def.measure, value, score: result.score, level: SCORE_LEVEL_LABELS[result.score], lowerIsBetter });
+        { name, dimension: def.measure, value, score: result.score, level: SCORE_LEVEL_LABELS[result.score], lowerIsBetter, target });
     }
 
     return noScoreFact(id, input, priority);
@@ -476,7 +506,7 @@ export function buildAssessmentFacts(assessment) {
   return assignIds([
     ...contextFacts(assessment?.meta),
     ...dimensionFacts(results),
-    ...indicatorFacts(assessment, results, priority),
+    ...indicatorFacts(assessment, results, priority, computeGapAnalysis(assessment, results).gaps),
     ...layer0Facts(assessment, layer0),
     ...advisoryFacts(cross, results),
     priorityFact(priority),

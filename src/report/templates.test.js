@@ -42,7 +42,7 @@ describe('Westmaas baseline', () => {
   const facts = buildAssessmentFacts(BASELINE);
   const generated = buildGeneratedSections(facts);
 
-  it('returns the four generated sections', () => {
+  it('returns the five generated sections', () => {
     expect(Object.keys(generated)).toEqual(GENERATED_KEYS);
   });
 
@@ -82,6 +82,19 @@ describe('Westmaas baseline', () => {
     });
   });
 
+  it('targets (Step 7)', () => {
+    expect(generated.targets).toEqual({
+      factIds: ['F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11'],
+      text: [
+        'Each target is the value an indicator needs for its next score level, taken from the scoring bands.',
+        'In Incident Handling, Mean Time to Detect, now 18 hours (score 3, Good), reaches score 4 (Excellent) at 6 hours or less. Mean Time to Respond, now 30 hours (score 2, Developing), reaches score 3 (Good) at 24 hours or less.',
+        'In Business Continuity, Network Operability Under Disruption, now 85% (score 3, Good), reaches score 4 (Excellent) at 90% or more. Zone Availability Rate, now 40% (score 2, Developing), reaches score 3 (Good) at 70% or more. Operational Threshold Violation Rate, now 12.5% (score 2, Developing), reaches score 3 (Good) at 5% or less. RTO Achievement Rate, now 50% (score 2, Developing), reaches score 3 (Good) at 75% or more.',
+        'RPO Achievement Rate has no numeric target yet: no recovery point objective has been established. Define the objective first; the scoring bands apply once it exists.',
+        'Mean Time to Contain has no score, so it has no target.',
+      ].join('\n\n'),
+    });
+  });
+
   it('passes the validator', () => {
     expect(validGenerated(facts, generated).errors).toEqual([]);
   });
@@ -97,6 +110,13 @@ describe('Westmaas follow-up (2026-06-01)', () => {
     expect(generated.gapsAndMissingEvidence.text).toBe(
       'No evidence is missing and no programme gaps were found: every effectiveness indicator has a score.'
     );
+  });
+
+  it('targets: Mean Time to Contain now has one; RPO Achievement Rate is at the highest level', () => {
+    expect(generated.targets.text).toContain('Mean Time to Contain, now 20 hours (score 3, Good), reaches score 4 (Excellent) at 6 hours or less.');
+    expect(generated.targets.text).toContain('Zone Availability Rate, now 82% (score 3, Good), reaches score 4 (Excellent) at 90% or more.');
+    expect(generated.targets.text.split('\n\n').at(-1)).toBe('Already at the highest level (score 4, Excellent): RPO Achievement Rate.');
+    expect(generated.targets.text).not.toContain('no score');
   });
 });
 
@@ -269,4 +289,94 @@ describe('property-based tests (fast-check)', () => {
       }
     }), { numRuns: 300 });
   }, 30_000);
+});
+
+// ─── Targets (Step 7) ─────────────────────────────────────────────────────────
+
+describe('targets variants', () => {
+  const paragraphs = generated => generated.targets.text.split('\n\n');
+  const THEN = 'the scoring bands apply once it exists.';
+
+  it('a measured 0 gets a target like any other score', () => {
+    const { generated } = generatedFor({ indicators: { 'BC-02': meas(0) } });
+    expect(generated.targets.text).toContain('Zone Availability Rate, now 0% (score 0, measured failure), reaches score 1 (Initial) at 1% or more.');
+  });
+
+  it('Operational Threshold Violation Rate: score 4 needs exactly 0%, a maximum otherwise (direction-inverted, no second reversal)', () => {
+    expect(generatedFor({ indicators: { 'BC-04': ratio(1, 40) } }).generated.targets.text).toContain(
+      'Operational Threshold Violation Rate, now 2.5% (score 3, Good), reaches score 4 (Excellent) at 0%.');
+    expect(generatedFor({ indicators: { 'BC-04': ratio(6, 10) } }).generated.targets.text).toContain(
+      'Operational Threshold Violation Rate, now 60% (score 0, measured failure), reaches score 1 (Initial) at 50% or less.');
+  });
+
+  it('every programme-gap state has its own sentence, never a number', () => {
+    const paragraphOf = (id, state) => paragraphs(generatedFor({ indicators: { [id]: { state } } }).generated)
+      .flatMap(p => p.split(/(?<=exists\.) /)).find(x => x.startsWith(`${displayName(id)} has no numeric target`));
+    expect(paragraphOf('IH-06', STATE.CAPABILITY_ABSENT)).toBe(`Mean Time to Detect has no numeric target: no detection capability exists yet. Establish it first; ${THEN}`);
+    expect(paragraphOf('IH-07', STATE.CAPABILITY_ABSENT)).toBe(`Mean Time to Respond has no numeric target: no response capability exists yet. Establish it first; ${THEN}`);
+    expect(paragraphOf('IH-08', STATE.CAPABILITY_ABSENT)).toBe(`Mean Time to Contain has no numeric target: no response capability exists yet. Establish it first; ${THEN}`);
+    expect(paragraphOf('BC-04', STATE.NO_THRESHOLDS_DEFINED)).toBe(`Operational Threshold Violation Rate has no numeric target yet: no operational thresholds have been established. Define the thresholds first; ${THEN}`);
+    expect(paragraphOf('BC-08', STATE.NO_RTO_DEFINED)).toBe(`RTO Achievement Rate has no numeric target yet: no recovery time objective has been established. Define the objective first; ${THEN}`);
+    expect(paragraphOf('BC-09', STATE.NO_RPO_DEFINED)).toBe(`RPO Achievement Rate has no numeric target yet: no recovery point objective has been established. Define the objective first; ${THEN}`);
+    for (const id of ALL_INDICATOR_IDS) {
+      for (const state of INDICATORS[id].allowedStates.filter(x => SCORE_ZERO_STATES.has(x))) {
+        expect(paragraphOf(id, state), `${id} ${state}`).toMatch(/^\D+$/);
+      }
+    }
+  });
+
+  it('several programme gaps share one paragraph, one sentence each, in catalogue order', () => {
+    const { generated } = generatedFor({ indicators: { 'BC-08': { state: STATE.NO_RTO_DEFINED } } });
+    expect(paragraphs(generated)).toContain([
+      `RTO Achievement Rate has no numeric target yet: no recovery time objective has been established. Define the objective first; ${THEN}`,
+      `RPO Achievement Rate has no numeric target yet: no recovery point objective has been established. Define the objective first; ${THEN}`,
+    ].join(' '));
+  });
+
+  it('no score, in every variant, never gets a number: one sentence names them all', () => {
+    const { generated } = generatedFor({ indicators: {
+      'IH-06': { state: STATE.NO_QUALIFYING_EVENT }, 'BC-01': { state: STATE.NO_QUALIFYING_DISRUPTION },
+      'BC-02': { state: null }, 'IH-07': meas(-3),
+    } });
+    expect(paragraphs(generated).at(-1)).toBe(
+      'Mean Time to Detect, Mean Time to Respond, Mean Time to Contain, Network Operability Under Disruption and Zone Availability Rate have no score, so they have no target.');
+    for (const name of ['Mean Time to Detect', 'Mean Time to Respond', 'Network Operability Under Disruption', 'Zone Availability Rate']) {
+      expect(generated.targets.text.split(name)).toHaveLength(2);   // named once, in the no-score sentence
+    }
+  });
+
+  it('nothing below 4: the fallback, then the highest-level sentence; no lead-in', () => {
+    const rec = loadScenario(baselineJson);
+    const facts = buildAssessmentFacts({ ...rec, indicators: {
+      'IH-06': meas(4), 'IH-07': meas(3), 'IH-08': meas(5),
+      'BC-01': meas(95), 'BC-02': meas(92), 'BC-04': ratio(0, 10), 'BC-08': ratio(9, 10), 'BC-09': ratio(10, 10),
+    } });
+    const generated = buildGeneratedSections(facts);
+    expect(paragraphs(generated)).toEqual([
+      'No measured indicator is below score 4.',
+      'Already at the highest level (score 4, Excellent): Mean Time to Detect, Mean Time to Respond, Mean Time to Contain, Network Operability Under Disruption, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate.',
+    ]);
+    expect(validGenerated(facts, generated).errors).toEqual([]);
+  });
+
+  it('nothing scored: only the fallback', () => {
+    const rec = loadScenario(baselineJson);
+    const indicators = Object.fromEntries(ALL_INDICATOR_IDS.map(id => [id, { state: null }]));
+    const facts = buildAssessmentFacts({ ...rec, indicators });
+    expect(buildGeneratedSections(facts).targets.text).toBe('No indicator has a score, so there are no targets.');
+  });
+
+  it('property: every number in Targets is in a cited scored fact, and no-score indicators are never given one', () => {
+    fc.assert(fc.property(assessmentArb, rec => {
+      const facts = buildAssessmentFacts(rec);
+      const { targets } = buildGeneratedSections(facts);
+      const cited = facts.filter(f => targets.factIds.includes(f.id));
+      const numbers = new Set(cited.filter(f => f.kind === 'scored').flatMap(f => f.text.match(/\d+(?:\.\d+)?/g) ?? []));
+      for (const n of targets.text.match(/\d+(?:\.\d+)?/g) ?? []) expect(numbers.has(n), n).toBe(true);
+      const noScore = facts.filter(f => f.kind === 'no_score').map(f => f.data.name);
+      for (const sentence of targets.text.split(/(?<=\.)\s+/)) {
+        if (noScore.some(name => sentence.includes(name))) expect(sentence).toMatch(/ha(?:s|ve) no score, so (?:it has|they have) no target\.$/);
+      }
+    }), { numRuns: 200 });
+  });
 });

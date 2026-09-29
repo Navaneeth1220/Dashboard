@@ -9,9 +9,9 @@ import * as fc from 'fast-check';
 import { parseAndValidateImport } from '../engine/persistence.js';
 import { INDICATORS, ALL_INDICATOR_IDS, STATE } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS, LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
-import { SECTION_KEYS } from './schema.js';
+import { SECTION_KEYS, TARGETS_KEY } from './schema.js';
 import { splitSentences, CONTEXT_KINDS } from './validator.js';
-import { buildAssessmentFacts } from './facts.js';
+import { buildAssessmentFacts, stripTargetSentence } from './facts.js';
 import { selectModelFacts } from './prompt.js';
 import { generateNarrative } from './generate.js';
 import { ProviderUnavailableError } from './providers/ollama.js';
@@ -57,17 +57,22 @@ export const assessmentArb = fc.record({
  * A narrative made of the facts' own text, shared round-robin across the five
  * sections; the headline is the first sentence of the first finding fact (one
  * sentence, citing a finding: checks 12 and 18). Always valid (validator
- * property test), so it doubles as a known-good model reply.
+ * property test), so it doubles as a known-good model reply. Outside the
+ * Targets section a fact's text is used without its target sentence, as the
+ * validator reads it there (Step 7).
  */
 export function echoNarrative(facts) {
   const cited = Object.fromEntries(SECTION_KEYS.map(k => [k, []]));
   facts.forEach((f, i) => cited[SECTION_KEYS[i % SECTION_KEYS.length]].push(f));
   const asSentence = t => (/[.!?]$/.test(t) ? t : `${t}.`);
-  const part = fs => ({ factIds: fs.map(f => f.id), text: fs.map(f => asSentence(f.text)).join(' ') });
+  const part = (fs, key) => ({
+    factIds: fs.map(f => f.id),
+    text: fs.map(f => asSentence(key === TARGETS_KEY ? f.text : stripTargetSentence(f.text))).join(' '),
+  });
   const finding = facts.find(f => !CONTEXT_KINDS.has(f.kind)) ?? facts[0];
   return {
     headline: { factIds: [finding.id], text: asSentence(splitSentences(finding.text)[0]) },
-    sections: Object.fromEntries(SECTION_KEYS.map(k => [k, part(cited[k])])),
+    sections: Object.fromEntries(SECTION_KEYS.map(k => [k, part(cited[k], k)])),
   };
 }
 

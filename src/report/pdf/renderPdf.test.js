@@ -69,7 +69,9 @@ describe('font coverage', () => {
   function stringsOf(value) {
     if (typeof value === 'string') return [value];
     if (typeof value === 'function') {
-      for (const args of [['Sample name 1.5', ['Title A', 'Title B'], 3], [['Title A', 'Title B']], ['Sample name', 'Other name']]) {
+      const target = { score: 3, level: 'Good', value: '75%', bound: 'min' };
+      for (const args of [['Sample name 1.5', ['Title A', 'Title B'], 3], [['Title A', 'Title B']], ['Sample name', 'Other name'],
+        [target], ['Sample name', '50%', '2, Developing', target]]) {
         try { return stringsOf(value(...args)); } catch { /* try the next signature */ }
       }
       throw new Error(`no sample arguments for ${value}`);

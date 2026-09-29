@@ -80,6 +80,53 @@ export const OUTCOME_WORDING = {
 };
 
 // ---------------------------------------------------------------------------
+// Targets (docs/ai-report-spec.md, Step 7)
+// ---------------------------------------------------------------------------
+
+/** The capability a capability-absent indicator is missing. */
+export const CAPABILITY_BY_INDICATOR = {
+  'IH-06': 'detection',
+  'IH-07': 'response',
+  'IH-08': 'response',
+};
+
+const BOUND = { max: ' or less', min: ' or more', exact: '' };
+const atValue = target => `at ${target.value}${BOUND[target.bound]}`;
+const THEN_BANDS = 'the scoring bands apply once it exists.';
+
+/**
+ * target: { score, level, value, bound: 'max' | 'min' | 'exact' }, from the
+ * engine's next band (lower is better → max; a maximum of 0 → exact).
+ */
+export const TARGET_WORDING = {
+  /** Starts the target sentence of a scored fact; the validator strips from here (check 8). */
+  nextLevelPrefix: 'Next level: ',
+  nextLevel: target => `${TARGET_WORDING.nextLevelPrefix}score ${target.score} ${atValue(target)}.`,
+  leadIn:    'Each target is the value an indicator needs for its next score level, taken from the scoring bands.',
+  /** "<name>, now <value> (score <current>), reaches score M (<level>) at X or less."; current: "3, Good". */
+  reaches:   (name, value, current, target) =>
+    `${name}, now ${value} (score ${current}), reaches score ${target.score} (${target.level}) ${atValue(target)}.`,
+  atHighest: (names, level) => `Already at the highest level (score 4, ${level}): ${names}.`,
+  programmeGap: {
+    [STATE.NO_RPO_DEFINED]: name =>
+      `${name} has no numeric target yet: no recovery point objective has been established. Define the objective first; ${THEN_BANDS}`,
+    [STATE.NO_RTO_DEFINED]: name =>
+      `${name} has no numeric target yet: no recovery time objective has been established. Define the objective first; ${THEN_BANDS}`,
+    [STATE.NO_THRESHOLDS_DEFINED]: name =>
+      `${name} has no numeric target yet: no operational thresholds have been established. Define the thresholds first; ${THEN_BANDS}`,
+  },
+  capabilityAbsent: {
+    detection: name => `${name} has no numeric target: no detection capability exists yet. Establish it first; ${THEN_BANDS}`,
+    response:  name => `${name} has no numeric target: no response capability exists yet. Establish it first; ${THEN_BANDS}`,
+  },
+  noScore:   (names, count) => (count === 1
+    ? `${names} has no score, so it has no target.`
+    : `${names} have no score, so they have no target.`),
+  noneBelowFour: 'No measured indicator is below score 4.',
+  nothingScored: 'No indicator has a score, so there are no targets.',
+};
+
+// ---------------------------------------------------------------------------
 // Lead-ins of the generated sections
 // ---------------------------------------------------------------------------
 
@@ -103,6 +150,7 @@ export const SECTION_TITLES = {
   gapsAndMissingEvidence: 'Gaps and missing evidence',
   foundationsAndFlags:    'Foundations and flags',
   priorities:             'Priorities',
+  targets:                'Targets',
 };
 
 /** Fixed wording of the narrative panel and of its Copy footer. */

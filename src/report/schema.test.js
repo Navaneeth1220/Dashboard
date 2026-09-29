@@ -16,7 +16,7 @@ const partsOf = schema => MODEL_PARTS.map(key => [key, schema.properties[key]]);
 describe('keys', () => {
   it('model parts, generated sections, and all report sections', () => {
     expect(MODEL_PARTS).toEqual(['headline', 'overview']);
-    expect(GENERATED_KEYS).toEqual(['measuredPerformance', 'gapsAndMissingEvidence', 'foundationsAndFlags', 'priorities']);
+    expect(GENERATED_KEYS).toEqual(['measuredPerformance', 'gapsAndMissingEvidence', 'foundationsAndFlags', 'priorities', 'targets']);
     expect(SECTION_KEYS).toEqual(['overview', ...GENERATED_KEYS]);
   });
 });
