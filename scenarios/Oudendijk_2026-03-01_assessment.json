@@ -1,0 +1,87 @@
+{
+  "kind": "nis2-ot-assessment",
+  "schemaVersion": 1,
+  "exportedAt": "2026-09-29T00:53:16.088Z",
+  "assessment": {
+    "meta": {
+      "clientId": "Oudendijk",
+      "assessmentDate": "2026-03-01"
+    },
+    "indicators": {
+      "IH-06": {
+        "state": "measured",
+        "value": "20"
+      },
+      "IH-07": {
+        "state": null,
+        "value": ""
+      },
+      "IH-08": {
+        "state": null,
+        "value": ""
+      },
+      "BC-01": {
+        "state": "measured",
+        "value": "90"
+      },
+      "BC-02": {
+        "state": null,
+        "value": ""
+      },
+      "BC-04": {
+        "state": null,
+        "numerator": "",
+        "denominator": ""
+      },
+      "BC-08": {
+        "state": null,
+        "numerator": "",
+        "denominator": ""
+      },
+      "BC-09": {
+        "state": null,
+        "numerator": "",
+        "denominator": ""
+      }
+    },
+    "layer0": {
+      "L0-asset-inventory": {
+        "state": "present"
+      },
+      "L0-risk-assessment": {
+        "state": null
+      },
+      "L0-interdependency": {
+        "state": "incomplete_outdated"
+      },
+      "L0-it-ot-boundary": {
+        "state": null
+      },
+      "L0-multi-homed": {
+        "state": null
+      },
+      "L0-bc-plan-doc": {
+        "state": null
+      },
+      "RM-04": {
+        "state": null,
+        "numerator": "",
+        "denominator": ""
+      },
+      "RM-05": {
+        "state": null,
+        "value": ""
+      },
+      "L0-bc-plan-tested": {
+        "state": null
+      }
+    }
+  },
+  "targets": {},
+  "derived": {
+    "_note": "Derived snapshot for human readability only — recomputed from inputs on import; never trusted as authoritative.",
+    "ih": null,
+    "bc": null,
+    "overall": null
+  }
+}
