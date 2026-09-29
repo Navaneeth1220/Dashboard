@@ -17,7 +17,11 @@ Handling and Business Continuity, nine unscored prerequisite and
 process-evidence items, a four-state evidence model, and a
 transition-classified before/after comparison. The design, analysis,
 demonstration, and evaluation of the system are documented in the thesis;
-this repository contains the artifact as evaluated (release `v1.0-thesis`).
+the artifact as evaluated is tagged `v1.0-thesis`.
+
+Since the thesis, the dashboard has gained an optional narrative report:
+a short management summary of an assessment, drafted locally (see
+[Narrative report](#narrative-report-optional)).
 
 ## Repository structure
 
@@ -26,7 +30,13 @@ this repository contains the artifact as evaluated (release `v1.0-thesis`).
   thesis Chapter 5) and its output files
 - `/scenarios` — the Westmaas Water Treatment assessment data used for the
   demonstration and evaluation (thesis Chapter 6): baseline and follow-up
-  assessment files
+  assessment files; plus `Oudendijk_2026-03-01_assessment.json`, a
+  synthetic, mostly unassessed assessment used to test the narrative report
+- `/docs` — the narrative report specification (`ai-report-spec.md`) and
+  the log of its manual checks against the model
+  (`ai-report-manual-check.md`)
+- `/scripts` — `narrative-check.mjs`, the manual check of the narrative
+  report
 
 ## Running the dashboard
 
@@ -44,6 +54,58 @@ files in the comparison view.
 The committed output files correspond to the results reported in thesis
 Chapter 5.
 
+## Narrative report (optional)
+
+Below the dashboard's panels, **Generate narrative** produces a short
+management summary of the current assessment. It is a hybrid:
+
+- Four sections (measured performance, gaps and missing evidence,
+  foundations and flags, priorities) are generated from the assessment by
+  fixed templates, using the dashboard's own labels. They are labelled
+  "Generated from the assessment" and need no model.
+- The headline and the overview are drafted by a local language model
+  (Ollama, `qwen2.5:7b`) from a pre-worded list of facts, and checked by a
+  validator before they are shown. They are labelled "AI-drafted — review
+  before use". A draft that still fails validation after three attempts is
+  not shown; the generated sections still are.
+
+The model runs on your own machine; no assessment data leaves it. Every
+part can be edited before copying; edited parts are labelled as such and
+listed in the copied text. The design, its rules and the validator's
+checks are in `docs/ai-report-spec.md`.
+
+### Setup
+
+1. Install Ollama from https://ollama.com/download and start it (on
+   Windows and macOS the app runs it in the background; otherwise run
+   `ollama serve`).
+2. Optional: to keep models off the system drive, set the environment
+   variable `OLLAMA_MODELS` to a folder of your choice (for example
+   `D:\ollama\models`) before starting Ollama.
+3. Download the model (about 4.7 GB):
+
+       ollama pull qwen2.5:7b
+
+4. Start the dashboard:
+
+       npm run dev
+
+The development server forwards `/ollama` to Ollama at `localhost:11434`;
+a production build (`npm run build`) has no such proxy, so its panel
+reports that Ollama is not running. On a laptop with a 6 GB GPU a draft
+takes about 13 seconds once the model is loaded; the first request loads
+it and takes longer.
+
+### Manual check
+
+    npm run check:narrative
+    npm run check:narrative -- --scenario scenarios/Westmaas_2026-06-01_assessment.json
+
+Generates the report five times for a scenario (default: the Westmaas
+baseline) against the running Ollama and appends the results (every
+draft, every validator error, timings) to `docs/ai-report-manual-check.md`
+for review.
+
 ## Note on the data
 
 All assessment data in this repository, including the Westmaas Water
@@ -52,6 +114,8 @@ demonstration. It describes no real facility, organisation, or incident.
 
 ## Status
 
-This repository reflects the prototype at thesis submission and is not
-maintained as a product. The thesis records its known limitations and the
-future work that a production version would require.
+The tag `v1.0-thesis` reflects the prototype at thesis submission. Later
+work (the narrative report) continues as a hobby project and is not
+maintained as a product. The thesis records the measurement system's known
+limitations and the future work that a production version would require;
+the narrative report's limitations are listed in `docs/ai-report-spec.md`.
