@@ -890,6 +890,13 @@ reports progress (an exception it throws is logged as a warning and ignored).
    - `onAttempt({ attempt, maxAttempts })` once per attempt.
    - `failed` = still invalid after 3 attempts: `narrative` is null and the
      model text is never shown; `errors` are the last attempt's.
+   - No model text anywhere in the result: `sentence` is null in every
+     error, in `errors` and in every attempt record, whatever the status
+     (a rejected sentence is model text; on `ok` the attempt records of a
+     repaired draft would otherwise carry the rejected sentences). `detail`
+     stays: it is validator text, shown in the UI error list. Option
+     `keepSentences` (default false) keeps them, for the manual-check
+     script only; the app never sets it.
    - `unavailable` = the provider threw: `reason` and `message` from the
      table above, no retry, earlier drafts discarded. Timeout is 300 s per
      call.
@@ -906,7 +913,8 @@ parts repaired in order in one attempt; always invalid; invalid JSON and
 cut-off output get a whole retry at 0.5; an unusable part reply keeps the
 part; error list capped; only the latest errors; each unavailable reason
 with no retry and `generated` still returned; `onAttempt` once per attempt;
-`failed` never carries model text). Mock `fetch` for the
+`failed` never carries model text; no status carries a rejected sentence
+in `errors` or `attempts` unless `keepSentences` is set). Mock `fetch` for the
 provider (exact request URL and body including `num_predict`; temperature
 override; token counts; warning at 3001 but not 3000; cut-off warning;
 every row of the unavailable table).
