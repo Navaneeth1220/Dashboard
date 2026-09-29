@@ -4,7 +4,7 @@
  * buildGeneratedSections(facts, actions) → { measuredPerformance, gapsAndMissingEvidence,
  *   foundationsAndFlags, priorities, targets, recommendedActions }, each { factIds, text }
  *   (targets: Step 7; recommendedActions: Step 8, from matchActions and the
- *   action catalogue, and also { actionIds })
+ *   action catalogue, and also { blocks, actionIds })
  *
  * Pure and deterministic, no model: every sentence is rendered from the
  * facts' structured data with the dashboard's own labels (score levels,
@@ -360,41 +360,58 @@ function targets(facts) {
 /** The fact that states an indicator's or item's own result. */
 const OWN_FACT_KINDS = new Set(['scored', 'gap_zero', 'no_score', 'l0_flag', 'process']);
 
-/** One action: its lines, verbatim from the catalogue; empty references are left out. */
+/**
+ * One action as a block: its title and lines, verbatim from the catalogue;
+ * label null for the action sentence, empty references left out.
+ */
 function actionBlock(entry) {
-  return [
-    entry.title,
-    entry.action,
-    `${ACTION_WORDING.steps}${entry.steps}`,
-    `${ACTION_WORDING.why}${entry.why}`,
-    `${ACTION_WORDING.who}${entry.who}`,
-    entry.nis2 ? `${ACTION_WORDING.nis2Label(NIS2_ARTICLE)}${entry.nis2}` : null,
-    entry.standard ? `${ACTION_WORDING.standard}${entry.standard}` : null,
-  ].filter(Boolean).join('\n');
+  const lines = [
+    { label: null, text: entry.action },
+    { label: ACTION_WORDING.steps, text: entry.steps },
+    { label: ACTION_WORDING.why, text: entry.why },
+    { label: ACTION_WORDING.who, text: entry.who },
+    entry.nis2 ? { label: ACTION_WORDING.nis2Label(NIS2_ARTICLE), text: entry.nis2 } : null,
+    entry.standard ? { label: ACTION_WORDING.standard, text: entry.standard } : null,
+  ].filter(Boolean);
+  return { kind: 'action', title: entry.title, lines };
+}
+
+/** The section's plain text (panel, Copy): blocks separated by a blank line, one line per action line. */
+function textOfBlocks(blocks) {
+  return blocks.map(b => (b.kind === 'action'
+    ? [b.title, ...b.lines.map(l => `${l.label ?? ''}${l.text}`)].join('\n')
+    : b.text)).join('\n\n');
 }
 
 /**
  * The matched catalogue entries, grouped by area in catalogue order. Cites
  * the triggering items' own facts ("Based on facts" shows why each action is
- * there); with no match, the priority fact.
+ * there); with no match, the priority fact. `blocks` is the structure the PDF
+ * formats; `text` is derived from it, so the two cannot disagree.
  */
 function recommendedActions(facts, actions) {
   const matched = ACTION_CATALOGUE.filter(entry => actions.some(a => a.id === entry.id));
   const triggers = new Set(actions.flatMap(a => a.triggers));
   const notAssessed = facts.some(f => f.kind === 'l0_unset' || (f.kind === 'no_score' && f.data.status === 'unset'))
     ? ACTION_WORDING.notAssessed : null;
+  const withBlocks = (cited, blocks, actionIds) =>
+    ({ ...section(facts, cited, [textOfBlocks(blocks)]), blocks, actionIds });
 
   if (matched.length === 0) {
     const text = [ACTION_WORDING.noMatch, notAssessed].filter(Boolean).join(' ');
-    return { ...section(facts, facts.filter(f => f.kind === 'priority'), [text]), actionIds: [] };
+    return withBlocks(facts.filter(f => f.kind === 'priority'), [{ kind: 'text', text }], []);
   }
 
-  const areas = ACTION_AREAS.flatMap(({ key, title }) => {
-    const entries = matched.filter(e => e.area === key);
-    return entries.length === 0 ? [] : [title, ...entries.map(actionBlock)];
-  });
+  const blocks = [
+    { kind: 'text', text: ACTION_WORDING.leadIn },
+    ...ACTION_AREAS.flatMap(({ key, title }) => {
+      const entries = matched.filter(e => e.area === key);
+      return entries.length === 0 ? [] : [{ kind: 'heading', text: title }, ...entries.map(actionBlock)];
+    }),
+    ...(notAssessed ? [{ kind: 'text', text: notAssessed }] : []),
+  ];
   const cited = facts.filter(f => OWN_FACT_KINDS.has(f.kind) && f.refs.some(id => triggers.has(id)));
-  return { ...section(facts, cited, [ACTION_WORDING.leadIn, ...areas, notAssessed]), actionIds: matched.map(e => e.id) };
+  return withBlocks(cited, blocks, matched.map(e => e.id));
 }
 
 // ---------------------------------------------------------------------------

@@ -13,8 +13,10 @@ import { SECTION_TITLES, NARRATIVE_WORDING as W } from '../data/reportWording.js
 
 /**
  * reportParts(result, edits?) →
- *   [{ key, title, text, generatedText, factIds, origin, edited, label }]
+ *   [{ key, title, text, generatedText, factIds, origin, edited, label, blocks }]
  * label: 'ai' | 'generated' | 'edited' (a key of NARRATIVE_WORDING.label).
+ * blocks: the part's structure for the PDF (Recommended actions, Step 8),
+ * only while it is unedited; null otherwise. An edit is never re-parsed.
  */
 export function reportParts(result, edits = {}) {
   if (!result) return [];
@@ -34,6 +36,7 @@ export function reportParts(result, edits = {}) {
       origin,
       edited,
       label: edited ? 'edited' : origin,
+      blocks: edited ? null : part.blocks ?? null,
     };
   });
 }

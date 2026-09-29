@@ -28,6 +28,10 @@ export const STYLES = {
   partTitle: { font: 'bold',    size: 12,   color: 'text' },
   label:     { font: 'regular', size: 8,    color: 'muted' },
   body:      { font: 'regular', size: 10.5, color: 'text' },
+  // Recommended actions (Step 8): structured blocks only.
+  areaHeading: { font: 'bold', size: 11.5, color: 'text' },
+  actionTitle: { font: 'bold', size: 10.5, color: 'text' },
+  fieldLabel:  { font: 'bold', size: 10.5, color: 'text' },
   head:      { font: 'bold',    size: 10,   color: 'text' },
   cell:      { font: 'regular', size: 10,   color: 'text' },
   closing:   { font: 'regular', size: 8.5,  color: 'muted' },
@@ -81,9 +85,80 @@ export function wrapText(text, width, measure) {
 }
 
 /**
+ * Runs of different styles ([{ text, style, role, keep? }]) → rows of
+ * segments no wider than `width`. A run with `keep` (a field label) is one
+ * token and keeps its trailing space; other runs wrap at spaces, and a word
+ * wider than the row is broken by characters. `measure(text, style)`.
+ * Row: [{ text, style, role, dx }], dx the segment's offset from the margin.
+ */
+export function wrapRuns(runs, width, measure) {
+  const tokens = runs.flatMap(run => (run.keep
+    ? [{ text: run.text, style: run.style, role: run.role, glue: false }]
+    : run.text.split(/\s+/).filter(Boolean).map(text => ({ text, style: run.style, role: run.role, glue: true }))));
+  const segment = t => ({ text: t.text, style: t.style, role: t.role });
+  const rowWidth = row => row.reduce((w, seg) => w + measure(seg.text, seg.style), 0);
+  const place = row => {
+    let dx = 0;
+    return row.map(seg => {
+      const placed = { ...seg, dx };
+      dx += measure(seg.text, seg.style);
+      return placed;
+    });
+  };
+  /** The row with `token` added, or null when it would be wider than `width`. */
+  const withToken = (row, token) => {
+    const last = row.at(-1);
+    if (!last) return rowWidth([segment(token)]) <= width ? [segment(token)] : null;
+    const sep = token.glue && !last.text.endsWith(' ') ? ' ' : '';
+    const next = last.style === token.style && last.role === token.role
+      ? [...row.slice(0, -1), { ...last, text: last.text + sep + token.text }]
+      : [...row.slice(0, -1), { ...last, text: last.text + sep }, segment(token)];
+    return rowWidth(next) <= width ? next : null;
+  };
+
+  const rows = [];
+  let row = [];
+  for (const token of tokens) {
+    const added = withToken(row, token);
+    if (added) {
+      row = added;
+      continue;
+    }
+    if (row.length > 0) rows.push(place(row));
+    row = withToken([], token);
+    if (!row) {
+      const pieces = breakWord(token.text, width, t => measure(t, token.style));
+      for (const piece of pieces.slice(0, -1)) rows.push(place([{ ...segment(token), text: piece }]));
+      row = [{ ...segment(token), text: pieces.at(-1) }];
+    }
+  }
+  return [...rows, place(row)];
+}
+
+/**
+ * A structured part (Recommended actions, Step 8) → per block its rows;
+ * an action also says how many rows its title takes.
+ */
+function blockRows(blocks, width, measure) {
+  const runRows = (text, style) => wrapRuns([{ text, style, role: style === 'body' ? 'body' : style }], width, measure);
+  return blocks.map(block => {
+    if (block.kind === 'heading') return { kind: 'heading', rows: runRows(block.text, 'areaHeading') };
+    if (block.kind === 'text') return { kind: 'text', rows: runRows(block.text, 'body') };
+    const title = runRows(block.title, 'actionTitle');
+    const lines = block.lines.flatMap(l => wrapRuns([
+      ...(l.label ? [{ text: l.label, style: 'fieldLabel', role: 'fieldLabel', keep: true }] : []),
+      { text: l.text, style: 'body', role: 'body' },
+    ], width, measure));
+    return { kind: 'action', rows: [...title, ...lines], titleRows: title.length };
+  });
+}
+
+/**
  * layoutReport(doc, measure) → [{ ops }] per page.
- * op: { kind: 'text', text, x, y, style, role, part? } | { kind: 'rule', x1, y1, x2, y2 }
- * role: title, meta, scoresTitle, label, head, cell, partTitle, body, closing, footerModel, pageNumber.
+ * op: { kind: 'text', text, x, y, style, role, part?, block?, row? } | { kind: 'rule', x1, y1, x2, y2 }
+ * role: title, meta, scoresTitle, label, head, cell, partTitle, body, closing, footerModel, pageNumber;
+ * in a structured part (Recommended actions, Step 8) also areaHeading,
+ * actionTitle and fieldLabel, and text ops carry their block and row index.
  */
 export function layoutReport(doc, measure) {
   const pages = [{ ops: [] }];
@@ -146,14 +221,43 @@ export function layoutReport(doc, measure) {
   }
   top += BLOCK_GAP - PART_GAP;
 
+  // Structured part: blocks separated by one empty body line, as in the plain
+  // text. A heading stays with the next block's first rows (an action's title
+  // and its first two lines), an action's title with its first two lines.
+  const rowHeight = row => Math.max(...row.map(seg => lineHeight(seg.style)));
+  const rowsHeight = rows => rows.reduce((h, row) => h + rowHeight(row), 0);
+  const firstRows = b => b.rows.slice(0, (b.titleRows ?? 0) + KEEP_LINES);
+  const structured = (blocks, i) => {
+    blocks.forEach((block, j) => {
+      if (j > 0) top += lineHeight('body');
+      const next = blocks[j + 1];
+      if (block.kind === 'heading') keep(rowsHeight(block.rows) + (next ? lineHeight('body') + rowsHeight(firstRows(next)) : 0));
+      if (block.kind === 'action') keep(rowsHeight(firstRows(block)));
+      block.rows.forEach((row, k) => {
+        if (!fits(rowHeight(row))) newPage();
+        const y = top + Math.max(...row.map(seg => STYLES[seg.style].size)) * PT_MM;
+        for (const seg of row) {
+          if (seg.text.trim()) {
+            ops().push({ kind: 'text', text: seg.text, x: PAGE.margin + seg.dx, y, style: seg.style, role: seg.role, part: i, block: j, row: k });
+          }
+        }
+        top += rowHeight(row);
+      });
+    });
+  };
+
   // Parts
   doc.parts.forEach((part, i) => {
-    const bodyLines = part.text.split('\n').flatMap(p => wrap(p, 'body'));
-    const kept = Math.min(KEEP_LINES, bodyLines.length);
+    const blocks = part.blocks ? blockRows(part.blocks, CONTENT_WIDTH, measure) : null;
+    const bodyLines = blocks ? [] : part.text.split('\n').flatMap(p => wrap(p, 'body'));
+    const keptHeight = blocks
+      ? rowsHeight(firstRows(blocks[0]))
+      : Math.min(KEEP_LINES, bodyLines.length) * lineHeight('body');
     top += PART_GAP;
-    keep(titledHeight(part.title, part.label, 'partTitle') + 1.5 + kept * lineHeight('body'));
+    keep(titledHeight(part.title, part.label, 'partTitle') + 1.5 + keptHeight);
     titled(part.title, part.label, 'partTitle', 'partTitle', { part: i });
     top += 1.5;
+    if (blocks) structured(blocks, i);
     for (const l of bodyLines) {
       if (!fits(lineHeight('body'))) newPage();
       if (l) text(l, PAGE.margin, 'body', 'body', { part: i });

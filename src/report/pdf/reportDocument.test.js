@@ -142,6 +142,17 @@ describe('parts, closing and footer', () => {
     if (result.message) expect(all).not.toContain(result.message);
   });
 
+  it('Recommended actions: structured blocks while unedited, plain text once edited (Step 8)', async () => {
+    const result = await S.ok();
+    const actions = doc => doc.parts.find(p => p.key === 'recommendedActions');
+    expect(actions(build(result)).blocks).toEqual(result.generated.recommendedActions.blocks);
+    expect(actions(build(await S.failed())).blocks).toEqual(result.generated.recommendedActions.blocks);
+    const editedText = 'Edited.\nSteps: not a label here.';
+    const edited = actions(build(result, { edits: { recommendedActions: editedText } }));
+    expect(edited).toEqual({ key: 'recommendedActions', title: 'Recommended actions', label: W.label.edited, text: editedText });
+    expect(build(result).parts.filter(p => 'blocks' in p).map(p => p.key)).toEqual(['recommendedActions']);
+  });
+
   it('no internal ID anywhere', async () => {
     for (const result of [await S.ok(), await S.failed()]) {
       expect(JSON.stringify(build(result))).not.toMatch(ID_PATTERN);

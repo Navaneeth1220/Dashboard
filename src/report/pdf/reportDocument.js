@@ -42,7 +42,10 @@ export function formatGeneratedAt(iso) {
 /**
  * buildReportDocument({ result, edits, generatedAt, model }) →
  *   { filename, title, meta: [{ label, value }], scores: { title, label, columns, rows: [{ name, value }] },
- *     parts: [{ key, title, label, text }], closing: string[], footerModel: string | null }
+ *     parts: [{ key, title, label, text, blocks? }], closing: string[], footerModel: string | null }
+ *
+ * blocks (Recommended actions while unedited, Step 8): the structure the
+ * layout formats; an edited part is printed as its plain text.
  *
  * model: the panel's model name, used only when the result carries none.
  */
@@ -69,7 +72,7 @@ export function buildReportDocument({ result, edits = {}, generatedAt = null, mo
         .filter(f => DIMENSION_KINDS.has(f.kind))
         .map(f => ({ name: f.data.name, value: f.data.complete ? f.data.score : W.pdf.noScore })),
     },
-    parts: parts.map(p => ({ key: p.key, title: p.title, label: W.label[p.label], text: p.text })),
+    parts: parts.map(p => ({ key: p.key, title: p.title, label: W.label[p.label], text: p.text, ...(p.blocks ? { blocks: p.blocks } : {}) })),
     closing: provenanceLines(parts, modelName, [W.pdf.scoresTitle]),
     footerModel: hasAi ? W.pdf.model(modelName) : null,
   };

@@ -515,7 +515,8 @@ describe('recommended actions', () => {
       },
     });
     expect(generated.recommendedActions).toEqual({
-      factIds: [facts.find(f => f.kind === 'priority').id], text: ACTION_WORDING.noMatch, actionIds: [],
+      factIds: [facts.find(f => f.kind === 'priority').id], text: ACTION_WORDING.noMatch,
+      blocks: [{ kind: 'text', text: ACTION_WORDING.noMatch }], actionIds: [],
     });
   });
 
@@ -543,6 +544,51 @@ describe('recommended actions', () => {
       const { generated } = generatedWithActions([{ id: entry.id, triggers: [] }]);
       expect(paragraphs(generated)).toContain(lines.join('\n'));
     }
+  });
+
+  // PDF formatting (Step 8): the structure the text is derived from.
+  const textOfBlocks = blocks => blocks.map(b => (b.kind === 'action'
+    ? [b.title, ...b.lines.map(l => `${l.label ?? ''}${l.text}`)].join('\n')
+    : b.text)).join('\n\n');
+
+  it('Westmaas blocks: lead-in, area headings, actions with labelled lines from the catalogue', () => {
+    const { blocks } = sectionsOf(BASELINE).generated.recommendedActions;
+    const summary = b => ({ action: `action:${b.title}`, heading: `heading:${b.text}`, text: `text:${b.text?.slice(0, 20)}` })[b.kind];
+    expect(blocks.map(summary)).toEqual([
+      `text:${ACTION_WORDING.leadIn.slice(0, 20)}`,
+      'heading:Incident Handling', 'action:Shorten response time', 'action:Make incident handling measurable',
+      'heading:Business Continuity', 'action:Improve zone availability', 'action:Reduce operational threshold violations',
+      'action:Meet recovery time objectives', 'action:Define recovery point objectives',
+      'heading:Foundational controls', 'action:Document asset interdependencies', 'action:Remove or control multi-homed devices',
+      'action:Test the BC plan',
+      'heading:Vulnerability management', 'action:Improve the remediation rate',
+    ]);
+    const multiHomed = blocks.find(b => b.title === 'Remove or control multi-homed devices');
+    const entry = ACTION_CATALOGUE.find(e => e.id === 'ACT-L0-05');
+    expect(multiHomed.lines).toEqual([
+      { label: null, text: entry.action },
+      { label: ACTION_WORDING.steps, text: entry.steps },
+      { label: ACTION_WORDING.why, text: entry.why },
+      { label: ACTION_WORDING.who, text: entry.who },
+      { label: ACTION_WORDING.standard, text: entry.standard },
+    ]);
+    const response = blocks.find(b => b.title === 'Shorten response time');
+    expect(response.lines.at(-1)).toEqual({ label: ACTION_WORDING.nis2Label(NIS2_ARTICLE), text: '(b) incident handling' });
+  });
+
+  it('the fallback is one text block', () => {
+    const rec = loadScenario(baselineJson);
+    const indicators = Object.fromEntries(ALL_INDICATOR_IDS.map(id => [id, { state: null }]));
+    const layer0 = Object.fromEntries(Object.keys(rec.layer0).map(id => [id, { state: null }]));
+    const section = sectionsOf({ ...rec, indicators, layer0 }).generated.recommendedActions;
+    expect(section.blocks).toEqual([{ kind: 'text', text: section.text }]);
+  });
+
+  it('property: the text is always the text of the blocks', () => {
+    fc.assert(fc.property(assessmentArb, rec => {
+      const section = sectionsOf(rec).generated.recommendedActions;
+      expect(section.text).toBe(textOfBlocks(section.blocks));
+    }), { numRuns: 200 });
   });
 
   it('property: no internal or entry IDs, raw enums or "poor"; numbers only from the catalogue; each title once', () => {

@@ -42,6 +42,15 @@ describe('reportParts', () => {
     expect(byKey.priorities).toMatchObject({ edited: false, label: 'generated' });
   });
 
+  it('Recommended actions carries its blocks while unedited, and none once edited (Step 8)', async () => {
+    const result = await S.ok();
+    const blocksOf = edits => reportParts(result, edits).find(p => p.key === 'recommendedActions').blocks;
+    expect(blocksOf({})).toEqual(result.generated.recommendedActions.blocks);
+    expect(blocksOf({ recommendedActions: result.generated.recommendedActions.text })).toEqual(result.generated.recommendedActions.blocks);
+    expect(blocksOf({ recommendedActions: 'Edited actions.' })).toBeNull();
+    expect(reportParts(result).filter(p => p.blocks).map(p => p.key)).toEqual(['recommendedActions']);
+  });
+
   it.each([
     ['failed', () => S.failed()],
     ['unavailable', () => S.unavailable('not_running', 'Ollama is not reachable.')],
