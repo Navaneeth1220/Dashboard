@@ -268,6 +268,7 @@ async function main() {
       provider,
       model: MODEL,
       onAttempt: ({ attempt, maxAttempts }) => console.log(`run ${n}/${RUNS}, attempt ${attempt}/${maxAttempts}…`),
+      keepSentences: true,   // the review needs the rejected sentences; the app never sets this
     });
     const wallMs = Date.now() - started;
     console.log(`run ${n}: ${result.status} after ${roundsOf(result)} attempt(s), ${result.attempts.length} call(s), ${seconds(wallMs)}`);

@@ -200,6 +200,33 @@ describe('failed', () => {
     }
   });
 
+  it('never carries a rejected sentence: failed errors and attempt records have sentence null', async () => {
+    const provider = scripted(reply(INVALID), reply(INVALID.overview));
+    const result = await generateNarrative(ASSESSMENT, { provider });
+    expect(result.status).toBe('failed');
+    expect(JSON.stringify(result)).not.toContain(POOR);
+    expect(result.errors.length).toBeGreaterThan(0);
+    for (const e of [...result.errors, ...result.attempts.flatMap(a => a.errors)]) {
+      expect(e.sentence).toBeNull();
+      expect(e.detail).toEqual(expect.any(String));
+    }
+  });
+
+  it('ok after a repair: the attempt records carry no rejected sentence either', async () => {
+    const provider = scripted(reply(INVALID), reply(VALID.overview));
+    const result = await generateNarrative(ASSESSMENT, { provider });
+    expect(result.status).toBe('ok');
+    expect(result.attempts[0].errors).toEqual([expect.objectContaining({ rule: 'noScoreWording', sentence: null })]);
+    expect(JSON.stringify(result)).not.toContain(POOR);
+  });
+
+  it('keepSentences (manual-check script only) keeps them', async () => {
+    const provider = scripted(reply(INVALID), reply(INVALID.overview));
+    const result = await generateNarrative(ASSESSMENT, { provider, keepSentences: true });
+    expect(result.errors).toEqual([expect.objectContaining({ sentence: POOR })]);
+    expect(result.attempts[0].errors).toEqual([expect.objectContaining({ sentence: POOR })]);
+  });
+
   it('respects maxAttempts', async () => {
     const provider = scripted(reply(INVALID));
     const result = await generateNarrative(ASSESSMENT, { provider, maxAttempts: 1 });

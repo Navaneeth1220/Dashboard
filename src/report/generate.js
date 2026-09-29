@@ -109,6 +109,16 @@ function factsOfPart(part, facts) {
   return own.some(f => !CONTEXT_KINDS.has(f.kind)) ? own : facts;
 }
 
+/**
+ * A rejected sentence is model text, so errors leave generateNarrative with
+ * sentence null; detail (validator text) stays. The retry messages still
+ * quote the sentences to the model. keepSentences is for the manual-check
+ * script only.
+ */
+function withoutSentences(errors) {
+  return errors.map(e => ({ ...e, sentence: null }));
+}
+
 function record(attempt, section, errors, response) {
   return {
     attempt,
@@ -127,7 +137,8 @@ function record(attempt, section, errors, response) {
  *     errors, facts, attempts, model }
  *
  * narrative (ok only): { headline, sections: { overview, ...generated } }.
- * origin: 'ai' | 'generated' per part.
+ * origin: 'ai' | 'generated' per part. No error carries a sentence unless
+ * keepSentences is set.
  */
 export async function generateNarrative(assessment, {
   model = DEFAULT_MODEL,
@@ -136,7 +147,9 @@ export async function generateNarrative(assessment, {
   timeoutMs,
   signal,
   onAttempt,
+  keepSentences = false,
 } = {}) {
+  const returned = errs => (keepSentences ? errs : withoutSentences(errs));
   const facts = buildAssessmentFacts(assessment);
   const modelFacts = selectModelFacts(facts);
   const generated = buildGeneratedSections(facts);
@@ -177,7 +190,7 @@ export async function generateNarrative(assessment, {
       }
       draft = parseObject(response);
       errors = draft === null ? [UNPARSEABLE] : validateDraft(draft, facts);
-      attempts.push(record(attempt, null, errors, response));
+      attempts.push(record(attempt, null, returned(errors), response));
     } else {
       // Repair each failing part; a part that passed stays exactly as it is.
       const calls = [];
@@ -205,7 +218,7 @@ export async function generateNarrative(assessment, {
         ...validated.filter(e => e.section === key),
       ]);
       for (const { key, response } of calls) {
-        attempts.push(record(attempt, key, errors.filter(e => e.section === key), response));
+        attempts.push(record(attempt, key, returned(errors.filter(e => e.section === key)), response));
       }
     }
 
@@ -215,5 +228,5 @@ export async function generateNarrative(assessment, {
     }
   }
 
-  return { status: 'failed', narrative: null, errors, ...common };
+  return { status: 'failed', narrative: null, errors: returned(errors), ...common };
 }
