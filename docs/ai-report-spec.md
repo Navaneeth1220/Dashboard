@@ -418,6 +418,8 @@ categories still come from all facts.
   the words `and`, `but`, `while`, `whereas`, `although`, `though`.
   Unspaced dashes (`50–69%`, `multi-homed`) do not split.
 - **Name index** (rules 4–6, 8, 9): built from ALL facts, not only cited ones.
+  A dimension name directly followed by "plan" is not the dimension
+  ("Business Continuity plan test"; found in the replay for check 16).
   Names match case-insensitively as whole words (`name`, `shortName`,
   `aliases`).
 - **Inheritance** (rules 4–6): a clause that names no item inherits the last
@@ -502,7 +504,8 @@ categories still come from all facts.
    `l0_flag` fact, or a `process` fact with a severity) fails when none of
    the cited flag facts is CRITICAL ("None of the cited flags is
    CRITICAL; do not write "critical"."). Not reported again when the
-   clause rule already failed that sentence. Found in the June re-run:
+   clause rule already failed that sentence, and not when "critical" is
+   negated as in check 6 ("no critical or high flags" states an absence). Found in the June re-run:
    "equal priority critical issues with response times and recovery
    rates" (no item named, no CRITICAL flag cited).
 10. **Respectively** (`respectively`): a sentence containing "respectively"
@@ -550,8 +553,9 @@ categories still come from all facts.
     effectiveness indicator(s)") fails anywhere; and a clause whose
     subject (named or inherited) is a `no_score` indicator or an
     `l0_unset` item fails if it contains "missing", unless followed by
-    "data", "score(s)", "evidence" or "value(s)" ("missing data on Mean
-    Time to Contain" passes). Detail: "Do not call <name> missing: it
+    "data", "score(s)", "evidence" or "value(s)", directly or after an item
+    name ("missing data on Mean Time to Contain", "a missing Mean Time to
+    Contain score" pass). Detail: "Do not call <name> missing: it
     exists and has no score. Say it has no score." (for the phrase:
     "Do not write "missing indicator": the indicator exists; say it has
     no score."). Enforces the last sentence of prompt rule 3, which the
@@ -602,7 +606,9 @@ failing and passing examples, including: "Mean Time to Contain is poor";
 "Mean Time to Contain, which is poor, …" (inheritance); "Mean Time to
 Contain is not measurable and poor." in a section citing F19 (inherited
 clause not exempt); "Mean Time to
-Contain is not measurable, but Zone Availability Rate is poor" (OK);
+Contain is not measurable, but Zone Availability Rate is poor" (no
+noScoreWording; fails check 16 since the June re-run, "…is Developing"
+passes);
 "Mean Time to Contain is a high-priority evidence gap" (OK); "Incident
 Handling scored 2.50"; "Incident Handling scored zero"; "Zero uncontrolled
 multi-homed devices" (no numbers error); "six of the eight indicators"
