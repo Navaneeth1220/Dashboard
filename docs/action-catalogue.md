@@ -32,11 +32,20 @@ Fields: **Trigger** (with internal keys for implementation) · **Action** ·
 
 NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 
+Entry IDs (`ACT-…`) are stable: step C lets the AI choose entries by ID. The
+`ACT-` prefix keeps them apart from indicator and item IDs (`BC-08` is RTO
+Achievement Rate; `ACT-BC-08` defines recovery point objectives). IDs are
+never shown in the report. Each entry stands on its own and never refers to
+another entry: any subset of entries can match an assessment.
+
+The code copy is `src/data/actionCatalogue.js`; a test keeps it identical
+to this file (IDs, order, every text field, triggers, references).
+
 ---
 
 ## Incident Handling
 
-### IH-01 · Establish OT detection capability
+### ACT-IH-01 · Establish OT detection capability
 - **Trigger:** Mean Time to Detect: no detection capability (`IH-06: capability_absent`)
 - **Action:** Establish a detection capability for the OT network.
 - **Steps:** Deploy passive network monitoring on the main OT zones (no active scanning in production). Define who receives and triages OT alerts, and during which hours. Start with a baseline of normal traffic so deviations can be detected.
@@ -45,7 +54,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (b) incident handling
 - **Standard:** IEC 62443-3-3 SR 6.2 (continuous monitoring)
 
-### IH-02 · Shorten detection time
+### ACT-IH-02 · Shorten detection time
 - **Trigger:** Mean Time to Detect: low score (`IH-06: measured, score ≤ 2`)
 - **Action:** Reduce the time between an incident starting and it being detected.
 - **Steps:** Review the last incidents: where was time lost before detection? Tune alerting on the OT baseline to reduce noise. Make sure OT alerts reach an owned triage queue with defined coverage outside office hours.
@@ -54,7 +63,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (b) incident handling
 - **Standard:** IEC 62443-3-3 SR 6.2 (continuous monitoring)
 
-### IH-03 · Establish an OT incident response procedure
+### ACT-IH-03 · Establish an OT incident response procedure
 - **Trigger:** Mean Time to Respond or Mean Time to Contain: no response capability (`IH-07` or `IH-08: capability_absent`)
 - **Action:** Establish a documented incident response procedure for OT.
 - **Steps:** Define roles and escalation, including OT engineering and plant operations. Write OT playbooks for the most likely incidents, covering how to isolate without stopping the process. Keep an up-to-date contact list including vendors and integrators.
@@ -63,7 +72,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (b) incident handling
 - **Standard:**
 
-### IH-04 · Shorten response time
+### ACT-IH-04 · Shorten response time
 - **Trigger:** Mean Time to Respond: low score (`IH-07: measured, score ≤ 2`)
 - **Action:** Reduce the time from detection to the start of a response.
 - **Steps:** Set target response times per incident severity. Arrange on-call cover that includes someone with OT knowledge. Review recent incidents for hand-over delays between IT, security and operations.
@@ -72,7 +81,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (b) incident handling
 - **Standard:**
 
-### IH-05 · Shorten containment time
+### ACT-IH-05 · Shorten containment time
 - **Trigger:** Mean Time to Contain: low score (`IH-08: measured, score ≤ 2`)
 - **Action:** Pre-approve containment actions per zone.
 - **Steps:** For each zone, agree in advance which conduits can be closed and which hosts can be isolated without a safety or process impact. Document who may take these actions. Practise them in a tabletop exercise.
@@ -81,7 +90,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (b) incident handling
 - **Standard:**
 
-### IH-06 · Make incident handling measurable
+### ACT-IH-06 · Make incident handling measurable
 - **Trigger:** Any Incident Handling indicator not measurable (`IH-06`, `IH-07` or `IH-08: not_measurable`)
 - **Action:** Record detection, response and containment times for every incident.
 - **Steps:** Add mandatory timestamp fields to incident tickets: incident start (if known), detection, response start, containment. Agree which clock is authoritative. Check the fields are filled in when a ticket is closed.
@@ -94,7 +103,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 
 ## Business Continuity
 
-### BC-01 · Improve network operability under disruption
+### ACT-BC-01 · Improve network operability under disruption
 - **Trigger:** Network Operability Under Disruption: low score (`BC-01: measured, score ≤ 2`)
 - **Action:** Reduce single points of failure in the OT network for critical processes.
 - **Steps:** Map the network paths that critical processes depend on. Identify single points of failure (switches, links, servers). Add redundancy where feasible, or document a manual fallback where it is not.
@@ -103,16 +112,16 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (c) business continuity
 - **Standard:** IEC 62443-3-3 FR 7 (resource availability)
 
-### BC-02 · Improve zone availability
+### ACT-BC-02 · Improve zone availability
 - **Trigger:** Zone Availability Rate: low score (`BC-02: measured, score ≤ 2`)
 - **Action:** Address the main causes of zone outages.
-- **Steps:** Use the disruption log to find the most common causes of zones becoming unavailable. Fix the top causes first. Check whether uncontrolled connections between zones contribute (see the multi-homed devices entry).
+- **Steps:** Use the disruption log to find the most common causes of zones becoming unavailable. Fix the top causes first. Check whether uncontrolled connections between zones, such as multi-homed devices, contribute.
 - **Why it matters:** Zone outages directly affect the processes running in them.
 - **Who:** OT engineering
 - **NIS2:** (c) business continuity
 - **Standard:** IEC 62443-3-3 FR 7 (resource availability)
 
-### BC-03 · Reduce operational threshold violations
+### ACT-BC-03 · Reduce operational threshold violations
 - **Trigger:** Operational Threshold Violation Rate: low score (`BC-04: measured, score ≤ 2`)
 - **Action:** Reduce how often process parameters leave their safe operating range during disruptions.
 - **Steps:** Review each violation: which disruption caused it, and how long it lasted. Improve operator procedures for degraded operation. Check that alarms for these parameters work and reach operators in time.
@@ -121,7 +130,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (c) business continuity
 - **Standard:**
 
-### BC-04 · Define operational thresholds
+### ACT-BC-04 · Define operational thresholds
 - **Trigger:** Operational Threshold Violation Rate: no thresholds defined (`BC-04: no_thresholds_defined`)
 - **Action:** Define safe operating limits for critical process parameters.
 - **Steps:** With process engineering, list the critical parameters per process (for a water plant, e.g. dosing, pressure, levels). Record the safe operating range for each. Make sure deviations are logged.
@@ -130,7 +139,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (c) business continuity (supports)
 - **Standard:**
 
-### BC-05 · Meet recovery time objectives
+### ACT-BC-05 · Meet recovery time objectives
 - **Trigger:** RTO Achievement Rate: low score (`BC-08: measured, score ≤ 2`)
 - **Action:** Make recovery of OT systems faster and more predictable.
 - **Steps:** Analyse recoveries that exceeded their RTO. Keep tested recovery media and system images for HMIs, servers and engineering workstations. Write step-by-step rebuild procedures and practise them.
@@ -139,7 +148,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (c) business continuity, disaster recovery
 - **Standard:** IEC 62443-3-3 SR 7.4 (control system recovery and reconstitution)
 
-### BC-06 · Define recovery time objectives
+### ACT-BC-06 · Define recovery time objectives
 - **Trigger:** RTO Achievement Rate: no RTO defined (`BC-08: no_rto_defined`)
 - **Action:** Define recovery time objectives for critical processes.
 - **Steps:** With operations, agree the maximum acceptable downtime per critical process. Derive RTOs for the OT systems each process depends on. Record them in the BC plan.
@@ -148,7 +157,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (c) business continuity
 - **Standard:**
 
-### BC-07 · Meet recovery point objectives
+### ACT-BC-07 · Meet recovery point objectives
 - **Trigger:** RPO Achievement Rate: low score (`BC-09: measured, score ≤ 2`)
 - **Action:** Make sure backups are recent and restorable enough to meet the RPO.
 - **Steps:** Check backup frequency against the RPO for each system. Verify backups by restoring them to a test system or spare hardware, not only by checking that the job ran. Include PLC programs and configurations, not only servers.
@@ -157,7 +166,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (c) business continuity, backup management
 - **Standard:** IEC 62443-3-3 SR 7.3 (control system backup)
 
-### BC-08 · Define recovery point objectives
+### ACT-BC-08 · Define recovery point objectives
 - **Trigger:** RPO Achievement Rate: no RPO defined (`BC-09: no_rpo_defined`)
 - **Action:** Define recovery point objectives for critical processes.
 - **Steps:** Agree with operations the maximum acceptable data loss per critical process. Align backup frequency for historians, SCADA/PLC configurations and engineering workstations with it. Verify with a restore test on a test system or spare hardware.
@@ -166,7 +175,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (c) business continuity, backup management
 - **Standard:** IEC 62443-3-3 SR 7.3 (control system backup)
 
-### BC-09 · Make business continuity measurable
+### ACT-BC-09 · Make business continuity measurable
 - **Trigger:** Any Business Continuity indicator not measurable (`BC-01`, `BC-02`, `BC-04`, `BC-08` or `BC-09: not_measurable`)
 - **Action:** Keep a disruption log.
 - **Steps:** For every disruption, record start and end time, affected zones and processes, which network functions stayed available, any threshold violations, and the recovery time and recovery point achieved.
@@ -179,7 +188,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 
 ## Foundational controls (Layer 0)
 
-### L0-01 · Build and maintain the OT asset inventory
+### ACT-L0-01 · Build and maintain the OT asset inventory
 - **Trigger:** Asset inventory missing or incomplete/outdated (`L0-asset-inventory: missing | incomplete_outdated`)
 - **Action:** Build a complete OT asset inventory and keep it current.
 - **Steps:** Combine passive network discovery with site walkdowns. Record for each asset: type, location, zone, firmware version and owner. Agree how often it is reviewed and who updates it after changes.
@@ -188,7 +197,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (i) asset management
 - **Standard:** IEC 62443-3-3 SR 7.8 (control system component inventory)
 
-### L0-02 · Assess risk per zone
+### ACT-L0-02 · Assess risk per zone
 - **Trigger:** Risk assessment per zone missing or incomplete/outdated (`L0-risk-assessment: missing | incomplete_outdated`)
 - **Action:** Perform a risk assessment for each OT zone.
 - **Steps:** Define zones and conduits if not yet done. For each zone, assess threats, consequences for the process and existing controls. Set a review cycle and repeat after major changes.
@@ -197,7 +206,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (a) risk analysis
 - **Standard:** IEC 62443-3-2 (security risk assessment, zones and conduits)
 
-### L0-03 · Document asset interdependencies
+### ACT-L0-03 · Document asset interdependencies
 - **Trigger:** Asset interdependency documentation missing or incomplete/outdated (`L0-interdependency: missing | incomplete_outdated`)
 - **Action:** Document which assets and services each critical process depends on.
 - **Steps:** For each critical process, list the PLCs, HMIs, servers, network paths and IT services it needs. Include external dependencies such as vendor remote access. Keep it linked to the asset inventory.
@@ -206,7 +215,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (c) business continuity (supports)
 - **Standard:**
 
-### L0-04 · Establish a controlled IT/OT boundary
+### ACT-L0-04 · Establish a controlled IT/OT boundary
 - **Trigger:** Controlled IT/OT boundary separation missing or incomplete/outdated (`L0-it-ot-boundary: missing | incomplete_outdated`)
 - **Action:** Control all traffic between IT and OT at a defined boundary.
 - **Steps:** Route all IT–OT traffic through a firewall or DMZ with explicit allow rules. Remove direct connections. Provide remote access only through a controlled jump host with multi-factor authentication.
@@ -215,7 +224,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (j) multi-factor authentication (for the remote access part)
 - **Standard:** IEC 62443-3-3 SR 5.2 (zone boundary protection), SR 1.13 (access via untrusted networks)
 
-### L0-05 · Remove or control multi-homed devices
+### ACT-L0-05 · Remove or control multi-homed devices
 - **Trigger:** Uncontrolled multi-homed devices found (`L0-multi-homed: uncontrolled_multi_homing_found`)
 - **Action:** Remove or control hosts connected to more than one zone.
 - **Steps:** List every host with interfaces in more than one zone. Remove the second interface, or route that traffic through a controlled conduit with a firewall. Re-scan to confirm none remain.
@@ -224,7 +233,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:**
 - **Standard:** IEC 62443-3-3 SR 5.1 (network segmentation), SR 5.2 (zone boundary protection)
 
-### L0-06 · Refresh the multi-homing evidence
+### ACT-L0-06 · Refresh the multi-homing evidence
 - **Trigger:** Multi-homed devices: evidence incomplete or outdated (`L0-multi-homed: incomplete_outdated_evidence`)
 - **Action:** Re-check all zones for hosts connected to more than one zone.
 - **Steps:** Run a fresh check using the asset inventory and network configuration. Record the date and scope of the check.
@@ -233,7 +242,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:**
 - **Standard:** IEC 62443-3-3 SR 5.1 (network segmentation)
 
-### L0-07 · Document the BC plan for critical processes
+### ACT-L0-07 · Document the BC plan for critical processes
 - **Trigger:** BC plan missing or incomplete/outdated (`L0-bc-plan-doc: missing | incomplete_outdated`)
 - **Action:** Write or update the business continuity plan for critical processes.
 - **Steps:** Cover each critical process: how to operate manually or in degraded mode, how to recover the OT systems it depends on, RTOs and RPOs, and contact lists. Assign an owner and a review date.
@@ -242,7 +251,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (c) business continuity, crisis management
 - **Standard:**
 
-### L0-08 · Test the BC plan
+### ACT-L0-08 · Test the BC plan
 - **Trigger:** No qualifying BC plan test, or test incomplete/outdated (`L0-bc-plan-tested: no_qualifying_test | incomplete_outdated`)
 - **Action:** Test the BC plan within the defined period.
 - **Steps:** Schedule a test: a tabletop exercise at minimum, ideally including a restore of at least one OT system to a test environment. Record the results and fix the gaps found.
@@ -251,7 +260,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (c) business continuity; (f) assessing the effectiveness of measures
 - **Standard:**
 
-### L0-09 · Make foundational controls verifiable
+### ACT-L0-09 · Make foundational controls verifiable
 - **Trigger:** Any Layer 0 item not verifiable (`not_verifiable` on any foundational item)
 - **Action:** Produce evidence that can be checked.
 - **Steps:** For the item concerned, keep a dated document or record with a named owner and a review history, so an assessor can confirm its state.
@@ -264,7 +273,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 
 ## Vulnerability management (process evidence)
 
-### RM-01 · Establish a vulnerability management process
+### ACT-RM-01 · Establish a vulnerability management process
 - **Trigger:** Vulnerability management process absent (`RM-04` or `RM-05: process_absent`)
 - **Action:** Establish a vulnerability management process for OT.
 - **Steps:** Decide how OT vulnerabilities are found (vendor advisories, asset inventory matching). Define how they are prioritised and who decides on remediation. Track them in a register.
@@ -273,7 +282,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (e) vulnerability handling
 - **Standard:** IEC TR 62443-2-3 (patch management in the IACS environment)
 
-### RM-02 · Improve the remediation rate
+### ACT-RM-02 · Improve the remediation rate
 - **Trigger:** Vulnerability Remediation Rate below target (`RM-04: measured` and the engine raises an action flag for it)
 - **Action:** Remediate more of the known vulnerabilities, prioritising by risk.
 - **Steps:** Prioritise by exposure and process criticality, for example known-exploited vulnerabilities on reachable systems first. Use vendor-approved patches. Where patching is not possible, apply and document compensating controls.
@@ -282,7 +291,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (e) vulnerability handling
 - **Standard:** IEC TR 62443-2-3 (patch management in the IACS environment)
 
-### RM-03 · Shorten remediation time
+### ACT-RM-03 · Shorten remediation time
 - **Trigger:** Mean Time to Remediate above target (`RM-05: measured` and the engine raises an action flag for it)
 - **Action:** Reduce the time from discovering a vulnerability to remediating it.
 - **Steps:** Set remediation deadlines per severity. Plan patching into scheduled maintenance windows. Track overdue items and report them to management.
@@ -291,7 +300,7 @@ NIS2 references are to Article 21(2) of Directive (EU) 2022/2555.
 - **NIS2:** (e) vulnerability handling
 - **Standard:** IEC TR 62443-2-3 (patch management in the IACS environment)
 
-### RM-04 · Make vulnerability handling measurable
+### ACT-RM-04 · Make vulnerability handling measurable
 - **Trigger:** Vulnerability Remediation Rate or Mean Time to Remediate not measurable (`RM-04` or `RM-05: not_measurable`)
 - **Action:** Record discovery and remediation dates for each vulnerability.
 - **Steps:** Keep a vulnerability register with, per entry, the date found, the decision taken, and the date remediated or mitigated.
