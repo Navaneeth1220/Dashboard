@@ -570,7 +570,11 @@ categories still come from all facts.
     only by its number or its level label (for example Good or
     Developing)." Found in the June re-run: "Both dimensions are complete
     but scored below average", "equal priority weaknesses", "areas of
-    concern".
+    concern". The generated advisory for the IT/OT boundary said "because
+    a weak boundary control can affect <outcome>" in a sentence with a
+    score, which this check fails; it now reads "because boundary
+    separation can affect <outcome>" (`reportWording.js`), true for every
+    boundary state.
 
 Limitations (accepted): paraphrased names ("containment time") are not
 recognised: log misses in the manual check and add aliases to the data
