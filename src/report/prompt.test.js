@@ -34,15 +34,14 @@ Rules:
 3. An item with no score (not measurable, no qualifying event or
    disruption, not yet assessed, invalid value entered) says nothing about
    performance. Never describe it as good, poor, weak, or failing. Say why
-   it has no score, as the fact states it.
+   it has no score, as the fact states it. Say an item has no score; never
+   call it or its indicator missing.
 4. A programme gap (score 0 because an objective is not defined) is not a
    measured failure. Say the objective does not exist yet.
 5. An incomplete dimension has no score. Never give it one or estimate one.
 6. Process evidence items are not scored. Never give them a score.
-7. When a fact says "may be related", keep that wording, and use it only
-   for the two items that fact names. Never claim one thing caused
-   another: never write "due to", "because of", "caused", "causes",
-   "led to", "results from" or "resulted in".
+7. When a fact says "may be related", keep that wording; never state that
+   one of those items caused the other.
 8. Items listed with equal priority are not ranked against each other.
 9. First choose the facts for each section in factIds, then write the text
    from those facts only. Never write fact IDs in the text.
