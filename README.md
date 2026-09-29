@@ -60,10 +60,15 @@ Chapter 5.
 Below the dashboard's panels, **Generate report** produces a short
 management summary of the current assessment. It is a hybrid:
 
-- Four sections (measured performance, gaps and missing evidence,
-  foundations and flags, priorities) are generated from the assessment by
-  fixed templates, using the dashboard's own labels. They are labelled
-  "Generated from the assessment" and need no model.
+- Five sections (measured performance, gaps and missing evidence,
+  foundations and flags, priorities, targets) are generated from the
+  assessment by fixed templates, using the dashboard's own labels. They are
+  labelled "Generated from the assessment" and need no model. Targets gives,
+  for each measured indicator below score 4, the value it needs for the
+  next score level, taken from the scoring bands; a programme gap gets the
+  step that comes first (define the objective, or establish the
+  capability) instead of a number, and an indicator without a score gets
+  no target.
 - The headline and the overview are drafted by a local language model
   (Ollama, `qwen2.5:7b`) from a pre-worded list of facts, and checked by a
   validator before they are shown. They are labelled "AI-drafted — review

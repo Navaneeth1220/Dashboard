@@ -61,7 +61,7 @@ Now a hobby project, developed on feature branches.
 ## Current work
 
 The assessment report (AI-drafted headline and overview via a local Ollama
-model, four generated sections; `src/report/`, `NarrativePanel.jsx`) is
+model, five generated sections; `src/report/`, `NarrativePanel.jsx`) is
 merged into `main` (tag `v1.1`). Its design, validator checks and known
 limitations are in `docs/ai-report-spec.md`; manual-check runs are logged
 in `docs/ai-report-manual-check.md` (`npm run check:narrative -- --scenario
@@ -77,7 +77,16 @@ the bundled Liberation Sans. Header values come from the result's context
 fact (the generation snapshot), never live App state; the button is
 disabled while the draft is stale.
 
-Next: the "Cleanup backlog" section at the end of `docs/ai-report-spec.md`
+Targets (spec Step 7) is merged into `main` (tag `v1.3`): a fifth generated
+section, last, with the value each measured indicator below 4 needs for its
+next score level, from `computeGapAnalysis` (`projection.js`). Each
+`scored` fact below 4 ends with a "Next level: …" sentence
+(`TARGET_WORDING.nextLevelPrefix`); outside the Targets section the
+validator reads scored facts without it (checks 2 and 8, verbatim
+exemption), so a target score can never pass as a current score.
+
+Next: the recommended actions from `docs/action-catalogue.md` (reviewed and
+approved), as a section after Targets. Also open: the "Cleanup backlog" section at the end of `docs/ai-report-spec.md`
 (`SCORE_LEVEL` duplicate in `Layer0ItemCard`, "poor" vs "Developing" in the
 cross-indicator advisories, 18 pre-existing lint warnings), on `main` or a
 short-lived branch from it.
