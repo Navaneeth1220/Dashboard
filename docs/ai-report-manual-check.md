@@ -1089,3 +1089,211 @@ misstates "no test was performed".
 **Performance**: 12.9 → 7.1 tokens/s; whole narratives ~51 s, section
 repairs 6–24 s; the whole run set took about 7 minutes of generation plus
 cooldowns. No timeouts.
+## Run set 2026-09-28 22:20 UTC
+
+- Model: qwen2.5:7b · Ollama 0.34.4 · options `{"temperature":0.2,"num_ctx":4096,"num_predict":1024}`
+- Timeout 300.0 s per call · 60.0 s cooldown between runs · retries at temperature 0.5, repairing failing sections only
+- Scenario: scenarios/Westmaas_2026-01-01_assessment.json (23 facts)
+
+| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |
+|---|---|---|---|---|---|
+| before | (no model loaded) | | | | |
+| after | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+
+### Summary
+
+| Measure | Value |
+|---|---|
+| ok | 5 of 5 |
+| generated sections identical and valid | 5 of 5 |
+| attempts per run (calls) | 1 (1), 1 (1), 1 (1), 1 (1), 1 (1) |
+| errors by rule (all attempts) | — |
+| max prompt_eval_count | 816 (warning above 3000) |
+| generation speed (tokens/s, eval_duration) | first 12.5, last 14.1, min 12.5, max 14.1 |
+
+### Generated sections
+
+Built from the facts by templates (no model); every run asserts it gets exactly this.
+
+The reference copy passes the validator.
+
+**measuredPerformance** (C3, F4, F5, F7, F8, F9, F10): Each effectiveness indicator is scored from 0 to 4, where 4 is best. In Incident Handling, Mean Time to Detect was 18 hours (score 3, Good) and Mean Time to Respond was 30 hours (score 2, Developing). In Business Continuity, Network Operability Under Disruption was 85% (score 3, Good), Zone Availability Rate was 40% (score 2, Developing), Operational Threshold Violation Rate was 12.5% (score 2, Developing) and RTO Achievement Rate was 50% (score 2, Developing). For Mean Time to Detect, Mean Time to Respond and Operational Threshold Violation Rate, lower values are better.
+
+**gapsAndMissingEvidence** (F1, F3, F6, F11): Mean Time to Contain is not measurable: evidence to compute the value is absent or unreliable, and no reason was recorded. This says nothing about how Mean Time to Contain performs, but without it Incident Handling has no score, so there is no overall score either.
+
+No recovery point objective has been established for RPO Achievement Rate, so it scores 0 as a programme gap; this is not a measured failure.
+
+**foundationsAndFlags** (F12, F13, F14, F15, F16, F17, F18, F19): In place: Asset inventory maintained, Risk assessment per zone, Controlled IT/OT boundary separation and BC plan documented for critical processes.
+
+The following issues were flagged (listed by severity; this is not an order of action). Critical: uncontrolled inter-zone multi-homed devices were identified. High: asset interdependency documentation is incomplete or outdated, and no BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+Process evidence is reported without a score. Vulnerability Remediation Rate is 60%, in the 50–69% band, which is below target — moderate programme improvement warranted (medium note). Mean Time to Remediate is 75 days, in the 31–90 days band, which is satisfactory — continue monitoring.
+
+Read together (advisory only; no scores change): the uncontrolled multi-homed devices and Zone Availability Rate (score 2, Developing) may be related, because a segmentation bypass can affect zone availability; review them together. Removing the multi-homed devices and establishing the evidence to measure Mean Time to Contain are both measurement-readiness actions; address them together.
+
+**priorities** (F6, F20): Ranked by score, where a lower score is more urgent: the lowest effectiveness result is RPO Achievement Rate, a programme gap at score 0. Next, at score 2 and of equal priority, are Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate and RTO Achievement Rate, listed in catalogue order. Mean Time to Contain is not ranked because it has no score.
+
+### Runs
+
+| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | ok | 1 | whole | 100.5 s | 816 | 172 | 12.5 | stop | — |
+| 2 | ok | 1 | whole | 12.1 s | 816 | 161 | 13.8 | stop | — |
+| 3 | ok | 1 | whole | 13.1 s | 816 | 180 | 14.0 | stop | — |
+| 4 | ok | 1 | whole | 12.8 s | 816 | 178 | 14.1 | stop | — |
+| 5 | ok | 1 | whole | 14.0 s | 816 | 194 | 14.1 | stop | — |
+
+#### Run 1: ok (1 attempt(s), 1 call(s), 100.5 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 816, eval_count 172, 12.5 tokens/s, done_reason stop, 100.5 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (C1): OT Cybersecurity Assessment of Westmaas as of 2026-01-01
+
+**overview** (C2, F1, F2, F13, F14, F15): The assessment covered 8 effectiveness indicators in two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80 out of 4. Critical issues include uncontrolled inter-zone multi-homed devices, and high priority issues are incomplete asset interdependency documentation and a lack of BC plan tests. The overall score is not available due to the incomplete dimension.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (C1): OT Cybersecurity Assessment of Westmaas as of 2026-01-01
+
+**overview** (C2, F1, F2, F13, F14, F15): The assessment covered 8 effectiveness indicators in two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80 out of 4. Critical issues include uncontrolled inter-zone multi-homed devices, and high priority issues are incomplete asset interdependency documentation and a lack of BC plan tests. The overall score is not available due to the incomplete dimension.
+
+</details>
+
+#### Run 2: ok (1 attempt(s), 1 call(s), 12.1 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 816, eval_count 161, 13.8 tokens/s, done_reason stop, 12.1 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (C1): OT Cybersecurity Assessment of Westmaas as of 2026-01-01
+
+**overview** (C2, F1, F2, F13, F14, F15): The assessment covered 8 effectiveness indicators in 2 dimensions. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80. Critical issues include uncontrolled inter-zone multi-homed devices, and high priority issues are incomplete asset interdependency documentation and unperformed BC plan tests. The overall score is not available due to the incomplete dimension.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (C1): OT Cybersecurity Assessment of Westmaas as of 2026-01-01
+
+**overview** (C2, F1, F2, F13, F14, F15): The assessment covered 8 effectiveness indicators in 2 dimensions. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80. Critical issues include uncontrolled inter-zone multi-homed devices, and high priority issues are incomplete asset interdependency documentation and unperformed BC plan tests. The overall score is not available due to the incomplete dimension.
+
+</details>
+
+#### Run 3: ok (1 attempt(s), 1 call(s), 13.1 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 816, eval_count 180, 14.0 tokens/s, done_reason stop, 13.1 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (C1): OT Cybersecurity Assessment of Westmaas as of 2026-01-01
+
+**overview** (C2, F1, F2, F13, F14, F15): The assessment covered 8 effectiveness indicators in two dimensions: Incident Handling and Business Continuity. Business Continuity scored 1.80 out of 4, with a programme gap noted for RPO Achievement Rate. Incident Handling is incomplete due to a missing indicator, resulting in no overall score. Critical and high priority issues include uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and the lack of a BC plan test during the assessment period.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (C1): OT Cybersecurity Assessment of Westmaas as of 2026-01-01
+
+**overview** (C2, F1, F2, F13, F14, F15): The assessment covered 8 effectiveness indicators in two dimensions: Incident Handling and Business Continuity. Business Continuity scored 1.80 out of 4, with a programme gap noted for RPO Achievement Rate. Incident Handling is incomplete due to a missing indicator, resulting in no overall score. Critical and high priority issues include uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and the lack of a BC plan test during the assessment period.
+
+</details>
+
+#### Run 4: ok (1 attempt(s), 1 call(s), 12.8 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 816, eval_count 178, 14.1 tokens/s, done_reason stop, 12.8 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (C1): OT Cybersecurity Assessment of Westmaas as of 2026-01-01.
+
+**overview** (C2, F1, F2, F13, F14, F15): The assessment covered 8 effectiveness indicators in 2 dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to a missing Mean Time to Contain score, resulting in no overall score. Business Continuity scored 1.80 out of 4. Critical issues include uncontrolled inter-zone multi-homed devices, and high-priority issues are incomplete asset interdependency documentation and the lack of a BC plan test during the assessment period.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (C1): OT Cybersecurity Assessment of Westmaas as of 2026-01-01.
+
+**overview** (C2, F1, F2, F13, F14, F15): The assessment covered 8 effectiveness indicators in 2 dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to a missing Mean Time to Contain score, resulting in no overall score. Business Continuity scored 1.80 out of 4. Critical issues include uncontrolled inter-zone multi-homed devices, and high-priority issues are incomplete asset interdependency documentation and the lack of a BC plan test during the assessment period.
+
+</details>
+
+#### Run 5: ok (1 attempt(s), 1 call(s), 14.0 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 816, eval_count 194, 14.1 tokens/s, done_reason stop, 14.0 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (C1): OT Cybersecurity Assessment of Westmaas, dated 2026-01-01.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators in 2 dimensions: Incident Handling and Business Continuity. Business Continuity scored 1.80 out of 4, with a programme gap for RPO Achievement Rate. Incident Handling is incomplete due to the absence of a Mean Time to Contain score. The overall score is not available. Critical issues include uncontrolled inter-zone multi-homed devices, and high-priority issues are incomplete asset interdependency documentation and a lack of BC plan tests during the assessment period.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (C1): OT Cybersecurity Assessment of Westmaas, dated 2026-01-01.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators in 2 dimensions: Incident Handling and Business Continuity. Business Continuity scored 1.80 out of 4, with a programme gap for RPO Achievement Rate. Incident Handling is incomplete due to the absence of a Mean Time to Contain score. The overall score is not available. Critical issues include uncontrolled inter-zone multi-homed devices, and high-priority issues are incomplete asset interdependency documentation and a lack of BC plan tests during the assessment period.
+
+</details>
+
+### Review
+
+First run set of the hybrid report. 5 of 5 accepted, all on the first
+attempt, with no validator errors (previous run set: 2 of 5, 16 errors).
+The generated sections were identical to the reference copy and passed the
+validator in every run. The model now writes 161–194 tokens from a
+816-token prompt, in 12–14 s once loaded (run 1's 100.5 s includes loading
+the model; nothing was loaded before the run).
+
+The overviews are faithful: dimension results, the incomplete Incident
+Handling dimension, no overall score, and the three critical and high
+flags, all as the facts state them. The weak point moved to the headline:
+**all five headlines are a title** ("OT Cybersecurity Assessment of
+Westmaas as of 2026-01-01", citing only C1), not "one sentence with the
+most important point". The validator cannot see this; it is a prompt
+conformance failure in 5 of 5.
+
+1. **Invariant breaks the validator missed**: none. Borderline, all runs:
+   the flags are called "high priority" / "high-priority issues", but the
+   severity is not a priority; the generated foundationsAndFlags says
+   "listed by severity; this is not an order of action", so the overview
+   contradicts it in wording. Minor: run 3 "due to a missing indicator"
+   (the indicator exists, its score is missing); "Critical issues include"
+   when there is exactly one.
+2. **Validator errors that look wrong**: none (no errors).
+3. **Paraphrased item names**: none; flag messages paraphrased faithfully
+   ("a lack of BC plan tests", "unperformed BC plan tests").
+4. **Prompt conformance**: headline is a title, not a sentence with the most
+   important point, in 5 of 5. Overview 4 sentences in runs 1–4, 5 in run 5
+   (limit 2–4). No bullets. Cited facts fit the overview.
+5. **Items named without their fact cited**: runs 1–4 state that there is no
+   overall score without citing F3 (only run 5 cites it).
+6. **Band ranges**: no longer applies to the model (process facts are not in
+   its fact set). The generated section states both as the band the value
+   falls in ("60%, in the 50–69% band, which is below target").
+
+**Performance**: 12.5 → 14.1 tokens/s, no throttling (previous run set
+12.9 → 7.1); max prompt_eval_count 816 of 3000; 16%/84% CPU/GPU split at
+4096 context. No timeouts.
