@@ -1297,3 +1297,209 @@ conformance failure in 5 of 5.
 **Performance**: 12.5 → 14.1 tokens/s, no throttling (previous run set
 12.9 → 7.1); max prompt_eval_count 816 of 3000; 16%/84% CPU/GPU split at
 4096 context. No timeouts.
+## Run set 2026-09-29 00:41 UTC
+
+- Model: qwen2.5:7b · Ollama 0.34.4 · options `{"temperature":0.2,"num_ctx":4096,"num_predict":1024}`
+- Timeout 300.0 s per call · 60.0 s cooldown between runs · retries at temperature 0.5, repairing failing sections only
+- Scenario: scenarios/Westmaas_2026-01-01_assessment.json (23 facts)
+
+| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |
+|---|---|---|---|---|---|
+| before | (no model loaded) | | | | |
+| after | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+
+### Summary
+
+| Measure | Value |
+|---|---|
+| ok | 5 of 5 |
+| generated sections identical and valid | 5 of 5 |
+| attempts per run (calls) | 1 (1), 1 (1), 1 (1), 1 (1), 1 (1) |
+| errors by rule (all attempts) | — |
+| max prompt_eval_count | 856 (warning above 3000) |
+| generation speed (tokens/s, eval_duration) | first 14.8, last 14.7, min 14.5, max 14.8 |
+
+### Generated sections
+
+Built from the facts by templates (no model); every run asserts it gets exactly this.
+
+The reference copy passes the validator.
+
+**measuredPerformance** (C3, F4, F5, F7, F8, F9, F10): Each effectiveness indicator is scored from 0 to 4, where 4 is best. In Incident Handling, Mean Time to Detect was 18 hours (score 3, Good) and Mean Time to Respond was 30 hours (score 2, Developing). In Business Continuity, Network Operability Under Disruption was 85% (score 3, Good), Zone Availability Rate was 40% (score 2, Developing), Operational Threshold Violation Rate was 12.5% (score 2, Developing) and RTO Achievement Rate was 50% (score 2, Developing). For Mean Time to Detect, Mean Time to Respond and Operational Threshold Violation Rate, lower values are better.
+
+**gapsAndMissingEvidence** (F1, F3, F6, F11): Mean Time to Contain is not measurable: evidence to compute the value is absent or unreliable, and no reason was recorded. This says nothing about how Mean Time to Contain performs, but without it Incident Handling has no score, so there is no overall score either.
+
+No recovery point objective has been established for RPO Achievement Rate, so it scores 0 as a programme gap; this is not a measured failure.
+
+**foundationsAndFlags** (F12, F13, F14, F15, F16, F17, F18, F19): In place: Asset inventory maintained, Risk assessment per zone, Controlled IT/OT boundary separation and BC plan documented for critical processes.
+
+The following issues were flagged (listed by severity; this is not an order of action). Critical: uncontrolled inter-zone multi-homed devices were identified. High: asset interdependency documentation is incomplete or outdated, and no BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+Process evidence is reported without a score. Vulnerability Remediation Rate is 60%, in the 50–69% band, which is below target — moderate programme improvement warranted (medium note). Mean Time to Remediate is 75 days, in the 31–90 days band, which is satisfactory — continue monitoring.
+
+Read together (advisory only; no scores change): the uncontrolled multi-homed devices and Zone Availability Rate (score 2, Developing) may be related, because a segmentation bypass can affect zone availability; review them together. Removing the multi-homed devices and establishing the evidence to measure Mean Time to Contain are both measurement-readiness actions; address them together.
+
+**priorities** (F6, F20): Ranked by score, where a lower score is more urgent: the lowest effectiveness result is RPO Achievement Rate, a programme gap at score 0. Next, at score 2 and of equal priority, are Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate and RTO Achievement Rate, listed in catalogue order. Mean Time to Contain is not ranked because it has no score.
+
+### Runs
+
+| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | ok | 1 | whole | 98.6 s | 856 | 184 | 14.8 | stop | — |
+| 2 | ok | 1 | whole | 12.1 s | 856 | 175 | 14.7 | stop | — |
+| 3 | ok | 1 | whole | 13.0 s | 856 | 189 | 14.8 | stop | — |
+| 4 | ok | 1 | whole | 12.4 s | 856 | 175 | 14.5 | stop | — |
+| 5 | ok | 1 | whole | 12.5 s | 856 | 179 | 14.7 | stop | — |
+
+#### Run 1: ok (1 attempt(s), 1 call(s), 98.6 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 856, eval_count 184, 14.8 tokens/s, done_reason stop, 98.6 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identified critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data on Mean Time to Contain, resulting in no overall score. Business Continuity scored 1.80 out of 4. Critical and high severity flags include uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation, along with a missing BC plan test.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identified critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data on Mean Time to Contain, resulting in no overall score. Business Continuity scored 1.80 out of 4. Critical and high severity flags include uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation, along with a missing BC plan test.
+
+</details>
+
+#### Run 2: ok (1 attempt(s), 1 call(s), 12.1 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 856, eval_count 175, 14.7 tokens/s, done_reason stop, 12.1 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identified critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators in two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to a missing indicator, resulting in no overall score. Business Continuity scored 1.80 out of 4. Critical and high severity issues were identified, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identified critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators in two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to a missing indicator, resulting in no overall score. Business Continuity scored 1.80 out of 4. Critical and high severity issues were identified, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+</details>
+
+#### Run 3: ok (1 attempt(s), 1 call(s), 13.0 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 856, eval_count 189, 14.8 tokens/s, done_reason stop, 13.0 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identified critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80 out of 4. No overall score is available. Critical issues include uncontrolled inter-zone multi-homed devices, and high severity issues are asset interdependency documentation being incomplete or outdated, and a lack of BC plan testing during the assessment period.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identified critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80 out of 4. No overall score is available. Critical issues include uncontrolled inter-zone multi-homed devices, and high severity issues are asset interdependency documentation being incomplete or outdated, and a lack of BC plan testing during the assessment period.
+
+</details>
+
+#### Run 4: ok (1 attempt(s), 1 call(s), 12.4 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 856, eval_count 175, 14.5 tokens/s, done_reason stop, 12.4 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identified critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80 out of 4. Overall, the assessment flagged critical issues with uncontrolled inter-zone multi-homed devices and high severity problems related to asset interdependency documentation and BC plan testing.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identified critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80 out of 4. Overall, the assessment flagged critical issues with uncontrolled inter-zone multi-homed devices and high severity problems related to asset interdependency documentation and BC plan testing.
+
+</details>
+
+#### Run 5: ok (1 attempt(s), 1 call(s), 12.5 s)
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 856, eval_count 179, 14.7 tokens/s, done_reason stop, 12.5 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identified critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to a missing indicator, resulting in no overall score. Business Continuity scored 1.80 out of 4. Critical and high severity issues include uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and a lack of BC plan testing.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identified critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to a missing indicator, resulting in no overall score. Business Continuity scored 1.80 out of 4. Critical and high severity issues include uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and a lack of BC plan testing.
+
+</details>
+
+### Review
+
+After the headline and severity prompt changes and validator check 12
+(commits ebec410, f133cc2). 5 of 5 accepted on the first attempt, no
+validator errors; check 12 never fired: the prompt alone fixed the
+headline. Generated sections identical and valid in every run.
+
+**Headline**: a finding in 5 of 5, citing F13–F15 and the same sentence
+every time ("The assessment identified critical and high severity issues,
+including uncontrolled inter-zone multi-homed devices and incomplete asset
+interdependency documentation."). One sentence, no client name or date.
+It leaves out the dimension results; whether the flags are the most
+important finding is a judgement the facts do not make, but it is
+accurate.
+
+**Severity, not priority**: "priority" is gone from all five overviews;
+the flags are "critical" and "high severity" throughout.
+
+1. **Invariant breaks the validator missed**: none. Still, in all five
+   overviews: "Incident Handling is incomplete due to missing data / a
+   missing indicator". The content matches F1, but prompt rule 7 forbids
+   "due to", and check 7 only looks for it when a cited fact says "may be
+   related" (none of the model facts does). Runs 2 and 5 again say "a
+   missing indicator" (the indicator exists; its score is missing).
+2. **Validator errors that look wrong**: none (no errors).
+3. **Paraphrased item names**: none; "incomplete asset interdependency
+   documentation" drops "or outdated" (runs 1, 2, 4, 5 and the headline).
+4. **Prompt conformance**: headline one sentence stating a finding, 5 of
+   5. Overview 4 sentences (runs 1, 2, 3, 5) or 3 (run 4), within 2–4. No
+   bullets. Rule 7 ("due to") broken in 5 of 5, see point 1.
+5. **Items named without their fact cited**: none; F3 is now cited in
+   every overview (previous run set: 1 of 5).
+6. **Band ranges**: not applicable to the model parts.
+
+**Performance**: 14.5–14.8 tokens/s, steady; max prompt_eval_count 856 of
+3000 (the longer prompt added 40 tokens); 12–13 s per run once loaded,
+run 1 98.6 s including the model load.
