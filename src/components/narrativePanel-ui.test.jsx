@@ -57,6 +57,13 @@ const labelOf = key => within(partOfPanel(key)).getByTestId('narrative-label').t
 const textOf = key => within(partOfPanel(key)).getByRole('textbox').value;
 
 describe('idle and running', () => {
+  it('the user-facing wording: "Assessment report" and "Generate report"', () => {
+    renderPanel({ phase: 'idle' });
+    expect(screen.getByText('Assessment report')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Generate report' })).toBeInTheDocument();
+    expect(screen.queryByText(/narrative/i)).toBeNull();
+  });
+
   it('idle: the generate button and the model name, no parts', () => {
     renderPanel({ phase: 'idle' });
     expect(screen.getByRole('button', { name: W.generate })).toBeEnabled();

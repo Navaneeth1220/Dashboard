@@ -19,9 +19,9 @@ transition-classified before/after comparison. The design, analysis,
 demonstration, and evaluation of the system are documented in the thesis;
 the artifact as evaluated is tagged `v1.0-thesis`.
 
-Since the thesis, the dashboard has gained an optional narrative report:
+Since the thesis, the dashboard has gained an optional assessment report:
 a short management summary of an assessment, drafted locally (see
-[Narrative report](#narrative-report-optional)).
+[Assessment report](#assessment-report-optional)).
 
 ## Repository structure
 
@@ -31,11 +31,11 @@ a short management summary of an assessment, drafted locally (see
 - `/scenarios` — the Westmaas Water Treatment assessment data used for the
   demonstration and evaluation (thesis Chapter 6): baseline and follow-up
   assessment files; plus `Oudendijk_2026-03-01_assessment.json`, a
-  synthetic, mostly unassessed assessment used to test the narrative report
-- `/docs` — the narrative report specification (`ai-report-spec.md`) and
+  synthetic, mostly unassessed assessment used to test the assessment report
+- `/docs` — the assessment report specification (`ai-report-spec.md`) and
   the log of its manual checks against the model
   (`ai-report-manual-check.md`)
-- `/scripts` — `narrative-check.mjs`, the manual check of the narrative
+- `/scripts` — `narrative-check.mjs`, the manual check of the assessment
   report
 
 ## Running the dashboard
@@ -54,9 +54,9 @@ files in the comparison view.
 The committed output files correspond to the results reported in thesis
 Chapter 5.
 
-## Narrative report (optional)
+## Assessment report (optional)
 
-Below the dashboard's panels, **Generate narrative** produces a short
+Below the dashboard's panels, **Generate report** produces a short
 management summary of the current assessment. It is a hybrid:
 
 - Four sections (measured performance, gaps and missing evidence,
@@ -115,7 +115,7 @@ demonstration. It describes no real facility, organisation, or incident.
 ## Status
 
 The tag `v1.0-thesis` reflects the prototype at thesis submission. Later
-work (the narrative report) continues as a hobby project and is not
+work (the assessment report) continues as a hobby project and is not
 maintained as a product. The thesis records the measurement system's known
 limitations and the future work that a production version would require;
-the narrative report's limitations are listed in `docs/ai-report-spec.md`.
+the assessment report's limitations are listed in `docs/ai-report-spec.md`.

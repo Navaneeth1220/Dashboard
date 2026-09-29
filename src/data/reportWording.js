@@ -107,8 +107,8 @@ export const SECTION_TITLES = {
 
 /** Fixed wording of the narrative panel and of its Copy footer. */
 export const NARRATIVE_WORDING = {
-  title:       'Narrative report',
-  generate:    'Generate narrative',
+  title:       'Assessment report',
+  generate:    'Generate report',
   cancel:      'Cancel',
   copy:        'Copy',
   copied:      'Copied to the clipboard.',

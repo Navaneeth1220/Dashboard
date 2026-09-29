@@ -5,7 +5,7 @@ stop after each step for review before starting the next.
 
 ## Goal
 
-A "Generate narrative" button that produces a short management summary of an
+A "Generate report" button that produces a short management summary of an
 assessment, written by a local LLM (Ollama), shown next to the existing
 deterministic views as an editable, clearly labelled AI draft.
 
@@ -1054,7 +1054,7 @@ differs from the one the result was generated from) to the panel.
 
 The panel (placed in the dashboard view, `view === 'dashboard'`, below the
 existing panels):
-- Header "Narrative report", the model name, and a "Generate narrative"
+- Header "Assessment report", the model name, and a "Generate report"
   button (disabled while running).
 - Running: "Generating… attempt N of M" and a "Cancel" button.
 - `ok`: the headline and the five sections, each in its own editable text
