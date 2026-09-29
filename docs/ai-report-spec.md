@@ -146,6 +146,16 @@ plus the indicators involved. IDs are assigned in a stable order: C-facts
   alongside RM-04") are copied verbatim except that exact internal IDs are
   replaced by `displayName()`. A bare dimension code followed by a number
   ("BC 1.80") becomes "Business Continuity score 1.80".
+- A `no_score` fact whose status (not measurable, no qualifying event, no
+  qualifying disruption, not yet assessed, invalid value) is shared by at
+  least one other indicator states the group's size, after "This says
+  nothing about how …" and before any reason: "It is one of 6
+  effectiveness indicators that are not yet assessed." (`data.groupCount`;
+  `NO_SCORE_GROUP` in `reportWording.js`). The generated Gaps section
+  counts its groups with these numbers ("Six indicators are not yet
+  assessed: …"), and check 8 ties a number beside an item's name to that
+  item's own fact. `no_score` facts are not sent to the model: the prompt
+  is unchanged.
 - Assessor free-text reasons (not-measurable `reason.text`) are included
   verbatim (whitespace collapsed) at the end of the fact as
   `Assessor note: "…"`. The quoted span is exempt from the text checks (IDs,
@@ -615,7 +625,14 @@ assessment.
     "data", "score(s)", "evidence" or "value(s)", directly or after an item
     name ("missing data on Mean Time to Contain", "a missing Mean Time to
     Contain score" pass). Detail: "Do not call <name> missing: it
-    exists and has no score. Say it has no score." (for the phrase:
+    exists and has no score. <hint>", the hint matching the item's state:
+    "Say it is not yet assessed." for a not-yet-assessed indicator
+    (`no_score` status `unset`) or an `l0_unset` item, "Say it could not
+    be measured." for a not-measurable indicator, otherwise "Say it has no
+    score." (found in the Oudendijk manual check: the repair hint "has no
+    score" for six unassessed indicators pulled the model away from the
+    fact's own wording). For this hint the validator reads a `no_score`
+    fact's `data.status`, the only use of `data` in the validator (for the phrase:
     "Do not write "missing indicator": the indicator exists; say it has
     no score."). Enforces the last sentence of prompt rule 3, which the
     model broke in 3 of 5 baseline runs after it was added.
@@ -802,6 +819,16 @@ Rules:
   disruption, not yet assessed, invalid value, each programme-gap state,
   unassessed foundational items, flagged and non-measured process
   evidence, each advisory rule and variant, each priority fallback.
+- No-score indicators with the same state are grouped into one sentence
+  when there are several: "Six indicators are not yet assessed: A, B, C,
+  D, E and F.", then one consequence sentence for all no-score indicators
+  ("This says nothing about how they perform, but without them …"; "any
+  of these indicators" when there are several groups). The count word
+  comes from the facts' group count (Step 1). Not measurable keeps each
+  item's reason: "For A, the recorded root cause is …", "No reason was
+  recorded for B and C." A single indicator keeps its own sentence. Found
+  in the Oudendijk manual check, where one sentence per unassessed
+  indicator repeated the same words six times.
 - The generated sections always pass the validator (property test over
   random assessments; the check script also asserts it on every run).
 
