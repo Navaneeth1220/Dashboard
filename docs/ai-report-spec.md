@@ -559,7 +559,8 @@ categories still come from all facts.
 16. **Judgement** (`judgement`): a sentence that names a scored item (an
     item with a `scored` fact, or the dimension of a `dim_complete`
     fact, including the overall score) or states a score (the score-claim
-    patterns of check 5) fails if it contains "below average",
+    patterns of check 5, or a score word: score, scores, scored, scoring)
+    fails if it contains "below average",
     "weakness", "weaknesses", "area(s) of concern", "poor", "low" or
     "weak" (whole words; "lower", "lowest" do not count). Level labels
     (`SCORE_LEVEL_LABELS`: Excellent, Good, Developing, Initial, None)
