@@ -4,6 +4,9 @@
  *
  *   npm run check:narrative          5 runs on the Westmaas baseline, 60 s apart
  *   RUNS=1 npm run check:narrative   fewer runs (COOLDOWN_MS overrides the pause)
+ *   npm run check:narrative -- --scenario scenarios/<file>.json
+ *                                    any exported assessment file (path relative
+ *                                    to the working directory, or absolute)
  *
  * Talks to Ollama directly (OLLAMA_URL, default http://localhost:11434), not
  * through the Vite proxy. The real provider is wrapped to record every raw
@@ -19,8 +22,8 @@
 
 import { readFileSync, existsSync, writeFileSync, appendFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
-import { isDeepStrictEqual } from 'node:util';
+import { dirname, join, relative, resolve } from 'node:path';
+import { isDeepStrictEqual, parseArgs } from 'node:util';
 import { parseAndValidateImport } from '../src/engine/persistence.js';
 import { buildAssessmentFacts } from '../src/report/facts.js';
 import { buildGeneratedSections } from '../src/report/templates.js';
@@ -35,7 +38,18 @@ const RUNS = Number(process.env.RUNS ?? 5);
 // The laptop GPU throttles under sustained load (first manual check: 14.8 → 3.0 tokens/s).
 const COOLDOWN_MS = Number(process.env.COOLDOWN_MS ?? 60_000);
 const MODEL = process.env.MODEL ?? DEFAULT_MODEL;
-const SCENARIO = 'scenarios/Westmaas_2026-01-01_assessment.json';
+const DEFAULT_SCENARIO = 'scenarios/Westmaas_2026-01-01_assessment.json';
+const args = (() => {
+  try {
+    return parseArgs({ options: { scenario: { type: 'string' } } }).values;
+  } catch (error) {
+    console.error(`${error.message}\nUsage: npm run check:narrative -- [--scenario <assessment file>]`);
+    process.exit(1);
+  }
+})();
+const SCENARIO_PATH = resolve(args.scenario ?? join(ROOT, DEFAULT_SCENARIO));
+// As logged: relative to the repository, with forward slashes.
+const SCENARIO = relative(ROOT, SCENARIO_PATH).split('\\').join('/');
 const LOG = 'docs/ai-report-manual-check.md';
 
 const REVIEW_POINTS = [
@@ -48,8 +62,15 @@ const REVIEW_POINTS = [
 ];
 
 function loadAssessment() {
-  const res = parseAndValidateImport(readFileSync(join(ROOT, SCENARIO), 'utf8'));
-  if (!res.ok) throw new Error(res.error);
+  if (!existsSync(SCENARIO_PATH)) {
+    console.error(`Scenario file not found: ${SCENARIO_PATH}`);
+    process.exit(1);
+  }
+  const res = parseAndValidateImport(readFileSync(SCENARIO_PATH, 'utf8'));
+  if (!res.ok) {
+    console.error(`${SCENARIO} is not a valid assessment file: ${res.error}`);
+    process.exit(1);
+  }
   const { clientId, assessmentDate, indicators, layer0 } = res.data;
   return { meta: { clientId, assessmentDate }, indicators, layer0 };
 }
@@ -162,7 +183,7 @@ function renderRunSet({ version, before, after, factCount, reference, referenceF
     : '?';
 
   const lines = [
-    `## Run set ${new Date().toISOString().replace('T', ' ').slice(0, 16)} UTC`,
+    `## Run set ${new Date().toISOString().replace('T', ' ').slice(0, 16)} UTC: ${SCENARIO.split('/').pop()}`,
     '',
     `- Model: ${MODEL} · Ollama ${version} · options \`${JSON.stringify(OLLAMA_OPTIONS)}\``,
     `- Timeout ${seconds(DEFAULT_TIMEOUT_MS)} per call · ${seconds(COOLDOWN_MS)} cooldown between runs · retries at temperature ${RETRY_TEMPERATURE}, repairing failing sections only`,
@@ -205,18 +226,19 @@ function renderRunSet({ version, before, after, factCount, reference, referenceF
     '',
     ...REVIEW_POINTS.map((point, i) => `${i + 1}. ${point}: _to be filled in_`),
     '',
+    '',   // blank line before the next appended run set's heading
   ];
   return lines.join('\n');
 }
 
 async function main() {
+  const assessment = loadAssessment();
   const version = (await getJson('/api/version'))?.version;
   if (!version) {
     console.error(`Ollama is not reachable at ${OLLAMA_URL}. Start it (ollama serve) and try again.`);
     process.exit(1);
   }
 
-  const assessment = loadAssessment();
   const referenceFacts = buildAssessmentFacts(assessment);
   const reference = buildGeneratedSections(referenceFacts);
   const referenceFailures = checkGenerated(reference, referenceFacts, reference);
