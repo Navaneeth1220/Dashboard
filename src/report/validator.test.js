@@ -743,6 +743,28 @@ describe('baseline re-run: "missing" for an item with no score (check 15)', () =
     ]);
   });
 
+  it('Oudendijk re-run false positive: "missing A and B scores" passes like "a missing A score"; "missing A and B" fails', () => {
+    const rec = loadScenario(sparseJson);
+    const facts = buildAssessmentFacts(rec);
+    const cite = facts.filter(f => f.kind === 'dim_incomplete').map(f => f.id);
+    const missingOf = text => validateNarrative({ sections: { overview: { factIds: cite, text } } }, facts, { parts: ['overview'] })
+      .errors.filter(e => e.rule === 'missing');
+    // Run 5, attempt 3 (2026-09-29 18:38 run set).
+    expect(missingOf('For Incident Handling, there are three indicators, but the dimension is incomplete due to missing Mean Time to Respond and Mean Time to Contain scores.')).toEqual([]);
+    expect(missingOf('Business Continuity is incomplete due to missing Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate scores.')).toEqual([]);
+    expect(missingOf('Incident Handling is incomplete due to missing Mean Time to Respond and Mean Time to Contain data.')).toEqual([]);
+    // Still fails; as before, the error names the item in the clause with "missing".
+    expect(missingOf('Incident Handling is incomplete due to missing Mean Time to Respond and Mean Time to Contain.').map(e => e.detail)).toEqual([
+      'Do not call Mean Time to Respond missing: it exists and has no score. Say it is not yet assessed.',
+    ]);
+    // One listed "missing … scores" does not excuse another bare "missing".
+    expect(missingOf('Scores are absent due to missing Mean Time to Respond and Mean Time to Contain scores; Zone Availability Rate is missing.').map(e => e.detail)).toEqual([
+      'Do not call Zone Availability Rate missing: it exists and has no score. Say it is not yet assessed.',
+    ]);
+    // Still caught: the names are followed by "indicators", not by what is missing.
+    expect(missingOf('Incident Handling is incomplete due to missing Mean Time to Respond and Mean Time to Contain indicators.')).not.toEqual([]);
+  });
+
   it('"missing data", "missing scores", "missing evidence" pass', () => {
     expect(gaps('Incident Handling is incomplete due to missing data on Mean Time to Contain.').ok).toBe(true);
     expect(overview('Both dimensions are incomplete due to missing scores.').ok).toBe(true);

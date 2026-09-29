@@ -202,6 +202,13 @@ const SEVERITY_WORD = { critical: 'CRITICAL', high: 'HIGH', medium: 'MEDIUM NOTE
 const MISSING_INDICATOR = /\bmissing\s+(?:effectiveness\s+)?indicators?\b/i;
 // "a missing § score": the item's name is masked as §; its score is what is missing.
 const MISSING_WORD = /\bmissing\b(?!\s+(?:§\s+)?(?:data|scores?|evidence|values?)\b)/i;
+// The same across a list of names, which the clause split cuts apart: "missing
+// A and B scores", "missing A, B and C data" (Oudendijk re-run, run 5). Only
+// this "missing" is neutralised before the per-clause check.
+const MISSING_LIST = new RegExp(
+  `\\bmissing(?=\\s+${NAME_PATTERN.source}(?:(?:\\s*,\\s*and\\s+|\\s*,\\s*|\\s+and\\s+)${NAME_PATTERN.source})+\\s+(?:data|scores?|evidence|values?)\\b)`,
+  'gi'
+);
 
 // Check 16: judgement words about a scored result (level labels are allowed).
 const JUDGEMENT = /\bbelow average\b|\bweakness(?:es)?\b|\bareas? of concern\b|\bperforming well\b|\bmoderate\b|\bpoor\b|\blow\b|\bweak\b/i;
@@ -597,6 +604,9 @@ function checkSection(section, part, ctx) {
 
     // Check 15: the indicator exists; only its score is missing.
     const missingPhrase = MISSING_INDICATOR.test(sentence);
+    // "missing <names> scores" (or data, …): the scores are missing, not the
+    // items. Same clauses, with that "missing" replaced by a neutral word.
+    const missingClauses = splitClauses(sentence.replace(MISSING_LIST, 'lacking'));
     if (missingPhrase) {
       add('missing', 'Do not write "missing indicator": the indicator exists; say it has no score.', sentence);
     }
@@ -605,7 +615,7 @@ function checkSection(section, part, ctx) {
     // and the verbatim exemption.
     let lastNamed = null;
     let severityReported = false;
-    for (const clause of splitClauses(sentence)) {
+    for (const [clauseIndex, clause] of splitClauses(sentence).entries()) {
       const named = namesIn(clause);
       const subjects = named.length > 0 ? named : (lastNamed ? [lastNamed] : []);
       if (named.length > 0) lastNamed = named[named.length - 1];
@@ -616,7 +626,7 @@ function checkSection(section, part, ctx) {
       if (named.length > 0 && citedTexts.some(t => t.includes(normalize(clause)))) continue;
 
       for (const [rule, detail] of checkClause(clause, subjects, ctx.categories)) add(rule, detail, sentence);
-      if (!missingPhrase && MISSING_WORD.test(maskNames(clause))) {
+      if (!missingPhrase && MISSING_WORD.test(maskNames(missingClauses[clauseIndex] ?? clause))) {
         for (const id of subjects.filter(s => ctx.categories.notScored.has(s))) {
           add('missing', `Do not call ${nameOf(id)} missing: it exists and has no score. ${ctx.categories.notScored.get(id)}`, sentence);
         }
