@@ -14,6 +14,7 @@
     "check:narrative": "node scripts/narrative-check.mjs"
   },
   "dependencies": {
+    "jspdf": "4.2.1",
     "lucide-react": "^1.21.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
