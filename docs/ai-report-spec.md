@@ -483,7 +483,12 @@ categories still come from all facts.
    score word (`score`, `scores`, `scored`, `scoring`, `rated`, `rating`)
    followed within three words by a number; `<number> score`;
    `<number> out of <number>`; or, for dimensions, the dimension name
-   followed within two words by a number ("Overall score: 2.40").
+   followed within two words by a number ("Overall score: 2.40"), unless
+   the number is followed by "indicator(s)" or "effectiveness
+   indicator(s)": a count, not a score ("Business Continuity has five
+   effectiveness indicators", "Incident Handling and Business Continuity
+   across 8 effectiveness indicators" pass; in the sparse re-run after the
+   final fix round, two of four failed runs failed on this alone).
 6. **Programme gap**: a clause whose subject is a `gap_zero` item fails if
    it contains `fail*`, `missed` or `poor`, unless the word is negated
    (`not`, `no`, `never`, `rather than`, `instead of` within the three
@@ -609,7 +614,11 @@ categories still come from all facts.
     a weak boundary control can affect <outcome>" in a sentence with a
     score, which this check fails; it now reads "because boundary
     separation can affect <outcome>" (`reportWording.js`), true for every
-    boundary state. "performing well" is on the list too (sparse re-run:
+    boundary state. "moderate" is on the list (June re-run after the final
+    fix round: "2.73 out of 4, reflecting moderate performance"; the
+    generated process sentence "moderate programme improvement warranted"
+    names no score and passes). "performing well" is on the list too
+    (sparse re-run:
     "Only two out of eight effectiveness indicators are performing well",
     which reads as if the six unassessed ones were not). The generated Rule
     B advisory said "while Business Continuity is low (0.80)", which this
@@ -653,7 +662,16 @@ attributed for indicators (check 8 covers inherited clauses only for
 complete dimensions): "The lowest scored indicators were RPO Achievement
 Rate and Mean Time to Respond, …, each at a score of 2" passes although
 RPO Achievement Rate is a programme gap at 0 (baseline re-run after
-checks 14–16, run 2; kept as a known limitation).
+checks 14–16, run 2; kept as a known limitation). Also kept, from the
+re-run after the final fix round: an invented absence ("There are no
+flags for the process evidence items" when a MEDIUM NOTE exists; the
+model's facts carry only critical and high flags, and absences are not
+checked); the client name repeated in the headline (the description says
+not to; not validated); check 17 catches a lower-case label only before
+"level(s)" ("both rated good" passes); check 4–6 subjects are inherited
+across "and", so a score for items named after a Layer 0 item can be
+reported against that item (the sentence is usually rejected by another
+check anyway).
 
 Tests: a hand-written good narrative for the Westmaas baseline passes,
 including the readiness advisory (F18) verbatim, "not a measured failure",
@@ -716,7 +734,12 @@ facts); "There is one HIGH severity flag" passes with one flag fact cited;
 "The overall score is Developing", "both at Good level", "a good level"
 fail `levelLabel` in the headline or overview and pass in a generated
 section, "neither is below 3 (Good)" citing F15 passes; "performing well"
-fails `judgement`; a two-sentence headline fails `headlineSentences`. The
+fails `judgement`; a two-sentence headline fails `headlineSentences`.
+From the re-run after the final fix round: "Business Continuity has five
+effectiveness indicators, but the dimension is incomplete…" and "…across
+8 effectiveness indicators" pass (sparse facts), "Business Continuity
+scored 2" still fails `unscoredScore`; "reflecting moderate performance"
+fails `judgement`. The
 drafts of each manual check are replayed before and after each validator
 change.
 Property tests: the cited facts' own text always passes; an injected
