@@ -1,12 +1,12 @@
-import { LAYER0_ITEMS, L0_SEVERITY } from '../data/layer0Definitions.js';
+import { LAYER0_ITEMS, L0_SEVERITY, L0_SEVERITY_LABELS } from '../data/layer0Definitions.js';
 import { INDICATOR_INFO } from '../data/indicatorInfo.js';
 import InfoIcon from './InfoIcon.jsx';
 
 const SEVERITY_COLORS = {
-  [L0_SEVERITY.CRITICAL]:    { bg: '#7f1d1d', text: '#fff', label: 'Critical' },
-  [L0_SEVERITY.HIGH]:        { bg: '#9a3412', text: '#fff', label: 'High' },
-  [L0_SEVERITY.MEDIUM_NOTE]: { bg: '#92400e', text: '#fff', label: 'Medium note' },
-  [L0_SEVERITY.MONITOR]:     { bg: '#1e40af', text: '#fff', label: 'Monitor' },
+  [L0_SEVERITY.CRITICAL]:    { bg: '#7f1d1d', text: '#fff', label: L0_SEVERITY_LABELS[L0_SEVERITY.CRITICAL] },
+  [L0_SEVERITY.HIGH]:        { bg: '#9a3412', text: '#fff', label: L0_SEVERITY_LABELS[L0_SEVERITY.HIGH] },
+  [L0_SEVERITY.MEDIUM_NOTE]: { bg: '#92400e', text: '#fff', label: L0_SEVERITY_LABELS[L0_SEVERITY.MEDIUM_NOTE] },
+  [L0_SEVERITY.MONITOR]:     { bg: '#1e40af', text: '#fff', label: L0_SEVERITY_LABELS[L0_SEVERITY.MONITOR] },
 };
 const HEALTHY_COLOR = { bg: '#14532d', text: '#fff', label: 'OK' };
 

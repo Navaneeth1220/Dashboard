@@ -4,8 +4,8 @@
   "exportedAt": "2026-07-02T08:33:37.076Z",
   "assessment": {
     "meta": {
-      "clientId": "Watermaas",
-      "assessmentDate": "2026-01-06"
+      "clientId": "Westmaas",
+      "assessmentDate": "2026-06-01"
     },
     "indicators": {
       "IH-06": {
@@ -26,8 +26,6 @@
       },
       "BC-02": {
         "state": "measured",
-        "numerator": "4",
-        "denominator": "5",
         "value": "82"
       },
       "BC-04": {

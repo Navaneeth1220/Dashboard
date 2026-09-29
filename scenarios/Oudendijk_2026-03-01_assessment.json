@@ -1,45 +1,45 @@
 {
   "kind": "nis2-ot-assessment",
   "schemaVersion": 1,
-  "exportedAt": "2026-07-02T08:32:22.008Z",
+  "exportedAt": "2026-09-29T00:53:16.088Z",
   "assessment": {
     "meta": {
-      "clientId": "Westmaas",
-      "assessmentDate": "2026-01-01"
+      "clientId": "Oudendijk",
+      "assessmentDate": "2026-03-01"
     },
     "indicators": {
       "IH-06": {
         "state": "measured",
-        "value": "18"
+        "value": "20"
       },
       "IH-07": {
-        "state": "measured",
-        "value": "30"
+        "state": null,
+        "value": ""
       },
       "IH-08": {
-        "state": "not_measurable",
+        "state": null,
         "value": ""
       },
       "BC-01": {
         "state": "measured",
-        "value": "85"
+        "value": "90"
       },
       "BC-02": {
-        "state": "measured",
-        "value": "40"
+        "state": null,
+        "value": ""
       },
       "BC-04": {
-        "state": "measured",
-        "numerator": "2",
-        "denominator": "16"
+        "state": null,
+        "numerator": "",
+        "denominator": ""
       },
       "BC-08": {
-        "state": "measured",
-        "numerator": "1",
-        "denominator": "2"
+        "state": null,
+        "numerator": "",
+        "denominator": ""
       },
       "BC-09": {
-        "state": "no_rpo_defined",
+        "state": null,
         "numerator": "",
         "denominator": ""
       }
@@ -49,31 +49,31 @@
         "state": "present"
       },
       "L0-risk-assessment": {
-        "state": "present"
+        "state": null
       },
       "L0-interdependency": {
         "state": "incomplete_outdated"
       },
       "L0-it-ot-boundary": {
-        "state": "present"
+        "state": null
       },
       "L0-multi-homed": {
-        "state": "uncontrolled_multi_homing_found"
+        "state": null
       },
       "L0-bc-plan-doc": {
-        "state": "present"
+        "state": null
       },
       "RM-04": {
-        "state": "measured",
-        "numerator": "6",
-        "denominator": "10"
+        "state": null,
+        "numerator": "",
+        "denominator": ""
       },
       "RM-05": {
-        "state": "measured",
-        "value": "75"
+        "state": null,
+        "value": ""
       },
       "L0-bc-plan-tested": {
-        "state": "no_qualifying_test"
+        "state": null
       }
     }
   },
@@ -81,7 +81,7 @@
   "derived": {
     "_note": "Derived snapshot for human readability only — recomputed from inputs on import; never trusted as authoritative.",
     "ih": null,
-    "bc": 1.8,
+    "bc": null,
     "overall": null
   }
 }

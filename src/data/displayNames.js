@@ -14,6 +14,13 @@ export function displayName(id) {
   return INDICATORS[id]?.name ?? LAYER0_ITEMS[id]?.name ?? id;
 }
 
+/** Dimension names keyed by the pseudo-IDs used outside the indicator catalogue. */
+export const DIMENSION_NAMES = {
+  IH:      'Incident Handling',
+  BC:      'Business Continuity',
+  OVERALL: 'Overall score',
+};
+
 /** Format a score for display: always exactly two decimals (3.00, 2.50, 2.33).
  *  Display layer only — engines keep full precision. */
 export function formatScore(score) {

@@ -13,10 +13,14 @@
 
 import { INDICATORS, STATE_PRIORITY_LABELS } from '../data/indicatorDefinitions.js';
 import { displayName, formatScore } from '../data/displayNames.js';
+import { NOT_YET_ASSESSED } from '../data/reportWording.js';
 
 const SCORE_BADGE = { 4: '#1a7f4b', 3: '#2e7d32', 2: '#f59e0b', 1: '#dc2626', 0: '#7f1d1d' };
 
 const name = displayName;
+
+// The shared phrase at the start of a label.
+const NOT_YET_ASSESSED_START = NOT_YET_ASSESSED.charAt(0).toUpperCase() + NOT_YET_ASSESSED.slice(1);
 
 // Reason → display text (state-named reasons reuse the centralised label map)
 function excludedReasonText(reason) {
@@ -25,7 +29,7 @@ function excludedReasonText(reason) {
     case 'no_qualifying_event':      return STATE_PRIORITY_LABELS.no_qualifying_event.chip;
     case 'no_qualifying_disruption': return STATE_PRIORITY_LABELS.no_qualifying_disruption.chip;
     case 'invalid_input':            return 'Invalid value entered';
-    case 'unset':                    return 'Not yet assessed';
+    case 'unset':                    return NOT_YET_ASSESSED_START;
     default:                         return reason;
   }
 }
@@ -36,7 +40,7 @@ function projectionBlockMessage(reason) {
     case 'no_qualifying_event':
     case 'no_qualifying_disruption': return 'Resolve the evidence state first';
     case 'invalid_input':            return 'Invalid value — correct it';
-    case 'unset':                    return 'Not yet assessed';
+    case 'unset':                    return NOT_YET_ASSESSED_START;
     default:                         return 'Not projectable';
   }
 }
@@ -45,7 +49,7 @@ function rejectReasonText(reason) {
   switch (reason) {
     case 'resolve_evidence_state_first': return 'resolve the evidence state first';
     case 'invalid_target':               return 'target out of range';
-    case 'not_assessed':                 return 'not yet assessed';
+    case 'not_assessed':                 return NOT_YET_ASSESSED;
     case 'invalid_input':                return 'invalid input';
     default:                             return reason;
   }
