@@ -68,6 +68,15 @@ in `docs/ai-report-manual-check.md` (`npm run check:narrative -- --scenario
 <file>`). Any change to the prompt, facts or validator follows the spec's
 rule: spec first, tests first, replay the logged drafts, re-run the check.
 
+PDF export (spec Step 6) is merged into `main` (tag `v1.2`): "Download PDF"
+in the report panel. `src/report/reportParts.js` decides the shown parts,
+text and labels for the panel, Copy and the PDF; `src/report/pdf/` holds
+the pure builder (`reportDocument.js`), the pure layout (`layout.js`) and
+the jsPDF renderer, loaded with `import()` on first click together with
+the bundled Liberation Sans. Header values come from the result's context
+fact (the generation snapshot), never live App state; the button is
+disabled while the draft is stale.
+
 Next: the "Cleanup backlog" section at the end of `docs/ai-report-spec.md`
 (`SCORE_LEVEL` duplicate in `Layer0ItemCard`, "poor" vs "Developing" in the
 cross-indicator advisories, 18 pre-existing lint warnings), on `main` or a
