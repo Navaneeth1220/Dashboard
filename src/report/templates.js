@@ -2,7 +2,8 @@
  * Generated report sections (docs/ai-report-spec.md, Step 3b).
  *
  * buildGeneratedSections(facts) → { measuredPerformance, gapsAndMissingEvidence,
- *   foundationsAndFlags, priorities }, each { factIds, text }
+ *   foundationsAndFlags, priorities, targets }, each { factIds, text }
+ *   (targets: Step 7)
  *
  * Pure and deterministic, no model: every sentence is rendered from the
  * facts' structured data with the dashboard's own labels (score levels,
@@ -23,6 +24,7 @@ import {
   ARCHITECTURE_WORDING,
   OUTCOME_WORDING,
   LEAD_IN,
+  TARGET_WORDING,
 } from '../data/reportWording.js';
 
 const PROGRAMME_GAP = 'programme gap';
@@ -306,6 +308,48 @@ function priorities(facts) {
 }
 
 // ---------------------------------------------------------------------------
+// Targets (Step 7)
+// ---------------------------------------------------------------------------
+
+function programmeGapTarget({ data: d }) {
+  return d.capability ? TARGET_WORDING.capabilityAbsent[d.capability](d.name) : TARGET_WORDING.programmeGap[d.state](d.name);
+}
+
+/**
+ * The next level's value for each scored indicator below 4, from the
+ * target its scored fact carries (the engine's next band). Programme gaps
+ * get the step that comes first instead of a number; no-score indicators
+ * get no target.
+ */
+function targets(facts) {
+  const counts = ofKind(facts, 'context').find(f => f.data.dimensions);
+  const scored = ofKind(facts, 'scored');
+  const gaps = ofKind(facts, 'gap_zero');
+  const noScore = ofKind(facts, 'no_score');
+
+  if (scored.length === 0 && gaps.length === 0) return section(facts, noScore, [TARGET_WORDING.nothingScored]);
+
+  const withTarget = scored.filter(f => f.data.target);
+  const atHighest = scored.filter(f => !f.data.target);
+  const reaches = ({ data: d }) => TARGET_WORDING.reaches(d.name, d.value, scoreText(d.score, false).slice('score '.length), d.target);
+  const dimensions = counts.data.dimensions.map(({ dimension, name }) => {
+    const sentences = withTarget.filter(f => f.data.dimension === dimension).map(reaches);
+    return sentences.length === 0 ? null : [`In ${name}, ${sentences[0]}`, ...sentences.slice(1)].join(' ');
+  });
+  let opening = null;
+  if (withTarget.length > 0) opening = TARGET_WORDING.leadIn;
+  else if (gaps.length === 0) opening = TARGET_WORDING.noneBelowFour;
+
+  return section(facts, [...scored, ...gaps, ...noScore], [
+    opening,
+    ...dimensions,
+    atHighest.length > 0 ? TARGET_WORDING.atHighest(joinNames(atHighest.map(f => f.data.name)), SCORE_LEVEL_LABELS[4]) : null,
+    gaps.map(programmeGapTarget).join(' '),
+    noScore.length > 0 ? TARGET_WORDING.noScore(joinNames(noScore.map(f => f.data.name)), noScore.length) : null,
+  ]);
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
@@ -315,5 +359,6 @@ export function buildGeneratedSections(facts) {
     gapsAndMissingEvidence: gapsAndMissingEvidence(facts),
     foundationsAndFlags: foundationsAndFlags(facts),
     priorities: priorities(facts),
+    targets: targets(facts),
   };
 }

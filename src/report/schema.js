@@ -20,7 +20,11 @@ export const GENERATED_KEYS = [
   'gapsAndMissingEvidence',
   'foundationsAndFlags',
   'priorities',
+  'targets',
 ];
+
+/** The Targets section (Step 7): the only part whose check 8 reads the target sentences. */
+export const TARGETS_KEY = 'targets';
 
 /** Every section of the assembled report, in reading order. */
 export const SECTION_KEYS = ['overview', ...GENERATED_KEYS];

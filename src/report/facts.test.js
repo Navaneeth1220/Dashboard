@@ -13,7 +13,8 @@ import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?ra
 import followUpJson from '../../scenarios/Westmaas_2026-06-01_assessment.json?raw';
 import { buildAssessmentFacts, stripAssessorNote, FACT_KINDS } from './facts.js';
 import { loadScenario, assessmentArb } from './testSupport.js';
-import { computeAssessment, createBlankAssessment } from '../engine/scoring.js';
+import { computeAssessment, createBlankAssessment, scoreIndicator } from '../engine/scoring.js';
+import { computeGapAnalysis } from '../engine/projection.js';
 import { createBlankLayer0 } from '../engine/layer0.js';
 import {
   INDICATORS,
@@ -96,19 +97,19 @@ describe('Westmaas baseline', () => {
       { id: 'F3', kind: 'dim_incomplete', refs: ['OVERALL', 'IH'],
         text: 'Overall score: not available, because Incident Handling is incomplete.' },
       { id: 'F4', kind: 'scored', refs: ['IH-06'],
-        text: 'Mean Time to Detect: measured at 18 hours (lower is better); score 3.' },
+        text: 'Mean Time to Detect: measured at 18 hours (lower is better); score 3. Next level: score 4 at 6 hours or less.' },
       { id: 'F5', kind: 'scored', refs: ['IH-07'],
-        text: 'Mean Time to Respond: measured at 30 hours (lower is better); score 2.' },
+        text: 'Mean Time to Respond: measured at 30 hours (lower is better); score 2. Next level: score 3 at 24 hours or less.' },
       { id: 'F6', kind: 'no_score', refs: ['IH-08'],
         text: 'Mean Time to Contain: not measurable. Evidence to compute the value is absent or unreliable. No score. This says nothing about how Mean Time to Contain performs. No reason was recorded.' },
       { id: 'F7', kind: 'scored', refs: ['BC-01'],
-        text: 'Network Operability Under Disruption: measured at 85%; score 3.' },
+        text: 'Network Operability Under Disruption: measured at 85%; score 3. Next level: score 4 at 90% or more.' },
       { id: 'F8', kind: 'scored', refs: ['BC-02'],
-        text: 'Zone Availability Rate: measured at 40%; score 2.' },
+        text: 'Zone Availability Rate: measured at 40%; score 2. Next level: score 3 at 70% or more.' },
       { id: 'F9', kind: 'scored', refs: ['BC-04'],
-        text: 'Operational Threshold Violation Rate: measured at 12.5% (lower is better); score 2.' },
+        text: 'Operational Threshold Violation Rate: measured at 12.5% (lower is better); score 2. Next level: score 3 at 5% or less.' },
       { id: 'F10', kind: 'scored', refs: ['BC-08'],
-        text: 'RTO Achievement Rate: measured at 50%; score 2.' },
+        text: 'RTO Achievement Rate: measured at 50%; score 2. Next level: score 3 at 75% or more.' },
       { id: 'F11', kind: 'gap_zero', refs: ['BC-09'],
         text: 'RPO Achievement Rate: recovery point objective not established. Scored 0 as a programme gap: the objective or capability does not exist yet. Not a measured failure.' },
       { id: 'F12', kind: 'l0_ok', refs: ['L0-asset-inventory', 'L0-risk-assessment', 'L0-it-ot-boundary', 'L0-bc-plan-doc'],
@@ -138,7 +139,8 @@ describe('Westmaas baseline', () => {
   });
 
   it('carries structured data for the generated sections (never sent to the model)', () => {
-    const scored = (name, dimension, value, score, level, lowerIsBetter) => ({ name, dimension, value, score, level, lowerIsBetter });
+    const scored = (name, dimension, value, score, level, lowerIsBetter, target) => ({ name, dimension, value, score, level, lowerIsBetter, target });
+    const target = (score, level, value, bound) => ({ score, level, value, bound });
     const multiHomed = { archItemId: 'L0-multi-homed', archState: 'uncontrolled_multi_homing_found' };
     const data = Object.fromEntries(buildAssessmentFacts(loadScenario(baselineJson)).map(f => [f.id, f.data]));
     expect(data).toEqual({
@@ -154,13 +156,13 @@ describe('Westmaas baseline', () => {
       F1: { dimension: 'IH', name: 'Incident Handling', complete: false, missing: ['Mean Time to Contain'] },
       F2: { dimension: 'BC', name: 'Business Continuity', complete: true, score: '1.80', programmeGaps: ['RPO Achievement Rate'] },
       F3: { dimension: 'OVERALL', name: 'Overall score', complete: false, incomplete: ['Incident Handling'] },
-      F4: scored('Mean Time to Detect', 'IH', '18 hours', 3, 'Good', true),
-      F5: scored('Mean Time to Respond', 'IH', '30 hours', 2, 'Developing', true),
+      F4: scored('Mean Time to Detect', 'IH', '18 hours', 3, 'Good', true, target(4, 'Excellent', '6 hours', 'max')),
+      F5: scored('Mean Time to Respond', 'IH', '30 hours', 2, 'Developing', true, target(3, 'Good', '24 hours', 'max')),
       F6: { name: 'Mean Time to Contain', dimension: 'IH', status: 'not_measurable', rootCause: null, note: null },
-      F7: scored('Network Operability Under Disruption', 'BC', '85%', 3, 'Good', false),
-      F8: scored('Zone Availability Rate', 'BC', '40%', 2, 'Developing', false),
-      F9: scored('Operational Threshold Violation Rate', 'BC', '12.5%', 2, 'Developing', true),
-      F10: scored('RTO Achievement Rate', 'BC', '50%', 2, 'Developing', false),
+      F7: scored('Network Operability Under Disruption', 'BC', '85%', 3, 'Good', false, target(4, 'Excellent', '90%', 'min')),
+      F8: scored('Zone Availability Rate', 'BC', '40%', 2, 'Developing', false, target(3, 'Good', '70%', 'min')),
+      F9: scored('Operational Threshold Violation Rate', 'BC', '12.5%', 2, 'Developing', true, target(3, 'Good', '5%', 'max')),
+      F10: scored('RTO Achievement Rate', 'BC', '50%', 2, 'Developing', false, target(3, 'Good', '75%', 'min')),
       F11: { name: 'RPO Achievement Rate', dimension: 'BC', state: 'no_rpo_defined' },
       F12: { names: ['Asset inventory maintained', 'Risk assessment per zone', 'Controlled IT/OT boundary separation', 'BC plan documented for critical processes'] },
       F13: { name: 'Zero uncontrolled multi-homed devices', severity: 'critical', message: 'Uncontrolled inter-zone multi-homed devices were identified.' },
@@ -217,7 +219,7 @@ describe('indicator facts', () => {
     const facts = buildAssessmentFacts(withInputs(healthyRecord(), { indicators: { 'BC-02': meas(0) } }));
     const f = factFor(facts, 'BC-02');
     expect(f.kind).toBe('scored');
-    expect(f.text).toBe('Zone Availability Rate: measured at 0%; score 0. Measured failure: a measured result, not a programme gap.');
+    expect(f.text).toBe('Zone Availability Rate: measured at 0%; score 0. Measured failure: a measured result, not a programme gap. Next level: score 1 at 1% or more.');
   });
 
   it('every programme-gap state gives gap_zero, never scored', () => {
@@ -286,7 +288,86 @@ describe('indicator facts', () => {
 
   it('repeating ratio is rounded to two decimals', () => {
     const facts = buildAssessmentFacts(withInputs(healthyRecord(), { indicators: { 'BC-08': ratio(1, 3) } }));
-    expect(factFor(facts, 'BC-08').text).toBe('RTO Achievement Rate: measured at 33.33%; score 1.');
+    expect(factFor(facts, 'BC-08').text).toBe('RTO Achievement Rate: measured at 33.33%; score 1. Next level: score 2 at 50% or more.');
+  });
+});
+
+// ─── 2b. Targets (Step 7) ─────────────────────────────────────────────────────
+
+describe('targets on scored facts', () => {
+  const targetOf = (inputs, id) => factFor(buildAssessmentFacts(withInputs(healthyRecord(), { indicators: inputs })), id);
+
+  it('score 4 has no target and no "Next level" sentence', () => {
+    const f = targetOf({}, 'IH-06');   // 4 hours → score 4
+    expect(f.data.score).toBe(4);
+    expect(f.data.target).toBeNull();
+    expect(f.text).not.toContain('Next level');
+  });
+
+  it('Operational Threshold Violation Rate is direction-inverted: its targets are maxima', () => {
+    const at = (n, d) => targetOf({ 'BC-04': ratio(n, d) }, 'BC-04');
+    expect(at(1, 40)).toMatchObject({ // 2.5% → score 3
+      text: 'Operational Threshold Violation Rate: measured at 2.5% (lower is better); score 3. Next level: score 4 at 0%.',
+      data: { target: { score: 4, level: 'Excellent', value: '0%', bound: 'exact' } },
+    });
+    expect(at(2, 16).data.target).toEqual({ score: 3, level: 'Good', value: '5%', bound: 'max' });
+    expect(at(3, 10).data.target).toEqual({ score: 2, level: 'Developing', value: '20%', bound: 'max' });
+    expect(at(6, 10)).toMatchObject({ // 60% → score 0, a measured failure
+      text: 'Operational Threshold Violation Rate: measured at 60% (lower is better); score 0. Measured failure: a measured result, not a programme gap. Next level: score 1 at 50% or less.',
+      data: { target: { score: 1, level: 'Initial', value: '50%', bound: 'max' } },
+    });
+  });
+
+  it('a measured 0 on a lower-is-better time targets score 1 in hours', () => {
+    expect(targetOf({ 'IH-06': meas(800) }, 'IH-06').text).toBe(
+      'Mean Time to Detect: measured at 800 hours (lower is better); score 0. Measured failure: a measured result, not a programme gap. Next level: score 1 at 720 hours or less.'
+    );
+  });
+
+  it('programme gaps and no-score indicators get no target', () => {
+    for (const id of ALL_INDICATOR_IDS) {
+      for (const state of INDICATORS[id].allowedStates.filter(s => s !== STATE.MEASURED)) {
+        const f = targetOf({ [id]: { state } }, id);
+        expect(f.kind, `${id} ${state}`).not.toBe('scored');
+        expect(f.text).not.toContain('Next level');
+        expect(f.data.target).toBeUndefined();
+      }
+    }
+  });
+
+  it('capability absent carries the capability: detection or response', () => {
+    const capability = id => targetOf({ [id]: { state: STATE.CAPABILITY_ABSENT } }, id).data.capability;
+    expect(capability('IH-06')).toBe('detection');
+    expect(capability('IH-07')).toBe('response');
+    expect(capability('IH-08')).toBe('response');
+    expect(targetOf({ 'BC-09': { state: STATE.NO_RPO_DEFINED } }, 'BC-09').data.capability).toBeUndefined();
+  });
+
+  it('property: every target is the engine\'s next band, in the right direction, and scores as promised', () => {
+    const measuredAt = (id, value) => (INDICATORS[id].inputType === 'ratio'
+      ? { state: STATE.MEASURED, numerator: String(Math.round(value * 100)), denominator: '10000' }
+      : { state: STATE.MEASURED, value: String(value) });
+    fc.assert(fc.property(assessmentArb, assessment => {
+      const results = computeAssessment(assessment);
+      const { gaps } = computeGapAnalysis(assessment, results);
+      for (const f of buildAssessmentFacts(assessment).filter(x => x.kind === 'scored')) {
+        const id = f.refs[0];
+        const gap = gaps.find(g => g.indicatorId === id);
+        if (f.data.score === 4) {
+          expect(f.data.target).toBeNull();
+          continue;
+        }
+        const { targetScore, thresholdValue } = gap.nextBand;
+        const lower = INDICATORS[id].direction === 'lower_is_better';
+        expect(f.data.target.score).toBe(targetScore);
+        expect(f.data.target.bound).toBe(lower ? (thresholdValue === 0 ? 'exact' : 'max') : 'min');
+        expect(f.text.endsWith(`Next level: score ${targetScore} at ${f.data.target.value}${
+          f.data.target.bound === 'max' ? ' or less' : f.data.target.bound === 'min' ? ' or more' : ''}.`)).toBe(true);
+        // A value at the target reaches the target score; just past it on the wrong side does not.
+        expect(scoreIndicator(id, measuredAt(id, thresholdValue)).score).toBe(targetScore);
+        expect(scoreIndicator(id, measuredAt(id, thresholdValue + (lower ? 0.01 : -0.01))).score).toBeLessThan(targetScore);
+      }
+    }), { numRuns: 200 });
   });
 });
 

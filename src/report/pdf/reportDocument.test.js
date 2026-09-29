@@ -108,6 +108,9 @@ describe('parts, closing and footer', () => {
     expect(doc.parts[0].text).toBe(S.VALID.headline.text);
     expect(doc.footerModel).toBe(W.pdf.model(DEFAULT_MODEL));
     expect(doc.closing).toEqual(provenanceLines(reportParts(result), DEFAULT_MODEL, [W.pdf.scoresTitle]));
+    // Targets (Step 7): the last part, generated, and named in the closing.
+    expect(doc.parts.at(-1)).toMatchObject({ title: 'Targets', label: W.label.generated });
+    expect(doc.closing[1]).toContain('Priorities, Targets.');
   });
 
   it('an edit: the edited text, the "Edited" label and the edited line in the closing', async () => {

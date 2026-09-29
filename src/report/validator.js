@@ -34,8 +34,8 @@
 import { INDICATORS, ALL_INDICATOR_IDS, SCORE_LEVEL_LABELS } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS, LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
 import { displayName, DIMENSION_NAMES } from '../data/displayNames.js';
-import { SECTION_KEYS, MODEL_PARTS } from './schema.js';
-import { quotedUserText } from './facts.js';
+import { SECTION_KEYS, MODEL_PARTS, TARGETS_KEY } from './schema.js';
+import { quotedUserText, stripTargetSentence } from './facts.js';
 
 export const VALIDATOR_RULES = [
   'shape', 'factIds', 'numbers', 'leakedIds',
@@ -459,15 +459,16 @@ function checkClause(clause, subjects, categories) {
 /**
  * Check 8: a clause that itself names exactly one item with an own fact may
  * only use numbers from that fact, not from another fact that refs the item.
+ * factText reads a fact as the section may use it (see checkSection).
  * Inherited clauses are not checked (they misfire on forward references:
  * "…and several areas with scores of 2, including …").
  */
-function checkAttribution(clause, named, categories) {
+function checkAttribution(clause, named, categories, factText) {
   const items = [...new Set(named)];
   if (items.length !== 1 || !categories.ownFacts.has(items[0])) return [];
 
   const [id] = items;
-  const own = new Set(extractNumbers(maskNames(categories.ownFacts.get(id).text)));
+  const own = new Set(extractNumbers(maskNames(factText(categories.ownFacts.get(id)))));
   const isDimension = categories.dimensionScores.has(id);
   const seen = new Set();
   const details = [];
@@ -507,10 +508,14 @@ function checkSection(section, part, ctx) {
 
   for (const detail of checkFactIds(part.factIds, ctx.byId)) add('factIds', detail);
 
+  // Outside the Targets section a scored fact is read without its "Next level"
+  // target sentence (Step 7): a target score is not the current score, so its
+  // numbers are neither allowed (check 2), copied verbatim, nor attributed (check 8).
+  const factText = section === TARGETS_KEY ? f => f.text : f => stripTargetSentence(f.text);
   const cited = [...new Set(part.factIds)].filter(id => ctx.byId.has(id)).map(id => ctx.byId.get(id));
-  const citedTexts = cited.map(f => normalize(f.text));
+  const citedTexts = cited.map(f => normalize(factText(f)));
   // Context facts (C1, C2) count as cited everywhere; safe only with check 8.
-  const allowedNumbers = new Set([...cited, ...ctx.contextFacts].flatMap(f => extractNumbers(maskNames(f.text))));
+  const allowedNumbers = new Set([...cited, ...ctx.contextFacts].flatMap(f => extractNumbers(maskNames(factText(f)))));
   const mayBeRelated = cited.some(f => MAY_BE_RELATED.test(f.text));
 
   // Check 12: a headline that cites only context and scale facts is a title,
@@ -607,7 +612,7 @@ function checkSection(section, part, ctx) {
         }
       }
       if (respectively) continue;
-      for (const detail of checkAttribution(clause, named, ctx.categories)) add('attribution', detail, sentence);
+      for (const detail of checkAttribution(clause, named, ctx.categories, factText)) add('attribution', detail, sentence);
       for (const detail of checkDimensionScore(clause, subjects, ctx.categories)) add('attribution', detail, sentence);
       for (const detail of checkSeverity(clause, named, ctx.categories)) {
         add('severity', detail, sentence);
