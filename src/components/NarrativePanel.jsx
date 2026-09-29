@@ -9,7 +9,7 @@
  * shown; model text never reaches this panel then (the result carries none).
  */
 
-import { useState } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import { reportParts, provenanceLines } from '../report/reportParts.js';
 import { downloadReportPdf } from '../report/pdf/download.js';
 import { SECTION_TITLES, NARRATIVE_WORDING as W } from '../data/reportWording.js';
@@ -54,8 +54,29 @@ function Label({ kind }) {
   );
 }
 
+/**
+ * Sizes a text box to its content, so no part scrolls inside the panel:
+ * after every change of the text, and when the window width changes the
+ * wrapping. Height is reset first so the box can also shrink.
+ */
+function useAutoHeight(text) {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const fit = () => {
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`;
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [text]);
+  return ref;
+}
+
 function Part({ part, facts, onChange }) {
   const { key, title, text } = part;
+  const boxRef = useAutoHeight(text);
   const cited = part.factIds.map(id => facts.find(f => f.id === id)).filter(Boolean);
   return (
     <div data-testid={`narrative-part-${key}`} style={{ marginBottom: '16px' }}>
@@ -64,13 +85,14 @@ function Part({ part, facts, onChange }) {
         <Label kind={part.label} />
       </div>
       <textarea
+        ref={boxRef}
         aria-label={title}
         value={text}
         onChange={e => onChange(key, e.target.value)}
-        rows={key === 'headline' ? 2 : 5}
+        rows={1}
         style={{
           width: '100%', boxSizing: 'border-box', padding: '8px 10px', fontSize: '13px', lineHeight: 1.5,
-          fontFamily: 'inherit', border: '1px solid #d1d5db', borderRadius: '4px', resize: 'vertical',
+          fontFamily: 'inherit', border: '1px solid #d1d5db', borderRadius: '4px', resize: 'none', overflowY: 'hidden',
         }}
       />
       <details style={{ marginTop: '4px', fontSize: '11px', color: '#6b7280' }}>
