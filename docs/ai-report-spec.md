@@ -1,6 +1,7 @@
 # AI-drafted narrative reports: spec
 
-Status: implemented (Steps 0–5), merged into `main` as `v1.1`. Shown in the
+Status: implemented (Steps 0–5), merged into `main` as `v1.1`; Steps 6–7
+merged as `v1.2` and `v1.3`; Step 8 on `feature/report-actions`. Shown in the
 UI as the "Assessment report". Changes follow the same order as the steps:
 spec first, tests first, replay the logged drafts, then the manual check.
 
@@ -42,7 +43,9 @@ reviewed action catalogue (Step 8), any cloud provider.
 
 ```
 src/report/facts.js            buildAssessmentFacts(assessment) → facts
-src/report/templates.js        buildGeneratedSections(facts) → the generated sections (five since Step 7)
+src/report/templates.js        buildGeneratedSections(facts, actions) → the generated sections (six since Step 8)
+src/engine/actions.js          matchActions(assessment, results, layer0) → the matched catalogue entries (Step 8)
+src/data/actionCatalogue.js    the action catalogue as data (Step 8)
 src/report/prompt.js           SYSTEM_PROMPT, selectModelFacts(facts), buildUserMessage(facts)
 src/report/schema.js           buildOutputSchema(factIds)  (headline + overview)
 src/report/validator.js        validateNarrative(narrative, facts, { parts }) → { ok, errors }
@@ -984,7 +987,8 @@ reports progress (an exception it throws is logged as a warning and ignored).
      A reply that is not valid JSON, not an object, or cut off leaves the
      part as it was, with the `shape` error. After each attempt both model
      parts are validated.
-4. Returns `{ status: 'ok' | 'failed' | 'unavailable', reason?, message?, narrative, generated, origin, errors, facts, attempts, model }`.
+4. Returns `{ status: 'ok' | 'failed' | 'unavailable', reason?, message?, narrative, generated, origin, errors, facts, actions, attempts, model }`
+   (`actions`: the matched catalogue entries `[{ id, triggers }]`, Step 8).
    - `narrative` (only on `ok`): `{ headline, sections: { overview,
      ...generated } }`, the assembled report.
    - `generated`: the generated sections, always present (also on
@@ -1546,7 +1550,9 @@ sentence.
   `unavailable`; Copy and the PDF closing name it; the font covers the
   catalogue.
 - Replay: the logged drafts' verdicts are unchanged (the model parts, facts
-  and prompt are unchanged, so the manual check is not re-run).
+  and prompt are unchanged, so the manual check is not re-run). Done: all
+  444 logged model parts get identical verdicts with the old and the new
+  validator.
 
 ---
 

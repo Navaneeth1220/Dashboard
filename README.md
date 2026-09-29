@@ -33,9 +33,10 @@ downloadable as a PDF (see
   demonstration and evaluation (thesis Chapter 6): baseline and follow-up
   assessment files; plus `Oudendijk_2026-03-01_assessment.json`, a
   synthetic, mostly unassessed assessment used to test the assessment report
-- `/docs` — the assessment report specification (`ai-report-spec.md`) and
+- `/docs` — the assessment report specification (`ai-report-spec.md`),
   the log of its manual checks against the model
-  (`ai-report-manual-check.md`)
+  (`ai-report-manual-check.md`) and the action catalogue behind the
+  recommended actions (`action-catalogue.md`)
 - `/scripts` — `narrative-check.mjs`, the manual check of the assessment
   report
 
@@ -60,15 +61,20 @@ Chapter 5.
 Below the dashboard's panels, **Generate report** produces a short
 management summary of the current assessment. It is a hybrid:
 
-- Five sections (measured performance, gaps and missing evidence,
-  foundations and flags, priorities, targets) are generated from the
+- Six sections (measured performance, gaps and missing evidence,
+  foundations and flags, priorities, targets, recommended actions) are
+  generated from the
   assessment by fixed templates, using the dashboard's own labels. They are
   labelled "Generated from the assessment" and need no model. Targets gives,
   for each measured indicator below score 4, the value it needs for the
   next score level, taken from the scoring bands; a programme gap gets the
   step that comes first (define the objective, or establish the
   capability) instead of a number, and an indicator without a score gets
-  no target.
+  no target. Recommended actions lists the entries of the reviewed action
+  catalogue (`docs/action-catalogue.md`) that match the assessment, with
+  steps, why each matters, who acts, and the NIS2 and IEC 62443
+  references; missing evidence only ever leads to an action that makes the
+  next assessment measurable.
 - The headline and the overview are drafted by a local language model
   (Ollama, `qwen2.5:7b`) from a pre-worded list of facts, and checked by a
   validator before they are shown. They are labelled "AI-drafted — review
