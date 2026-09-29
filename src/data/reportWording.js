@@ -137,4 +137,22 @@ export const NARRATIVE_WORDING = {
     generated: titles => `Generated from the assessment: ${titles.join(', ')}.`,
     edited:    titles => `Edited after generation: ${titles.join(', ')}.`,
   },
+  // PDF export (docs/ai-report-spec.md, Step 6)
+  downloadPdf:     'Download PDF',
+  preparingPdf:    'Preparing PDF…',
+  pdfFailed:       'Creating the PDF failed.',
+  regenerateFirst: 'Regenerate the report first',
+  pdf: {
+    client:           'Client',
+    assessmentDate:   'Assessment date',
+    generated:        'Generated',
+    notRecorded:      'not recorded',
+    scoresTitle:      'Scores at a glance',
+    dimensionColumn:  'Dimension',
+    scoreColumn:      'Score (0–4, 4 = best)',
+    noScore:          'no score (incomplete)',
+    model:            model => `Model: ${model}`,
+    page:             (page, pages) => `Page ${page} of ${pages}`,
+    filenameFallback: 'assessment',
+  },
 };
