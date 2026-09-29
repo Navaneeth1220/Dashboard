@@ -16,6 +16,10 @@ import { GENERATED_KEYS } from '../report/schema.js';
 import { ProviderUnavailableError } from '../report/providers/ollama.js';
 import { loadScenario } from '../report/testSupport.js';
 import { SECTION_TITLES, NARRATIVE_WORDING as W } from '../data/reportWording.js';
+import { downloadReportPdf } from '../report/pdf/download.js';
+import { buildReportDocument } from '../report/pdf/reportDocument.js';
+
+vi.mock('../report/pdf/download.js', () => ({ downloadReportPdf: vi.fn() }));
 
 const ASSESSMENT = loadScenario(baselineJson);
 const FACTS = buildAssessmentFacts(ASSESSMENT);
@@ -242,5 +246,77 @@ describe('stale', () => {
   it('no notice when not stale', async () => {
     renderPanel({ result: await okResult() });
     expect(screen.queryByText(W.stale)).toBeNull();
+  });
+});
+
+describe('Download PDF (Step 6)', () => {
+  const GENERATED_AT = '2026-01-02T09:05:00.000Z';
+  const pdfButton = () => screen.getByRole('button', { name: W.downloadPdf });
+  beforeEach(() => {
+    downloadReportPdf.mockReset();
+    downloadReportPdf.mockResolvedValue(undefined);
+  });
+
+  it('shown with the parts, not before', async () => {
+    renderPanel({ phase: 'idle' });
+    expect(screen.queryByRole('button', { name: W.downloadPdf })).toBeNull();
+    renderPanel({ result: await okResult() });
+    expect(pdfButton()).toBeEnabled();
+  });
+
+  it('passes the result, the edits, the generation time and the model; the PDF gets the edited text', async () => {
+    const result = await okResult();
+    renderPanel({ result, generatedAt: GENERATED_AT });
+    fireEvent.change(within(partOfPanel('overview')).getByRole('textbox'), { target: { value: 'Edited overview text.' } });
+    fireEvent.click(pdfButton());
+
+    expect(downloadReportPdf).toHaveBeenCalledTimes(1);
+    const input = downloadReportPdf.mock.calls[0][0];
+    expect(input).toEqual({ result, edits: { overview: 'Edited overview text.' }, generatedAt: GENERATED_AT, model: DEFAULT_MODEL });
+    const doc = buildReportDocument(input);
+    expect(doc.parts[1]).toMatchObject({ text: 'Edited overview text.', label: W.label.edited });
+    await waitFor(() => expect(pdfButton()).toBeEnabled());
+  });
+
+  it('failed: what the PDF is built from contains no draft text', async () => {
+    renderPanel({ result: await failedResult(), generatedAt: GENERATED_AT });
+    fireEvent.click(pdfButton());
+    const doc = JSON.stringify(buildReportDocument(downloadReportPdf.mock.calls[0][0]));
+    expect(doc).not.toContain(MARKER);
+    expect(doc).not.toContain(POOR);
+    expect(doc).not.toContain(VALID.headline.text);
+  });
+
+  it('stale: disabled, with the hint to regenerate first', async () => {
+    renderPanel({ result: await okResult(), stale: true });
+    expect(pdfButton()).toBeDisabled();
+    expect(screen.getByText(W.regenerateFirst)).toBeInTheDocument();
+    fireEvent.click(pdfButton());
+    expect(downloadReportPdf).not.toHaveBeenCalled();
+  });
+
+  it('no hint when not stale', async () => {
+    renderPanel({ result: await okResult() });
+    expect(screen.queryByText(W.regenerateFirst)).toBeNull();
+  });
+
+  it('while the PDF is prepared: "Preparing PDF…" and a disabled button', async () => {
+    let finish;
+    downloadReportPdf.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    renderPanel({ result: await okResult() });
+    fireEvent.click(pdfButton());
+    expect(screen.getByText(W.preparingPdf)).toBeInTheDocument();
+    expect(pdfButton()).toBeDisabled();
+    finish();
+    await waitFor(() => expect(screen.queryByText(W.preparingPdf)).toBeNull());
+    expect(pdfButton()).toBeEnabled();
+  });
+
+  it('a failure says so', async () => {
+    downloadReportPdf.mockRejectedValue(new Error('font not loaded'));
+    renderPanel({ result: await okResult() });
+    fireEvent.click(pdfButton());
+    await waitFor(() => expect(screen.getByText(W.pdfFailed)).toBeInTheDocument());
+    expect(pdfButton()).toBeEnabled();
   });
 });
