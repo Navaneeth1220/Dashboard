@@ -183,7 +183,7 @@ describe('foundationsAndFlags variants', () => {
       indicators: { 'BC-01': meas(10) },
     });
     expect(generated.foundationsAndFlags.text).toContain(
-      'the missing IT/OT boundary separation and Network Operability Under Disruption (score 1, Initial) may be related, because a weak boundary control can affect network operability; review them together.'
+      'the missing IT/OT boundary separation and Network Operability Under Disruption (score 1, Initial) may be related, because boundary separation can affect network operability; review them together.'
     );
   });
 

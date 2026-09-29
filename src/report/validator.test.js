@@ -49,7 +49,7 @@ const GOOD = {
     },
     foundationsAndFlags: {
       factIds: FOUNDATIONS,
-      text: 'Asset inventory, zone risk assessment, IT/OT boundary separation and the BC plan are in place, but a critical flag was raised because uncontrolled inter-zone multi-homed devices were identified. Asset interdependency documentation is incomplete or outdated, and no BC plan test was performed during the assessment period. Vulnerability Remediation Rate is 60%, below target, and Mean Time to Remediate is 75 days, which is satisfactory; neither is scored. Zero uncontrolled multi-homed devices is in a weak state (Uncontrolled multi-homing found) and Mean Time to Contain is not measurable. The multi-homed devices and the poor Zone Availability Rate (score 2) may be related and should be reviewed together.',
+      text: 'Asset inventory, zone risk assessment, IT/OT boundary separation and the BC plan are in place, but a critical flag was raised because uncontrolled inter-zone multi-homed devices were identified. Asset interdependency documentation is incomplete or outdated, and no BC plan test was performed during the assessment period. Vulnerability Remediation Rate is 60%, below target, and Mean Time to Remediate is 75 days, which is satisfactory; neither is scored. Zero uncontrolled multi-homed devices is in a weak state (Uncontrolled multi-homing found) and Mean Time to Contain is not measurable. The multi-homed devices and Zone Availability Rate (score 2, Developing) may be related and should be reviewed together.',
     },
     priorities: {
       factIds: ['F20'],
@@ -288,9 +288,13 @@ describe('noScoreWording', () => {
   });
 
   it('another named item resets the subject', () => {
+    // No noScoreWording for Mean Time to Contain. "poor" for a scored item
+    // fails check 16 (judgement) since the June re-run.
     const result = validate(withPart('gapsAndMissingEvidence', ['F6', 'F8'],
       'Mean Time to Contain is not measurable, but Zone Availability Rate is poor.'));
-    expect(result.ok).toBe(true);
+    expect(rulesOf(result)).toEqual(['judgement']);
+    expect(validate(withPart('gapsAndMissingEvidence', ['F6', 'F8'],
+      'Mean Time to Contain is not measurable, but Zone Availability Rate is Developing.')).ok).toBe(true);
   });
 
   it('contrast words split clauses: F18 paraphrase with "while" passes', () => {
@@ -642,6 +646,166 @@ describe('June manual check: an invented "may be related" (check 13)', () => {
 
   it('is a known rule', () => {
     expect(VALIDATOR_RULES).toContain('relation');
+  });
+});
+
+// ─── 14. Flag count ───────────────────────────────────────────────────────────
+
+describe('June and sparse re-runs: flag counts (check 14)', () => {
+  const flags = (ids, text) => validate(withPart('overview', [...OVERVIEW, ...ids], text));
+
+  it('"There are two flags" citing one flag fails (June run 1)', () => {
+    expect(flags(['F14'], 'There are two flags: asset interdependency documentation is incomplete or outdated.').errors).toEqual([{
+      section: 'overview',
+      sentence: 'There are two flags: asset interdependency documentation is incomplete or outdated.',
+      rule: 'flagCount',
+      detail: 'The cited facts contain 1 flag; do not write "two flags".',
+    }]);
+  });
+
+  it('"three flags" citing F13–F15 passes', () => {
+    expect(flags(['F13', 'F14', 'F15'], 'Three flags were raised.').ok).toBe(true);
+  });
+
+  it('a severity word counts only flags of that severity', () => {
+    const text = 'There are two HIGH severity flags.';
+    expect(flags(['F13', 'F14', 'F15'], text).ok).toBe(true);
+    expect(rulesOf(flags(['F13', 'F14'], text))).toEqual(['flagCount']);
+    expect(flags(['F13', 'F14'], text).errors[0].detail).toBe('The cited facts contain 1 HIGH flag; do not write "two HIGH severity flags".');
+  });
+
+  it('a process fact with a severity is a flag (F16, MEDIUM NOTE)', () => {
+    expect(flags(['F13', 'F16'], 'There are two flags.').ok).toBe(true);
+  });
+
+  it('digits count too; the number must be within two words of "flag(s)"', () => {
+    expect(rulesOf(flags(['F13'], 'There are 2 flags.'))).toEqual(['flagCount']);
+    expect(flags(['F13'], 'Of the 8 effectiveness indicators none has a flag.').ok).toBe(true);
+  });
+
+  it('is a known rule', () => {
+    expect(VALIDATOR_RULES).toContain('flagCount');
+  });
+});
+
+// ─── 15. Missing ──────────────────────────────────────────────────────────────
+
+describe('baseline re-run: "missing" for an item with no score (check 15)', () => {
+  const PHRASE = 'Do not write "missing indicator": the indicator exists; say it has no score.';
+
+  it('"a missing indicator" fails anywhere (baseline runs 2, 3, 5)', () => {
+    const sentence = 'Incident Handling is incomplete due to a missing indicator.';
+    expect(gaps(sentence).errors).toEqual([{ section: 'gapsAndMissingEvidence', sentence, rule: 'missing', detail: PHRASE }]);
+  });
+
+  it('"missing indicators" and "missing effectiveness indicators" fail (sparse run 2)', () => {
+    expect(rulesOf(overview('Both dimensions are incomplete, with no scores available due to missing indicators.'))).toEqual(['missing']);
+    expect(rulesOf(overview('Both dimensions are incomplete due to missing effectiveness indicators.'))).toEqual(['missing']);
+  });
+
+  it('"missing" with a no-score item as subject fails', () => {
+    expect(gaps('Mean Time to Contain is missing.').errors).toEqual([expect.objectContaining({
+      rule: 'missing',
+      detail: 'Do not call Mean Time to Contain missing: it exists and has no score. Say it has no score.',
+    })]);
+  });
+
+  it('"missing data", "missing scores", "missing evidence" pass', () => {
+    expect(gaps('Incident Handling is incomplete due to missing data on Mean Time to Contain.').ok).toBe(true);
+    expect(overview('Both dimensions are incomplete due to missing scores.').ok).toBe(true);
+    expect(gaps('Mean Time to Contain has no score because of missing evidence.').ok).toBe(true);
+  });
+
+  it('replay false positive: "a missing Mean Time to Contain score" passes (the score is missing)', () => {
+    expect(gaps('Incident Handling is incomplete due to a missing Mean Time to Contain score.').ok).toBe(true);
+  });
+
+  it('is a known rule', () => {
+    expect(VALIDATOR_RULES).toContain('missing');
+  });
+});
+
+// ─── 9. Severity, per sentence ────────────────────────────────────────────────
+
+describe('June re-run: "critical" naming no flagged item (check 9, per sentence)', () => {
+  const HEADLINE = 'The assessment identified equal priority critical issues with response times and recovery rates.';
+
+  it('fails once when no cited flag fact is CRITICAL (June run 5, accepted)', () => {
+    expect(validate(withPart('headline', ['F20'], HEADLINE)).errors).toEqual([{
+      section: 'headline', sentence: HEADLINE, rule: 'severity',
+      detail: 'None of the cited flags is CRITICAL; do not write "critical".',
+    }]);
+    expect(rulesOf(validate(withPart('headline', ['F14', 'F20'], HEADLINE)))).toEqual(['severity']);
+  });
+
+  it('passes when a cited flag fact is CRITICAL', () => {
+    expect(validate(withPart('headline', ['F13', 'F20'], HEADLINE)).ok).toBe(true);
+  });
+
+  it('replay false positive: a negated "critical" passes ("no critical or high flags")', () => {
+    expect(rulesOf(validate(withPart('headline', ['F20'], 'There are no critical flags among the lowest effectiveness results.')))).not.toContain('severity');
+  });
+
+  it('passes when the sentence names a flagged item (the clause rule decides)', () => {
+    expect(validate(withPart('headline', ['F13'], 'Critical: uncontrolled inter-zone multi-homed devices were identified.')).ok).toBe(true);
+  });
+
+  it('is not reported twice when the clause rule already failed the sentence', () => {
+    const result = validate(withPart('headline', ['F11', 'F20'], 'The assessment highlights critical gaps in RPO Achievement Rate.'));
+    expect(result.errors.filter(e => e.rule === 'severity')).toHaveLength(1);
+  });
+});
+
+// ─── 16. Judgement ────────────────────────────────────────────────────────────
+
+describe('June re-run: judgements about scored results (check 16)', () => {
+  const detail = word => `Do not describe a score as "${word}": describe it only by its number or its level label (for example Good or Developing).`;
+  const measured = text => validate(withPart('measuredPerformance', MEASURED, text));
+
+  it('"Both dimensions are complete but scored below average" fails (score word, no item named; June run 4)', () => {
+    const sentence = 'Both dimensions are complete but scored below average.';
+    expect(overview(sentence).errors).toEqual([{ section: 'overview', sentence, rule: 'judgement', detail: detail('below average') }]);
+  });
+
+  it('each judgement word fails in a sentence naming a scored item', () => {
+    for (const phrase of ['weak', 'poor', 'low', 'a weakness', 'weaknesses', 'an area of concern', 'areas of concern', 'below average']) {
+      expect(rulesOf(measured(`Mean Time to Respond is ${phrase}.`))).toEqual(['judgement']);
+    }
+  });
+
+  it('"equal priority weaknesses in Mean Time to Respond" fails (June run 4)', () => {
+    expect(rulesOf(validate(withPart('priorities', ['F20'], 'There are equal priority weaknesses in Mean Time to Respond and RTO Achievement Rate.')))).toEqual(['judgement']);
+  });
+
+  it('a complete dimension counts as scored', () => {
+    expect(rulesOf(overview('Business Continuity is low.'))).toEqual(['judgement']);
+  });
+
+  it('replay false positive: "Business Continuity plan test" is not the dimension', () => {
+    expect(rulesOf(foundations('A Business Continuity plan test was not performed, and the architecture foundation for Mean Time to Contain is weak.'))).not.toContain('judgement');
+  });
+
+  it('"Zone Availability Rate is poor (score 2)" fails unless verbatim in a cited fact', () => {
+    expect(rulesOf(measured('Zone Availability Rate is poor (score 2).'))).toEqual(['judgement']);
+    const advisory = FACTS.find(f => f.id === 'F19').text;
+    expect(foundations(advisory).ok).toBe(true);
+  });
+
+  it('level labels pass', () => {
+    expect(measured('Mean Time to Respond scored 2 (Developing).').ok).toBe(true);
+    for (const label of ['Excellent', 'Good', 'Developing', 'Initial', 'None']) {
+      expect(rulesOf(measured(`Mean Time to Detect was rated ${label}.`))).not.toContain('judgement');
+    }
+  });
+
+  it('"lower" and "lowest" are not "low"; a sentence about no scored item is not checked', () => {
+    expect(measured('For Mean Time to Detect, lower values are better.').ok).toBe(true);
+    expect(validate(withPart('priorities', ['F20'], 'The lowest effectiveness result is RPO Achievement Rate, a programme gap at 0.')).ok).toBe(true);
+    expect(rulesOf(foundations('Asset interdependency documentation is weak.'))).not.toContain('judgement');
+  });
+
+  it('is a known rule', () => {
+    expect(VALIDATOR_RULES).toContain('judgement');
   });
 });
 

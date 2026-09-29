@@ -36,7 +36,7 @@ import { quotedUserText } from './facts.js';
 export const VALIDATOR_RULES = [
   'shape', 'factIds', 'numbers', 'leakedIds',
   'noScoreWording', 'unscoredScore', 'programmeGap', 'causal', 'attribution', 'severity', 'respectively',
-  'dimensionCount', 'headlineFacts', 'relation',
+  'dimensionCount', 'headlineFacts', 'relation', 'flagCount', 'missing', 'judgement',
 ];
 
 /** Fact kinds that set the scene rather than state a finding (C1–C3). */
@@ -62,9 +62,13 @@ const NAME_TO_ID = new Map(
 const escapeRegExp = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Longest first, so "Zone Availability Rate" wins over "Zone Availability".
-// An optional plural "s" ("documented BC plans") still names the item.
+// An optional plural "s" ("documented BC plans") still names the item. A
+// dimension name followed by "plan" is not the dimension ("Business
+// Continuity plan test").
+const DIMENSION_NAME_KEYS = new Set(Object.values(DIMENSION_NAMES).map(n => n.toLowerCase()));
 const NAME_PATTERN = new RegExp(
-  `(?<![\\w-])(${[...NAME_TO_ID.keys()].sort((a, b) => b.length - a.length).map(escapeRegExp).join('|')})s?(?![\\w-])`,
+  `(?<![\\w-])(${[...NAME_TO_ID.keys()].sort((a, b) => b.length - a.length)
+    .map(n => escapeRegExp(n) + (DIMENSION_NAME_KEYS.has(n) ? '(?!\\s+plans?\\b)' : '')).join('|')})s?(?![\\w-])`,
   'gi'
 );
 
@@ -181,6 +185,20 @@ const RESPECTIVELY = /\brespectively\b/i;
 const DIMENSION_COUNT = new RegExp(`\\b(${NUM})\\s+dimensions?\\b`, 'gi');
 const C2_DIMENSIONS = /\b(\d+) dimensions\b/;
 const MAY_BE_RELATED = /may be related/i;
+
+// Check 14: a flag or process fact with a severity is a flag.
+const FLAG_SEVERITY = /^(CRITICAL|HIGH|MEDIUM NOTE)\./;
+const FLAG_COUNT = new RegExp(`\\b(${NUM})\\s+((?:[\\w-]+\\s+){0,2})flags?\\b`, 'gi');
+const SEVERITY_WORD = { critical: 'CRITICAL', high: 'HIGH', medium: 'MEDIUM NOTE' };
+
+// Check 15: "missing" for an item that exists but has no score.
+const MISSING_INDICATOR = /\bmissing\s+(?:effectiveness\s+)?indicators?\b/i;
+// "a missing § score": the item's name is masked as §; its score is what is missing.
+const MISSING_WORD = /\bmissing\b(?!\s+(?:§\s+)?(?:data|scores?|evidence|values?)\b)/i;
+
+// Check 16: judgement words about a scored result (level labels are allowed).
+const JUDGEMENT = /\bbelow average\b|\bweakness(?:es)?\b|\bareas? of concern\b|\bpoor\b|\blow\b|\bweak\b/i;
+const SCORE_WORD = /\b(?:score|scores|scored|scoring)\b/i;
 const CAUSAL = /\b(?:caused|causes|because of|due to|led to|results from|resulted in)\b/i;
 
 const QUOTED = /"([^"]*)"|“([^”]*)”/g;
@@ -198,6 +216,9 @@ function categorize(facts) {
   const gaps = new Set();          // rule 6
   const ownFacts = new Map();      // rule 8: id → the item's own fact
   const criticalItems = new Set(); // rule 9: items whose flag / process fact is CRITICAL
+  const flaggedItems = new Set();  // rule 9, per sentence: items with any flag
+  const notScored = new Set();     // rule 15: no-score indicators and unassessed Layer 0 items
+  const scored = new Set();        // rule 16: scored indicators and complete dimensions
 
   for (const id of LAYER0_ALL_IDS) unscored.set(id, 'is not scored');
   for (const f of facts) {
@@ -207,6 +228,12 @@ function categorize(facts) {
     if ((f.kind === 'l0_flag' || f.kind === 'process') && f.text.includes('CRITICAL')) {
       for (const id of f.refs) criticalItems.add(id);
     }
+    if (isFlagFact(f)) {
+      for (const id of f.refs) flaggedItems.add(id);
+    }
+    if (f.kind === 'scored') for (const id of f.refs) scored.add(id);
+    if (f.kind === 'dim_complete') scored.add(f.refs[0]);
+    if (f.kind === 'no_score' || f.kind === 'l0_unset') for (const id of f.refs) notScored.add(id);
     if (f.kind === 'no_score') {
       for (const id of f.refs) {
         noJudgement.set(id, 'has no score');
@@ -222,7 +249,36 @@ function categorize(facts) {
       for (const id of f.refs) gaps.add(id);
     }
   }
-  return { noJudgement, noScore, unscored, gaps, ownFacts, criticalItems };
+  return { noJudgement, noScore, unscored, gaps, ownFacts, criticalItems, flaggedItems, notScored, scored };
+}
+
+/** A flag fact: an l0_flag fact, or a process fact with a severity. → its severity, or null. */
+function flagSeverity(f) {
+  if (f.kind !== 'l0_flag' && f.kind !== 'process') return null;
+  return f.text.match(FLAG_SEVERITY)?.[1] ?? null;
+}
+
+function isFlagFact(f) {
+  return flagSeverity(f) !== null;
+}
+
+/**
+ * Check 14: "<number> [≤ 2 words] flag(s)" must equal the cited flag facts,
+ * of the named severity if a severity word stands in between.
+ */
+function checkFlagCount(cleaned, cited) {
+  const flags = cited.map(flagSeverity).filter(Boolean);
+  const details = [];
+  for (const m of cleaned.matchAll(FLAG_COUNT)) {
+    const [value] = extractNumbers(m[1]);
+    const word = m[2].toLowerCase().split(/\s+/).find(w => SEVERITY_WORD[w]);
+    const severity = word ? SEVERITY_WORD[word] : null;
+    const count = severity ? flags.filter(s => s === severity).length : flags.length;
+    if (value === String(count)) continue;
+    details.push(`The cited facts contain ${count} ${severity ? `${severity} ` : ''}flag${count === 1 ? '' : 's'}; ` +
+      `do not write "${m[0]}".`);
+  }
+  return details;
 }
 
 // ---------------------------------------------------------------------------
@@ -433,14 +489,29 @@ function checkSection(section, part, ctx) {
       }
     }
 
+    // Check 14: "N flags" must match the cited flag facts (C2's numbers are
+    // allowed everywhere by check 2, so "two flags" would otherwise pass).
+    for (const detail of checkFlagCount(cleaned, cited)) add('flagCount', detail, sentence);
+
     // Check 10: pairing items with numbers or labels across "respectively"
     // is not reliable, so such sentences skip checks 8–9.
     const respectively = RESPECTIVELY.test(sentence);
     if (respectively) add('respectively', 'Give each item its own number or label; do not write "respectively".', sentence);
 
-    // Checks 4–6 and 8–9 per clause, with inheritance (4–6 only) and the
-    // verbatim exemption.
+    const verbatim = citedTexts.some(t => t.includes(normalize(sentence)));
+    const maskedSentence = maskNames(sentence);
+    const sentenceNames = namesIn(sentence);
+
+    // Check 15: the indicator exists; only its score is missing.
+    const missingPhrase = MISSING_INDICATOR.test(sentence);
+    if (missingPhrase) {
+      add('missing', 'Do not write "missing indicator": the indicator exists; say it has no score.', sentence);
+    }
+
+    // Checks 4–6, 15 and 8–9 per clause, with inheritance (4–6 and 15 only)
+    // and the verbatim exemption.
     let lastNamed = null;
+    let severityReported = false;
     for (const clause of splitClauses(sentence)) {
       const named = namesIn(clause);
       const subjects = named.length > 0 ? named : (lastNamed ? [lastNamed] : []);
@@ -452,9 +523,37 @@ function checkSection(section, part, ctx) {
       if (named.length > 0 && citedTexts.some(t => t.includes(normalize(clause)))) continue;
 
       for (const [rule, detail] of checkClause(clause, subjects, ctx.categories)) add(rule, detail, sentence);
+      if (!missingPhrase && MISSING_WORD.test(maskNames(clause))) {
+        for (const id of subjects.filter(s => ctx.categories.notScored.has(s))) {
+          add('missing', `Do not call ${nameOf(id)} missing: it exists and has no score. Say it has no score.`, sentence);
+        }
+      }
       if (respectively) continue;
       for (const detail of checkAttribution(clause, named, ctx.categories)) add('attribution', detail, sentence);
-      for (const detail of checkSeverity(clause, named, ctx.categories)) add('severity', detail, sentence);
+      for (const detail of checkSeverity(clause, named, ctx.categories)) {
+        add('severity', detail, sentence);
+        severityReported = true;
+      }
+    }
+
+    // Check 9, per sentence: "critical" naming no flagged item, while no
+    // cited flag is CRITICAL (June re-run: "equal priority critical issues
+    // with response times and recovery rates").
+    const critical = maskedSentence.match(CRITICAL_WORD);
+    if (!respectively && !severityReported && !verbatim && critical && !isNegated(maskedSentence, critical.index)
+        && !sentenceNames.some(id => ctx.categories.flaggedItems.has(id))
+        && !cited.some(f => flagSeverity(f) === 'CRITICAL')) {
+      add('severity', 'None of the cited flags is CRITICAL; do not write "critical".', sentence);
+    }
+
+    // Check 16: a judgement word in a sentence about a scored result. Level
+    // labels (Good, Developing, …) are not in the list.
+    const judgement = maskedSentence.match(JUDGEMENT);
+    const aboutScore = sentenceNames.some(id => ctx.categories.scored.has(id))
+      || SCORE_CLAIM.test(maskedSentence) || SCORE_WORD.test(maskedSentence);
+    if (judgement && aboutScore && !verbatim) {
+      add('judgement', `Do not describe a score as "${judgement[0].toLowerCase()}": describe it only by its number ` +
+        'or its level label (for example Good or Developing).', sentence);
     }
 
     // Check 7

@@ -53,7 +53,9 @@ export const ARCHITECTURE_WORDING = {
       [L0_STATE.INCOMPLETE_OUTDATED]: 'Bringing the IT/OT boundary separation controls up to date',
       [L0_STATE.NOT_VERIFIABLE]:      'Verifying the IT/OT boundary separation',
     },
-    mechanism: outcome => `a weak boundary control can affect ${outcome}`,
+    // Not "a weak boundary control": the sentence names a scored result, and
+    // judgement words there fail validator check 16.
+    mechanism: outcome => `boundary separation can affect ${outcome}`,
   },
   'L0-multi-homed': {
     weakness: {
