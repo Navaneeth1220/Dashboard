@@ -1,7 +1,7 @@
 # AI-drafted narrative reports: spec
 
 Status: implemented (Steps 0–5), merged into `main` as `v1.1`; Steps 6–7
-merged as `v1.2` and `v1.3`; Step 8 on `feature/report-actions`. Shown in the
+merged as `v1.2` and `v1.3`; Step 8 as `v1.4`. Shown in the
 UI as the "Assessment report". Changes follow the same order as the steps:
 spec first, tests first, replay the logged drafts, then the manual check.
 
@@ -635,7 +635,13 @@ assessment.
     fact's `data.status`, the only use of `data` in the validator (for the phrase:
     "Do not write "missing indicator": the indicator exists; say it has
     no score."). Enforces the last sentence of prompt rule 3, which the
-    model broke in 3 of 5 baseline runs after it was added.
+    model broke in 3 of 5 baseline runs after it was added. A list of
+    names between "missing" and the allowed word passes like one name
+    ("missing Mean Time to Respond and Mean Time to Contain scores"): that
+    "missing" is neutralised before the clause split, which would
+    otherwise cut the names from "scores" (false positive in the
+    2026-09-29 18:38 Oudendijk run set, run 5). "missing A and B" without
+    the allowed word still fails.
 16. **Judgement** (`judgement`): a sentence that names a scored item (an
     item with a `scored` fact, or the dimension of a `dim_complete`
     fact, including the overall score) or states a score (the score-claim
@@ -1636,3 +1642,11 @@ this branch.
   score badges and the generated report say "Developing" for a score of 2.
 - 18 pre-existing oxlint warnings (unused imports and variables, mostly in
   tests).
+- Possible later prompt round: three patterns recur across the Oudendijk
+  run sets and each failed in 3 or more of 5 runs in the 2026-09-29 18:38
+  set: a level label for the scored indicators ("both rated good",
+  `levelLabel`, 4 of 5), "critical" for the only (HIGH) flag
+  (`severity`, 3 of 5 first attempts), and "three and five indicators,
+  respectively" (`respectively`, 3 of 5). The validator catches all
+  three; a prompt change would save attempts. Not changed yet by
+  decision.
