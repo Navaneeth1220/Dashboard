@@ -253,15 +253,14 @@ Rules:
 3. An item with no score (not measurable, no qualifying event or
    disruption, not yet assessed, invalid value entered) says nothing about
    performance. Never describe it as good, poor, weak, or failing. Say why
-   it has no score, as the fact states it.
+   it has no score, as the fact states it. Say an item has no score; never
+   call it or its indicator missing.
 4. A programme gap (score 0 because an objective is not defined) is not a
    measured failure. Say the objective does not exist yet.
 5. An incomplete dimension has no score. Never give it one or estimate one.
 6. Process evidence items are not scored. Never give them a score.
-7. When a fact says "may be related", keep that wording, and use it only
-   for the two items that fact names. Never claim one thing caused
-   another: never write "due to", "because of", "caused", "causes",
-   "led to", "results from" or "resulted in".
+7. When a fact says "may be related", keep that wording; never state that
+   one of those items caused the other.
 8. Items listed with equal priority are not ranked against each other.
 9. First choose the facts for each section in factIds, then write the text
    from those facts only. Never write fact IDs in the text.
@@ -288,6 +287,18 @@ Assessment of Westmaas as of 2026-01-01", citing only C1), and every
 overview called the flags "high priority", contradicting the generated
 foundationsAndFlags ("listed by severity; this is not an order of
 action"). Rule 12 no longer says "high priority", which rule 13 forbids.
+
+Rule 7 was narrowed after the second hybrid run set. It used to ban a
+list of causal words ("due to", "because of", "caused", …) outright. The
+ban exists to stop "may be related" turning into a cause, and the model no
+longer sees any "may be related" fact: advisories are template-only
+(foundationsAndFlags). All five overviews wrote "Incident Handling is
+incomplete due to a missing Mean Time to Contain score", which is
+accurate (F1). The rule now covers only what it protects; validator check
+7 is unchanged (it fires only when a cited fact says "may be related"),
+so a model fact set that ever includes an advisory is still guarded. The
+last sentence of rule 3 comes from the same run set: runs 2 and 5 called
+the indicator "missing" (it exists; its score is missing).
 
 The Sections block exists because Ollama turns the schema into a grammar:
 the grammar fixes the key names but never tells the model what each section
@@ -426,7 +437,8 @@ categories still come from all facts.
    section text must not contain `caused`, `causes`, `because of`,
    `due to`, `led to`, `results from`, `resulted in`. The detail names the
    replacement: use the fact's own wording (for example "so") or leave the
-   explanation out.
+   explanation out. Unchanged when prompt rule 7 was narrowed (Step 2):
+   the words are only a problem next to a "may be related" fact.
 8. **Attribution** (`attribution`): a clause that itself names exactly one
    item that has an own fact (its `scored`, `gap_zero`, `no_score` or
    `process` fact) and contains a number fails unless that number is in
