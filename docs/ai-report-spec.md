@@ -288,8 +288,7 @@ Rules:
 13. Refer to each flag by the severity its fact states, never as
     "priority"; severity is not an order of action.
 14. Do not describe consequences, risks or urgency.
-15. Describe a score only by its number or the dashboard's level label
-    (e.g. Good, Developing).
+15. Describe a score only by its number.
 
 Sections:
 - headline: one sentence stating the most important finding, not a title.
@@ -334,7 +333,14 @@ rule 14 is not validated.
 
 Rule 15 comes from the June re-run after those changes: accepted parts
 called score-2 results "below average", "weaknesses", "areas of concern"
-and "critical issues". Validator check 16 enforces it.
+and "critical issues". Validator check 16 enforces it. It first allowed
+"the dashboard's level label (e.g. Good, Developing)", but no fact gives
+the model the level of a dimension score: in the next June re-run the
+accepted headlines called the overall score 2.73 "Developing", which the
+dashboard rounds to 3 and shows as Good, and the sparse scenario called a
+score-4 indicator "Good". The model parts now use numbers only (check
+17); the generated sections keep their labels, which come from
+`SCORE_LEVEL_LABELS` through the templates.
 
 The Sections block exists because Ollama turns the schema into a grammar:
 the grammar fixes the key names but never tells the model what each section
@@ -389,7 +395,8 @@ Pure, no model needed, never throws. `section` is `headline` or a
 section-level checks); `rule` is one of `shape`, `factIds`, `numbers`,
 `leakedIds`, `noScoreWording`, `unscoredScore`, `programmeGap`, `causal`,
 `attribution`, `severity`, `respectively`, `dimensionCount`, `headlineFacts`,
-`relation`, `flagCount`, `missing`, `judgement`;
+`relation`, `flagCount`, `missing`, `judgement`, `levelLabel`,
+`headlineSentences`;
 `detail` is plain English with descriptive names only (it is sent back to
 the model on retry and shown in the UI on failure). The optional `parts`
 (default: `headline` and all of `SECTION_KEYS`) limits which parts are
@@ -451,7 +458,11 @@ categories still come from all facts.
    item to that item's own fact. Extraction: ISO dates as a single token; digits
    normalised (`1.80` = `1.8`, `3.00` = `3`, `85%` = `85`); number words
    `zero`–`twenty`. Applied identically to the text and the facts, after
-   masking. Tokens reported by check 3 are not reported again.
+   masking. Tokens reported by check 3 are not reported again. A number
+   that check 14 reads as a flag count ("one HIGH severity flag") is left
+   to check 14, as dimension counts are to check 11: in the June re-run
+   the correct "There is one HIGH severity flag" failed here because no
+   fact contains "one".
 3. **No leaked IDs**: no `F\d+`/`C\d+` fact IDs, internal IDs, raw enums, or
    bare dimension codes `IH` / `BC` in text. A bare code followed by a word
    that starts with the word after it in a known item name is not a leak
@@ -492,7 +503,18 @@ categories still come from all facts.
    times on forward references ("RPO Achievement Rate and several areas
    with scores of 2, including…"). Verbatim-exempt like checks 4–6. Found
    in the first manual check: "Zone Availability Rate (3)" passed check 2
-   because 3 was in other cited facts.
+   because 3 was in other cited facts. Complete dimensions (the dimension
+   of a `dim_complete` fact, the overall score included) count as items
+   with an own fact: a number in a clause that names exactly one complete
+   dimension must be in its `dim_complete` fact. And a score claim about a
+   complete dimension (the number after a score word, "score of 5", or
+   before "out of", "5 out of 4"), in a clause that names it or inherits
+   it, must equal the score in that fact ("score 2.80 out of 4",
+   "Overall score: 2.73 out of 4"): "Business Continuity, with a score of 5
+   out of 4" fails although F2 contains 5 ("5 indicators"). Detail: "The
+   score of <dimension> is <score>; do not write "<number>"." Found in the
+   June re-run: "Incident Handling, with a score of 3 out of 4 … Business
+   Continuity, with a score of 5 out of 4" (the indicator counts).
 9. **Severity** (`severity`): a clause that itself names exactly one item
    and contains "critical" (after masking item names) fails unless that
    item's `l0_flag` or `process` fact carries CRITICAL. "critical
@@ -578,7 +600,23 @@ categories still come from all facts.
     a weak boundary control can affect <outcome>" in a sentence with a
     score, which this check fails; it now reads "because boundary
     separation can affect <outcome>" (`reportWording.js`), true for every
-    boundary state.
+    boundary state. "performing well" is on the list too (sparse re-run:
+    "Only two out of eight effectiveness indicators are performing well",
+    which reads as if the six unassessed ones were not).
+17. **Level label** (`levelLabel`, headline and overview only): a
+    `SCORE_LEVEL_LABELS` word used as a level label fails: capitalised
+    after the first word of a sentence ("is Developing", "both at Good
+    level", "(Good)"), or in lower case directly before "level(s)" ("a good
+    level"). A "<number> (<label>)" pair that appears in a cited fact
+    passes (F15: "neither is below 3 (Good)"). Detail: "Do not write the
+    level label "<label>": describe a score only by its number." The
+    generated sections are not checked: their labels come from the
+    templates. Found in the June and sparse re-runs (see rule 15).
+18. **Headline sentences** (`headlineSentences`, headline only,
+    section-level): the headline must be exactly one sentence (split as
+    in Text preparation). Detail: "The headline must be exactly one
+    sentence." Found in the app: a headline that copied the three flag
+    facts as three sentences passed.
 
 Limitations (accepted): paraphrased names ("containment time") are not
 recognised: log misses in the manual check and add aliases to the data
@@ -597,7 +635,12 @@ not checked); scores written as "Mean Time to Detect at 3", which reads as
 a value; a garbled sentence listing in-place controls as "action flags".
 No check that named items are cited (may become a later check). Check 12
 only sees what the headline cites, not what it says: a title citing C1 and
-a finding fact passes.
+a finding fact passes. A score in an inherited clause is still not
+attributed for indicators (check 8 covers inherited clauses only for
+complete dimensions): "The lowest scored indicators were RPO Achievement
+Rate and Mean Time to Respond, …, each at a score of 2" passes although
+RPO Achievement Rate is a programme gap at 0 (baseline re-run after
+checks 14–16, run 2; kept as a known limitation).
 
 Tests: a hand-written good narrative for the Westmaas baseline passes,
 including the readiness advisory (F18) verbatim, "not a measured failure",
@@ -653,8 +696,16 @@ priority weaknesses in Mean Time to Respond", "Zone Availability Rate is
 poor (score 2)" not verbatim fail `judgement`; "Mean Time to Respond
 scored 2 (Developing)" and each level label pass; the Rule C advisory
 verbatim passes. The hand-written good narrative no longer says "the
-poor Zone Availability Rate (score 2)". The drafts of each manual check
-are replayed before and after each validator change.
+poor Zone Availability Rate (score 2)". From the re-run after checks
+14–16: "Business Continuity, with a score of 5 out of 4" fails
+`attribution`, "Business Continuity scored 2.80 out of 4" passes (June
+facts); "There is one HIGH severity flag" passes with one flag fact cited;
+"The overall score is Developing", "both at Good level", "a good level"
+fail `levelLabel` in the headline or overview and pass in a generated
+section, "neither is below 3 (Good)" citing F15 passes; "performing well"
+fails `judgement`; a two-sentence headline fails `headlineSentences`. The
+drafts of each manual check are replayed before and after each validator
+change.
 Property tests: the cited facts' own text always passes; an injected
 violation of checks 3–6 is always caught; malformed input never throws.
 
@@ -898,8 +949,15 @@ reports progress (an exception it throws is logged as a warning and ignored).
      `keepSentences` (default false) keeps them, for the manual-check
      script only; the app never sets it.
    - `unavailable` = the provider threw: `reason` and `message` from the
-     table above, no retry, earlier drafts discarded. Timeout is 300 s per
-     call.
+     table above, earlier drafts discarded. Timeout is 300 s per call. One
+     exception: when the very first call of a generation throws
+     `provider_error`, it is repeated once (the same request); if that
+     throws too, the result is `unavailable`. No other call and no other
+     reason is retried. Found in the manual checks: Ollama's llama-server
+     crashed while loading the model ("exit status 0xc0000409 … CUDA
+     error: shared object initialization failed") in two run sets; the
+     next request loads it again. The failed call leaves no attempt record
+     (it has no response); `onAttempt` is not called again.
    - Never throws.
 
 Section descriptions are exported from `prompt.js` (`SECTION_DESCRIPTIONS`,
@@ -912,7 +970,8 @@ the part call's facts, schema, temperature 0.5 and message pinned; both
 parts repaired in order in one attempt; always invalid; invalid JSON and
 cut-off output get a whole retry at 0.5; an unusable part reply keeps the
 part; error list capped; only the latest errors; each unavailable reason
-with no retry and `generated` still returned; `onAttempt` once per attempt;
+with no retry (except one repeat of a first call that throws
+`provider_error`) and `generated` still returned; `onAttempt` once per attempt;
 `failed` never carries model text; no status carries a rejected sentence
 in `errors` or `attempts` unless `keepSentences` is set). Mock `fetch` for the
 provider (exact request URL and body including `num_predict`; temperature
