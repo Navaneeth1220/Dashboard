@@ -592,6 +592,59 @@ describe('hybrid run set 1: the headline cites a finding (check 12)', () => {
   });
 });
 
+// ─── 0. Shape: braces ─────────────────────────────────────────────────────────
+
+describe('June manual check: braces in the text (check 0)', () => {
+  const BRACE_ERROR = {
+    section: 'overview', sentence: null, rule: 'shape',
+    detail: 'The text contains "{" or "}". Write plain sentences only, without JSON.',
+  };
+  const PLAIN = 'Business Continuity is complete at 1.80 out of 4.';
+
+  it('a stray " }" at the end fails once (June run 4, accepted)', () => {
+    expect(overview(`${PLAIN} }`).errors).toEqual([BRACE_ERROR]);
+  });
+
+  it('"{" fails too; several braces give one error', () => {
+    expect(overview(`{ ${PLAIN} }`).errors).toEqual([BRACE_ERROR]);
+  });
+
+  it('the other checks still run', () => {
+    expect(rulesOf(overview(`Mean Time to Contain is poor. }`))).toEqual(['shape', 'noScoreWording']);
+  });
+
+  it('a client name with a brace, quoted exactly in a part citing C1, passes', () => {
+    const facts = factsWith({ clientId: 'Plant {7}' });
+    expect(validate(withPart('overview', OVERVIEW, 'This assessment covers "Plant {7}".'), facts).ok).toBe(true);
+  });
+});
+
+// ─── 13. Relation ─────────────────────────────────────────────────────────────
+
+describe('June manual check: an invented "may be related" (check 13)', () => {
+  const INVENTED = 'Asset interdependency documentation is incomplete or outdated, which may be related to the Incident Handling score.';
+  const detail = 'Do not write "may be related": no cited fact relates these items. Only an advisory fact can state that two items may be related.';
+
+  it('fails in a part that cites no "may be related" fact (June run 2, accepted)', () => {
+    expect(validate(withPart('overview', [...OVERVIEW, 'F14'], INVENTED)).errors).toEqual([
+      { section: 'overview', sentence: INVENTED, rule: 'relation', detail },
+    ]);
+  });
+
+  it('any case: "May be related" fails too', () => {
+    expect(rulesOf(overview('Incident Handling and Business Continuity. May be related, the two dimensions are incomplete.'))).toContain('relation');
+  });
+
+  it('passes in a part that cites a "may be related" fact (F19)', () => {
+    expect(foundations(GOOD.sections.foundationsAndFlags.text).ok).toBe(true);
+    expect(validate(withPart('overview', [...OVERVIEW, 'F14', 'F19'], INVENTED)).errors.map(e => e.rule)).not.toContain('relation');
+  });
+
+  it('is a known rule', () => {
+    expect(VALIDATOR_RULES).toContain('relation');
+  });
+});
+
 describe('manual check 2: "respectively" (check 10)', () => {
   const detail = 'Give each item its own number or label; do not write "respectively".';
 

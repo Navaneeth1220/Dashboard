@@ -22,7 +22,9 @@
  * scale fact (C3) follows normal citation. Rule 9 (severity) keeps
  * "critical" on items whose fact is CRITICAL. Rule 10 flags "respectively".
  * Rule 11 holds "N dimensions" to the count C2 states. Rule 12 makes the
- * headline cite a finding, not only context and scale facts.
+ * headline cite a finding, not only context and scale facts. Rule 13 allows
+ * "may be related" only when a cited fact says it. Braces (JSON leaking into
+ * the text) are a shape error.
  */
 
 import { INDICATORS, ALL_INDICATOR_IDS } from '../data/indicatorDefinitions.js';
@@ -34,7 +36,7 @@ import { quotedUserText } from './facts.js';
 export const VALIDATOR_RULES = [
   'shape', 'factIds', 'numbers', 'leakedIds',
   'noScoreWording', 'unscoredScore', 'programmeGap', 'causal', 'attribution', 'severity', 'respectively',
-  'dimensionCount', 'headlineFacts',
+  'dimensionCount', 'headlineFacts', 'relation',
 ];
 
 /** Fact kinds that set the scene rather than state a finding (C1–C3). */
@@ -391,7 +393,21 @@ function checkSection(section, part, ctx) {
 
   const text = removeExemptQuotes(part.text.replace(/\s+/g, ' ').trim(), cited);
 
+  // Check 0, braces: JSON leaking into the text (June manual check: an
+  // accepted overview ended with " }"). After quote removal, so a quoted
+  // client name may contain one; the other checks still run.
+  if (/[{}]/.test(text)) {
+    add('shape', 'The text contains "{" or "}". Write plain sentences only, without JSON.');
+  }
+
   for (const sentence of splitSentences(text)) {
+    // Check 13: only a cited fact that says "may be related" allows it (June
+    // manual check: a HIGH flag "may be related to the Incident Handling score").
+    if (!mayBeRelated && MAY_BE_RELATED.test(sentence)) {
+      add('relation', 'Do not write "may be related": no cited fact relates these items. ' +
+        'Only an advisory fact can state that two items may be related.', sentence);
+    }
+
     // Checks 2–3 on the masked sentence
     const { details: leaks, cleaned } = checkLeaks(maskNames(sentence));
     for (const detail of leaks) add('leakedIds', detail, sentence);
