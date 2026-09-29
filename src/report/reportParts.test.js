@@ -59,7 +59,7 @@ describe('provenanceLines', () => {
     const parts = reportParts(await S.ok(), { overview: 'x' });
     expect(provenanceLines(parts, DEFAULT_MODEL)).toEqual([
       `AI-drafted with ${DEFAULT_MODEL}, review before use: Headline, Overview.`,
-      'Generated from the assessment: Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets.',
+      'Generated from the assessment: Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets, Recommended actions.',
       'Edited after generation: Overview.',
     ]);
   });
@@ -67,7 +67,7 @@ describe('provenanceLines', () => {
   it('extra generated titles come first in the generated line', async () => {
     const parts = reportParts(await S.failed());
     expect(provenanceLines(parts, DEFAULT_MODEL, ['Scores at a glance'])).toEqual([
-      'Generated from the assessment: Scores at a glance, Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets.',
+      'Generated from the assessment: Scores at a glance, Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets, Recommended actions.',
     ]);
   });
 });

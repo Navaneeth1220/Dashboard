@@ -9,40 +9,54 @@ import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
 import followUpJson from '../../scenarios/Westmaas_2026-06-01_assessment.json?raw';
+import sparseJson from '../../scenarios/Oudendijk_2026-03-01_assessment.json?raw';
 import { buildGeneratedSections } from './templates.js';
 import { buildAssessmentFacts, stripAssessorNote } from './facts.js';
 import { validateNarrative } from './validator.js';
-import { GENERATED_KEYS } from './schema.js';
+import { GENERATED_KEYS, FACT_SECTION_KEYS } from './schema.js';
+import { matchAssessmentActions } from '../engine/actions.js';
 import { loadScenario, assessmentArb } from './testSupport.js';
 import { INDICATORS, ALL_INDICATOR_IDS, SCORE_ZERO_STATES, STATE } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS } from '../data/layer0Definitions.js';
-import { PROGRAMME_GAP_WORDING } from '../data/reportWording.js';
+import { PROGRAMME_GAP_WORDING, ACTION_WORDING } from '../data/reportWording.js';
+import { ACTION_CATALOGUE, NIS2_ARTICLE } from '../data/actionCatalogue.js';
 import { displayName } from '../data/displayNames.js';
 
 const BASELINE = loadScenario(baselineJson);
+
+/** The facts and generated sections of an assessment, as generateNarrative builds them. */
+function sectionsOf(rec) {
+  const facts = buildAssessmentFacts(rec);
+  return { facts, generated: buildGeneratedSections(facts, matchAssessmentActions(rec)) };
+}
+
+/** The Westmaas baseline's sections with the given matched actions (catalogue rendering only). */
+function generatedWithActions(actions) {
+  const facts = buildAssessmentFacts(BASELINE);
+  return { facts, generated: buildGeneratedSections(facts, actions) };
+}
 
 function generatedFor(changes = {}) {
   const rec = loadScenario(baselineJson);
   rec.indicators = { ...rec.indicators, ...(changes.indicators ?? {}) };
   rec.layer0 = { ...rec.layer0, ...(changes.layer0 ?? {}) };
-  const facts = buildAssessmentFacts(rec);
-  return { facts, generated: buildGeneratedSections(facts) };
+  return sectionsOf(rec);
 }
 
 const meas = v => ({ state: STATE.MEASURED, value: String(v) });
 const ratio = (n, d) => ({ state: STATE.MEASURED, numerator: String(n), denominator: String(d) });
 
+/** The sections written from the facts; Recommended actions is catalogue text the validator skips (Step 8). */
 function validGenerated(facts, generated) {
-  return validateNarrative({ sections: generated }, facts, { parts: GENERATED_KEYS });
+  return validateNarrative({ sections: generated }, facts, { parts: FACT_SECTION_KEYS });
 }
 
 // ─── Westmaas baseline ────────────────────────────────────────────────────────
 
 describe('Westmaas baseline', () => {
-  const facts = buildAssessmentFacts(BASELINE);
-  const generated = buildGeneratedSections(facts);
+  const { facts, generated } = sectionsOf(BASELINE);
 
-  it('returns the five generated sections', () => {
+  it('returns the six generated sections', () => {
     expect(Object.keys(generated)).toEqual(GENERATED_KEYS);
   });
 
@@ -101,8 +115,7 @@ describe('Westmaas baseline', () => {
 });
 
 describe('Westmaas follow-up (2026-06-01)', () => {
-  const facts = buildAssessmentFacts(loadScenario(followUpJson));
-  const generated = buildGeneratedSections(facts);
+  const { facts, generated } = sectionsOf(loadScenario(followUpJson));
 
   it('passes the validator and reports the now-measured Mean Time to Contain', () => {
     expect(validGenerated(facts, generated).errors).toEqual([]);
@@ -131,8 +144,7 @@ describe('measuredPerformance variants', () => {
   it('nothing measured', () => {
     const rec = loadScenario(baselineJson);
     const indicators = Object.fromEntries(ALL_INDICATOR_IDS.map(id => [id, { state: null }]));
-    const facts = buildAssessmentFacts({ ...rec, indicators });
-    expect(buildGeneratedSections(facts).measuredPerformance).toEqual({
+    expect(sectionsOf({ ...rec, indicators }).generated.measuredPerformance).toEqual({
       factIds: ['C2'], text: 'No effectiveness indicator was measured and scored in this assessment.',
     });
   });
@@ -239,8 +251,8 @@ describe('priorities variants', () => {
     expect(healthy.generated.priorities.text).toBe('No scored effectiveness indicator is below 3 (Good).');
 
     const rec = loadScenario(baselineJson);
-    const facts = buildAssessmentFacts({ ...rec, indicators: Object.fromEntries(ALL_INDICATOR_IDS.map(id => [id, { state: null }])) });
-    expect(buildGeneratedSections(facts).priorities.text).toBe(
+    const unset = { ...rec, indicators: Object.fromEntries(ALL_INDICATOR_IDS.map(id => [id, { state: null }])) };
+    expect(sectionsOf(unset).generated.priorities.text).toBe(
       'No effectiveness indicator has a score, so there is no ranking of results. Mean Time to Detect, Mean Time to Respond, Mean Time to Contain, Network Operability Under Disruption, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate are not ranked because they have no score.'
     );
   });
@@ -277,8 +289,7 @@ const RAW_ENUM = /\w*_\w*/;
 describe('property-based tests (fast-check)', () => {
   it('generated sections always pass the validator, never say "poor", and leak no codes', () => {
     fc.assert(fc.property(assessmentArb, rec => {
-      const facts = buildAssessmentFacts(rec);
-      const generated = buildGeneratedSections(facts);
+      const { facts, generated } = sectionsOf(rec);
       expect(validGenerated(facts, generated).errors).toEqual([]);
       for (const key of GENERATED_KEYS) {
         const text = generated[key].text.replace(/"[^"]*"/g, '""');
@@ -347,11 +358,10 @@ describe('targets variants', () => {
 
   it('nothing below 4: the fallback, then the highest-level sentence; no lead-in', () => {
     const rec = loadScenario(baselineJson);
-    const facts = buildAssessmentFacts({ ...rec, indicators: {
+    const { facts, generated } = sectionsOf({ ...rec, indicators: {
       'IH-06': meas(4), 'IH-07': meas(3), 'IH-08': meas(5),
       'BC-01': meas(95), 'BC-02': meas(92), 'BC-04': ratio(0, 10), 'BC-08': ratio(9, 10), 'BC-09': ratio(10, 10),
     } });
-    const generated = buildGeneratedSections(facts);
     expect(paragraphs(generated)).toEqual([
       'No measured indicator is below score 4.',
       'Already at the highest level (score 4, Excellent): Mean Time to Detect, Mean Time to Respond, Mean Time to Contain, Network Operability Under Disruption, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate.',
@@ -362,14 +372,12 @@ describe('targets variants', () => {
   it('nothing scored: only the fallback', () => {
     const rec = loadScenario(baselineJson);
     const indicators = Object.fromEntries(ALL_INDICATOR_IDS.map(id => [id, { state: null }]));
-    const facts = buildAssessmentFacts({ ...rec, indicators });
-    expect(buildGeneratedSections(facts).targets.text).toBe('No indicator has a score, so there are no targets.');
+    expect(sectionsOf({ ...rec, indicators }).generated.targets.text).toBe('No indicator has a score, so there are no targets.');
   });
 
   it('property: every number in Targets is in a cited scored fact, and no-score indicators are never given one', () => {
     fc.assert(fc.property(assessmentArb, rec => {
-      const facts = buildAssessmentFacts(rec);
-      const { targets } = buildGeneratedSections(facts);
+      const { facts, generated: { targets } } = sectionsOf(rec);
       const cited = facts.filter(f => targets.factIds.includes(f.id));
       const numbers = new Set(cited.filter(f => f.kind === 'scored').flatMap(f => f.text.match(/\d+(?:\.\d+)?/g) ?? []));
       for (const n of targets.text.match(/\d+(?:\.\d+)?/g) ?? []) expect(numbers.has(n), n).toBe(true);
@@ -377,6 +385,183 @@ describe('targets variants', () => {
       for (const sentence of targets.text.split(/(?<=\.)\s+/)) {
         if (noScore.some(name => sentence.includes(name))) expect(sentence).toMatch(/ha(?:s|ve) no score, so (?:it has|they have) no target\.$/);
       }
+    }), { numRuns: 200 });
+  });
+});
+
+// ─── Recommended actions (Step 8) ─────────────────────────────────────────────
+
+/** The Westmaas baseline section, pinned: every catalogue or wording change shows up in review. */
+const WESTMAAS_ACTIONS = `Each action comes from the dashboard's action catalogue and is matched to a result in this assessment. Actions are grouped by area in catalogue order; this is not an order of action.
+
+Incident Handling
+
+Shorten response time
+Reduce the time from detection to the start of a response.
+Steps: Set target response times per incident severity. Arrange on-call cover that includes someone with OT knowledge. Review recent incidents for hand-over delays between IT, security and operations.
+Why it matters: Delays between detection and response are often organisational, not technical, and can be fixed without new tooling.
+Who: Security team with plant operations
+NIS2 Article 21(2): (b) incident handling
+
+Make incident handling measurable
+Record detection, response and containment times for every incident.
+Steps: Add mandatory timestamp fields to incident tickets: incident start (if known), detection, response start, containment. Agree which clock is authoritative. Check the fields are filled in when a ticket is closed.
+Why it matters: The next assessment can only score these indicators if the times are recorded. This says nothing about current performance.
+Who: Security team
+NIS2 Article 21(2): (b) incident handling; (f) assessing the effectiveness of measures
+
+Business Continuity
+
+Improve zone availability
+Address the main causes of zone outages.
+Steps: Use the disruption log to find the most common causes of zones becoming unavailable. Fix the top causes first. Check whether uncontrolled connections between zones, such as multi-homed devices, contribute.
+Why it matters: Zone outages directly affect the processes running in them.
+Who: OT engineering
+NIS2 Article 21(2): (c) business continuity
+Standard: IEC 62443-3-3 FR 7 (resource availability)
+
+Reduce operational threshold violations
+Reduce how often process parameters leave their safe operating range during disruptions.
+Steps: Review each violation: which disruption caused it, and how long it lasted. Improve operator procedures for degraded operation. Check that alarms for these parameters work and reach operators in time.
+Why it matters: Threshold violations are where a cyber disruption turns into a process or safety impact.
+Who: Plant operations with process engineering
+NIS2 Article 21(2): (c) business continuity
+
+Meet recovery time objectives
+Make recovery of OT systems faster and more predictable.
+Steps: Analyse recoveries that exceeded their RTO. Keep tested recovery media and system images for HMIs, servers and engineering workstations. Write step-by-step rebuild procedures and practise them.
+Why it matters: Recoveries that take longer than agreed extend process downtime.
+Who: OT engineering
+NIS2 Article 21(2): (c) business continuity, disaster recovery
+Standard: IEC 62443-3-3 SR 7.4 (control system recovery and reconstitution)
+
+Define recovery point objectives
+Define recovery point objectives for critical processes.
+Steps: Agree with operations the maximum acceptable data loss per critical process. Align backup frequency for historians, SCADA/PLC configurations and engineering workstations with it. Verify with a restore test on a test system or spare hardware.
+Why it matters: Without an RPO, recovery cannot be measured, so the indicator stays at 0.
+Who: Plant operations with OT engineering
+NIS2 Article 21(2): (c) business continuity, backup management
+Standard: IEC 62443-3-3 SR 7.3 (control system backup)
+
+Foundational controls
+
+Document asset interdependencies
+Document which assets and services each critical process depends on.
+Steps: For each critical process, list the PLCs, HMIs, servers, network paths and IT services it needs. Include external dependencies such as vendor remote access. Keep it linked to the asset inventory.
+Why it matters: Without this, the impact of losing an asset is guesswork, both during incidents and when planning recovery.
+Who: OT engineering with plant operations
+NIS2 Article 21(2): (c) business continuity (supports)
+
+Remove or control multi-homed devices
+Remove or control hosts connected to more than one zone.
+Steps: List every host with interfaces in more than one zone. Remove the second interface, or route that traffic through a controlled conduit with a firewall. Re-scan to confirm none remain.
+Why it matters: A dual-homed host bypasses the zone boundary and can connect zones that should be separated.
+Who: OT engineering
+Standard: IEC 62443-3-3 SR 5.1 (network segmentation), SR 5.2 (zone boundary protection)
+
+Test the BC plan
+Test the BC plan within the defined period.
+Steps: Schedule a test: a tabletop exercise at minimum, ideally including a restore of at least one OT system to a test environment. Record the results and fix the gaps found.
+Why it matters: An untested plan often fails on details nobody noticed on paper.
+Who: Plant operations with OT engineering
+NIS2 Article 21(2): (c) business continuity; (f) assessing the effectiveness of measures
+
+Vulnerability management
+
+Improve the remediation rate
+Remediate more of the known vulnerabilities, prioritising by risk.
+Steps: Prioritise by exposure and process criticality, for example known-exploited vulnerabilities on reachable systems first. Use vendor-approved patches. Where patching is not possible, apply and document compensating controls.
+Why it matters: In OT, not every vulnerability can be patched, but every one needs a decision.
+Who: OT engineering with the security team
+NIS2 Article 21(2): (e) vulnerability handling
+Standard: IEC TR 62443-2-3 (patch management in the IACS environment)`;
+
+describe('recommended actions', () => {
+  const paragraphs = generated => generated.recommendedActions.text.split('\n\n');
+
+  it("Westmaas baseline: the text, the cited facts (the triggering items' own facts) and the entry IDs", () => {
+    const { facts, generated } = sectionsOf(BASELINE);
+    expect(generated.recommendedActions.text).toBe(WESTMAAS_ACTIONS);
+    expect(generated.recommendedActions.factIds).toEqual(['F5', 'F6', 'F8', 'F9', 'F10', 'F11', 'F13', 'F14', 'F15', 'F16']);
+    expect(generated.recommendedActions.factIds.map(id => facts.find(f => f.id === id).refs[0])).toEqual([
+      'IH-07', 'IH-08', 'BC-02', 'BC-04', 'BC-08', 'BC-09', 'L0-multi-homed', 'L0-interdependency', 'L0-bc-plan-tested', 'RM-04',
+    ]);
+    expect(generated.recommendedActions.actionIds).toEqual([
+      'ACT-IH-04', 'ACT-IH-06', 'ACT-BC-02', 'ACT-BC-03', 'ACT-BC-05', 'ACT-BC-08', 'ACT-L0-03', 'ACT-L0-05', 'ACT-L0-08', 'ACT-RM-02',
+    ]);
+  });
+
+  it('Westmaas follow-up: five actions, each paragraph as in the baseline', () => {
+    const { generated } = sectionsOf(loadScenario(followUpJson));
+    expect(generated.recommendedActions.actionIds).toEqual(['ACT-IH-04', 'ACT-BC-03', 'ACT-BC-05', 'ACT-L0-03', 'ACT-RM-02']);
+    const baseline = WESTMAAS_ACTIONS.split('\n\n');
+    for (const p of paragraphs(generated)) expect(baseline).toContain(p);
+  });
+
+  it('Oudendijk: one action, then the not-yet-assessed sentence', () => {
+    const ps = paragraphs(sectionsOf(loadScenario(sparseJson)).generated);
+    expect(ps[0]).toBe(ACTION_WORDING.leadIn);
+    expect(ps.slice(1, 3).map(p => p.split('\n')[0])).toEqual(['Foundational controls', 'Document asset interdependencies']);
+    expect(ps.at(-1)).toBe(ACTION_WORDING.notAssessed);
+    expect(ps).toHaveLength(4);
+  });
+
+  it('no match: the fallback, citing the priority fact', () => {
+    const { facts, generated } = generatedFor({
+      indicators: { 'IH-07': meas(3), 'IH-08': meas(10), 'BC-02': meas(80), 'BC-04': ratio(0, 10), 'BC-08': ratio(9, 10), 'BC-09': ratio(8, 10) },
+      layer0: {
+        'L0-interdependency': { state: 'present' }, 'L0-multi-homed': { state: 'requirement_satisfied' },
+        'L0-bc-plan-tested': { state: 'qualifying_test_performed' }, 'RM-04': { state: 'measured', numerator: '8', denominator: '10' },
+      },
+    });
+    expect(generated.recommendedActions).toEqual({
+      factIds: [facts.find(f => f.kind === 'priority').id], text: ACTION_WORDING.noMatch, actionIds: [],
+    });
+  });
+
+  it('nothing assessed: the fallback and the not-yet-assessed sentence, one paragraph', () => {
+    const rec = loadScenario(baselineJson);
+    const indicators = Object.fromEntries(ALL_INDICATOR_IDS.map(id => [id, { state: null }]));
+    const layer0 = Object.fromEntries(Object.keys(rec.layer0).map(id => [id, { state: null }]));
+    expect(sectionsOf({ ...rec, indicators, layer0 }).generated.recommendedActions.text)
+      .toBe(`${ACTION_WORDING.noMatch} ${ACTION_WORDING.notAssessed}`);
+  });
+
+  it('empty references are left out', () => {
+    const ps = paragraphs(sectionsOf(BASELINE).generated);
+    const noNis2 = ps.find(p => p.startsWith('Remove or control multi-homed devices'));
+    expect(noNis2).not.toMatch(/^NIS2/m);
+    expect(noNis2).toMatch(/^Standard: /m);
+    expect(ps.find(p => p.startsWith('Shorten response time'))).not.toMatch(/^Standard/m);
+  });
+
+  it('every entry renders as title, action, steps, why, who and its references, verbatim', () => {
+    for (const entry of ACTION_CATALOGUE) {
+      const lines = [entry.title, entry.action, `Steps: ${entry.steps}`, `Why it matters: ${entry.why}`, `Who: ${entry.who}`];
+      if (entry.nis2) lines.push(`NIS2 ${NIS2_ARTICLE}: ${entry.nis2}`);
+      if (entry.standard) lines.push(`Standard: ${entry.standard}`);
+      const { generated } = generatedWithActions([{ id: entry.id, triggers: [] }]);
+      expect(paragraphs(generated)).toContain(lines.join('\n'));
+    }
+  });
+
+  it('property: no internal or entry IDs, raw enums or "poor"; numbers only from the catalogue; each title once', () => {
+    const catalogueNumbers = new Set(ACTION_CATALOGUE.flatMap(e =>
+      [e.title, e.action, e.steps, e.why, e.who, e.nis2 ?? '', e.standard ?? '', NIS2_ARTICLE].join(' ').match(/\d+(?:\.\d+)?/g) ?? []));
+    fc.assert(fc.property(assessmentArb, rec => {
+      const actions = matchAssessmentActions(rec);
+      const section = sectionsOf(rec).generated.recommendedActions;
+      expect(section.text).not.toMatch(INTERNAL_ID);
+      expect(section.text).not.toMatch(/ACT-/);
+      expect(section.text).not.toMatch(RAW_ENUM);
+      expect(section.text).not.toMatch(/\bpoor\b/i);
+      for (const n of section.text.match(/\d+(?:\.\d+)?/g) ?? []) expect(catalogueNumbers.has(n), n).toBe(true);
+      expect(section.actionIds).toEqual(actions.map(a => a.id));
+      for (const id of section.actionIds) {
+        const title = ACTION_CATALOGUE.find(e => e.id === id).title;
+        expect(section.text.split('\n').filter(line => line === title)).toHaveLength(1);
+      }
+      expect(section.factIds.length).toBeGreaterThan(0);
     }), { numRuns: 200 });
   });
 });

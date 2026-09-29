@@ -100,7 +100,7 @@ describe('scores at a glance', () => {
 });
 
 describe('parts, closing and footer', () => {
-  it('ok: six parts with their labels, the model footer, and the closing lines', async () => {
+  it('ok: every part with its label, the model footer, and the closing lines', async () => {
     const result = await S.ok();
     const doc = build(result);
     expect(doc.parts.map(p => p.title)).toEqual(['headline', 'overview', ...GENERATED_KEYS].map(k => SECTION_TITLES[k]));
@@ -108,9 +108,10 @@ describe('parts, closing and footer', () => {
     expect(doc.parts[0].text).toBe(S.VALID.headline.text);
     expect(doc.footerModel).toBe(W.pdf.model(DEFAULT_MODEL));
     expect(doc.closing).toEqual(provenanceLines(reportParts(result), DEFAULT_MODEL, [W.pdf.scoresTitle]));
-    // Targets (Step 7): the last part, generated, and named in the closing.
-    expect(doc.parts.at(-1)).toMatchObject({ title: 'Targets', label: W.label.generated });
-    expect(doc.closing[1]).toContain('Priorities, Targets.');
+    // Targets (Step 7) and Recommended actions (Step 8): generated, last, and named in the closing.
+    expect(doc.parts.at(-2)).toMatchObject({ title: 'Targets', label: W.label.generated });
+    expect(doc.parts.at(-1)).toMatchObject({ title: 'Recommended actions', label: W.label.generated });
+    expect(doc.closing[1]).toContain('Priorities, Targets, Recommended actions.');
   });
 
   it('an edit: the edited text, the "Edited" label and the edited line in the closing', async () => {

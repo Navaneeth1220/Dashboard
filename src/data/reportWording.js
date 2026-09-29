@@ -127,6 +127,27 @@ export const TARGET_WORDING = {
 };
 
 // ---------------------------------------------------------------------------
+// Recommended actions (docs/ai-report-spec.md, Step 8)
+// ---------------------------------------------------------------------------
+
+/**
+ * The frame around the catalogue text; the entries' own text comes verbatim
+ * from src/data/actionCatalogue.js. `nis2Label` takes NIS2_ARTICLE.
+ */
+export const ACTION_WORDING = {
+  leadIn:
+    "Each action comes from the dashboard's action catalogue and is matched to a result in this assessment. " +
+    'Actions are grouped by area in catalogue order; this is not an order of action.',
+  steps:       'Steps: ',
+  why:         'Why it matters: ',
+  who:         'Who: ',
+  nis2Label:   article => `NIS2 ${article}: `,
+  standard:    'Standard: ',
+  notAssessed: 'Indicators and controls that are not yet assessed trigger no action, so their absence here says nothing about them.',
+  noMatch:     'No action from the catalogue matches this assessment.',
+};
+
+// ---------------------------------------------------------------------------
 // Lead-ins of the generated sections
 // ---------------------------------------------------------------------------
 
@@ -151,6 +172,7 @@ export const SECTION_TITLES = {
   foundationsAndFlags:    'Foundations and flags',
   priorities:             'Priorities',
   targets:                'Targets',
+  recommendedActions:     'Recommended actions',
 };
 
 /** Fixed wording of the narrative panel and of its Copy footer. */

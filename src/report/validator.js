@@ -34,7 +34,7 @@
 import { INDICATORS, ALL_INDICATOR_IDS, SCORE_LEVEL_LABELS } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS, LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
 import { displayName, DIMENSION_NAMES } from '../data/displayNames.js';
-import { SECTION_KEYS, MODEL_PARTS, TARGETS_KEY } from './schema.js';
+import { SECTION_KEYS, MODEL_PARTS, TARGETS_KEY, CATALOGUE_KEYS } from './schema.js';
 import { quotedUserText, stripTargetSentence } from './facts.js';
 
 export const VALIDATOR_RULES = [
@@ -663,7 +663,11 @@ function checkSection(section, part, ctx) {
 // Entry point
 // ---------------------------------------------------------------------------
 
-/** Every part of a full narrative; `options.parts` narrows the check to some of them. */
+/**
+ * Every part of a full narrative; `options.parts` narrows the check to some
+ * of them. The catalogue sections (Step 8) are never checked, even when
+ * named: they state nothing about the assessment.
+ */
 const ALL_PARTS = ['headline', ...SECTION_KEYS];
 
 export function validateNarrative(narrative, facts, { parts: partNames = ALL_PARTS } = {}) {
@@ -683,7 +687,9 @@ export function validateNarrative(narrative, facts, { parts: partNames = ALL_PAR
   }
 
   const sections = narrative.sections !== null && typeof narrative.sections === 'object' ? narrative.sections : {};
-  const parts = partNames.map(key => [key, key === 'headline' ? narrative.headline : sections[key]]);
+  const parts = partNames
+    .filter(key => !CATALOGUE_KEYS.includes(key))
+    .map(key => [key, key === 'headline' ? narrative.headline : sections[key]]);
 
   const seen = new Set();
   const errors = [];

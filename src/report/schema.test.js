@@ -6,7 +6,9 @@
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
-import { buildOutputSchema, buildSectionSchema, SECTION_KEYS, MODEL_PARTS, GENERATED_KEYS } from './schema.js';
+import {
+  buildOutputSchema, buildSectionSchema, SECTION_KEYS, MODEL_PARTS, GENERATED_KEYS, ACTIONS_KEY, CATALOGUE_KEYS, FACT_SECTION_KEYS,
+} from './schema.js';
 import { buildAssessmentFacts } from './facts.js';
 import { selectModelFacts } from './prompt.js';
 import { loadScenario, assessmentArb } from './testSupport.js';
@@ -16,8 +18,16 @@ const partsOf = schema => MODEL_PARTS.map(key => [key, schema.properties[key]]);
 describe('keys', () => {
   it('model parts, generated sections, and all report sections', () => {
     expect(MODEL_PARTS).toEqual(['headline', 'overview']);
-    expect(GENERATED_KEYS).toEqual(['measuredPerformance', 'gapsAndMissingEvidence', 'foundationsAndFlags', 'priorities', 'targets']);
+    expect(GENERATED_KEYS).toEqual([
+      'measuredPerformance', 'gapsAndMissingEvidence', 'foundationsAndFlags', 'priorities', 'targets', 'recommendedActions',
+    ]);
     expect(SECTION_KEYS).toEqual(['overview', ...GENERATED_KEYS]);
+  });
+
+  it('Recommended actions is the one catalogue section; the others are written from the facts', () => {
+    expect(ACTIONS_KEY).toBe('recommendedActions');
+    expect(CATALOGUE_KEYS).toEqual([ACTIONS_KEY]);
+    expect(FACT_SECTION_KEYS).toEqual(['measuredPerformance', 'gapsAndMissingEvidence', 'foundationsAndFlags', 'priorities', 'targets']);
   });
 });
 

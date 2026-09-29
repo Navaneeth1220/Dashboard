@@ -1,9 +1,10 @@
 /**
  * Generated report sections (docs/ai-report-spec.md, Step 3b).
  *
- * buildGeneratedSections(facts) → { measuredPerformance, gapsAndMissingEvidence,
- *   foundationsAndFlags, priorities, targets }, each { factIds, text }
- *   (targets: Step 7)
+ * buildGeneratedSections(facts, actions) → { measuredPerformance, gapsAndMissingEvidence,
+ *   foundationsAndFlags, priorities, targets, recommendedActions }, each { factIds, text }
+ *   (targets: Step 7; recommendedActions: Step 8, from matchActions and the
+ *   action catalogue, and also { actionIds })
  *
  * Pure and deterministic, no model: every sentence is rendered from the
  * facts' structured data with the dashboard's own labels (score levels,
@@ -11,7 +12,8 @@
  * src/data/reportWording.js. It decides nothing; it only words what the
  * engines decided. Paragraphs are separated by a blank line. factIds lists
  * the facts a section was written from, in fact order. The sections always
- * pass the validator (a property test enforces it).
+ * pass the validator (a property test enforces it), except Recommended
+ * actions: catalogue text the validator never checks (Step 8).
  */
 
 import { SCORE_LEVEL_LABELS, STATE, STATE_PRIORITY_LABELS } from '../data/indicatorDefinitions.js';
@@ -25,7 +27,9 @@ import {
   OUTCOME_WORDING,
   LEAD_IN,
   TARGET_WORDING,
+  ACTION_WORDING,
 } from '../data/reportWording.js';
+import { ACTION_CATALOGUE, ACTION_AREAS, NIS2_ARTICLE } from '../data/actionCatalogue.js';
 
 const PROGRAMME_GAP = 'programme gap';
 const MEASURED_FAILURE = STATE_PRIORITY_LABELS.measured_zero.chip.toLowerCase();
@@ -350,15 +354,62 @@ function targets(facts) {
 }
 
 // ---------------------------------------------------------------------------
+// Recommended actions (Step 8)
+// ---------------------------------------------------------------------------
+
+/** The fact that states an indicator's or item's own result. */
+const OWN_FACT_KINDS = new Set(['scored', 'gap_zero', 'no_score', 'l0_flag', 'process']);
+
+/** One action: its lines, verbatim from the catalogue; empty references are left out. */
+function actionBlock(entry) {
+  return [
+    entry.title,
+    entry.action,
+    `${ACTION_WORDING.steps}${entry.steps}`,
+    `${ACTION_WORDING.why}${entry.why}`,
+    `${ACTION_WORDING.who}${entry.who}`,
+    entry.nis2 ? `${ACTION_WORDING.nis2Label(NIS2_ARTICLE)}${entry.nis2}` : null,
+    entry.standard ? `${ACTION_WORDING.standard}${entry.standard}` : null,
+  ].filter(Boolean).join('\n');
+}
+
+/**
+ * The matched catalogue entries, grouped by area in catalogue order. Cites
+ * the triggering items' own facts ("Based on facts" shows why each action is
+ * there); with no match, the priority fact.
+ */
+function recommendedActions(facts, actions) {
+  const matched = ACTION_CATALOGUE.filter(entry => actions.some(a => a.id === entry.id));
+  const triggers = new Set(actions.flatMap(a => a.triggers));
+  const notAssessed = facts.some(f => f.kind === 'l0_unset' || (f.kind === 'no_score' && f.data.status === 'unset'))
+    ? ACTION_WORDING.notAssessed : null;
+
+  if (matched.length === 0) {
+    const text = [ACTION_WORDING.noMatch, notAssessed].filter(Boolean).join(' ');
+    return { ...section(facts, facts.filter(f => f.kind === 'priority'), [text]), actionIds: [] };
+  }
+
+  const areas = ACTION_AREAS.flatMap(({ key, title }) => {
+    const entries = matched.filter(e => e.area === key);
+    return entries.length === 0 ? [] : [title, ...entries.map(actionBlock)];
+  });
+  const cited = facts.filter(f => OWN_FACT_KINDS.has(f.kind) && f.refs.some(id => triggers.has(id)));
+  return { ...section(facts, cited, [ACTION_WORDING.leadIn, ...areas, notAssessed]), actionIds: matched.map(e => e.id) };
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
-export function buildGeneratedSections(facts) {
+/** actions: matchActions output (src/engine/actions.js), [{ id, triggers }]. */
+export function buildGeneratedSections(facts, actions) {
+  if (!Array.isArray(actions)) throw new TypeError('buildGeneratedSections needs the matched actions');
   return {
     measuredPerformance: measuredPerformance(facts),
     gapsAndMissingEvidence: gapsAndMissingEvidence(facts),
     foundationsAndFlags: foundationsAndFlags(facts),
     priorities: priorities(facts),
     targets: targets(facts),
+    recommendedActions: recommendedActions(facts, actions),
   };
 }

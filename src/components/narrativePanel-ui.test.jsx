@@ -172,9 +172,10 @@ describe('Copy', () => {
       'Foundations and flags', g.foundationsAndFlags.text, '',
       'Priorities', g.priorities.text, '',
       'Targets', g.targets.text, '',
+      'Recommended actions', g.recommendedActions.text, '',
       '---',
       `AI-drafted with ${DEFAULT_MODEL}, review before use: Headline, Overview.`,
-      'Generated from the assessment: Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets.',
+      'Generated from the assessment: Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets, Recommended actions.',
       'Edited after generation: Overview.',
     ].join('\n'));
     await waitFor(() => expect(screen.getByText(W.copied)).toBeInTheDocument());
@@ -185,7 +186,7 @@ describe('Copy', () => {
     fireEvent.click(screen.getByRole('button', { name: W.copy }));
     const text = writeText.mock.calls[0][0];
     expect(text.startsWith('Measured performance\n')).toBe(true);
-    expect(text.endsWith('---\nGenerated from the assessment: Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets.')).toBe(true);
+    expect(text.endsWith('---\nGenerated from the assessment: Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets, Recommended actions.')).toBe(true);
   });
 
   it('a failing clipboard says so', async () => {

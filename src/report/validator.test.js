@@ -16,7 +16,7 @@ import {
   validateNarrative, splitSentences, splitClauses, extractNumbers, VALIDATOR_RULES,
 } from './validator.js';
 import { buildAssessmentFacts } from './facts.js';
-import { SECTION_KEYS } from './schema.js';
+import { SECTION_KEYS, CATALOGUE_KEYS, ACTIONS_KEY } from './schema.js';
 import { loadScenario, assessmentArb, echoNarrative } from './testSupport.js';
 import { ALL_INDICATOR_IDS, STATE } from '../data/indicatorDefinitions.js';
 import { LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
@@ -150,7 +150,15 @@ describe('shape', () => {
 
   it('missing sections object → every section reported', () => {
     const result = validate({ headline: GOOD.headline });
-    expect(result.errors.filter(e => e.rule === 'shape').map(e => e.section)).toEqual(SECTION_KEYS);
+    expect(result.errors.filter(e => e.rule === 'shape').map(e => e.section)).toEqual(SECTION_KEYS.filter(k => !CATALOGUE_KEYS.includes(k)));
+  });
+
+  it('the catalogue section is never checked, even when named (Step 8)', () => {
+    const catalogueText = { factIds: [], text: 'Mean Time to Contain is poor. IH-06 scored 7.3 out of 4. See IEC 62443-3-3 SR 7.3.' };
+    const narrative = { ...GOOD, sections: { ...GOOD.sections, [ACTIONS_KEY]: catalogueText } };
+    expect(validate(narrative)).toEqual({ ok: true, errors: [] });
+    expect(validateNarrative(narrative, FACTS, { parts: [ACTIONS_KEY] })).toEqual({ ok: true, errors: [] });
+    expect(validateNarrative({ headline: GOOD.headline, sections: {} }, FACTS, { parts: CATALOGUE_KEYS }).ok).toBe(true);
   });
 
   it('missing section, bad text, bad factIds', () => {

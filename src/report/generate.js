@@ -22,6 +22,7 @@ import { buildAssessmentFacts } from './facts.js';
 import { SYSTEM_PROMPT, SECTION_DESCRIPTIONS, buildUserMessage, selectModelFacts } from './prompt.js';
 import { buildOutputSchema, buildSectionSchema, MODEL_PARTS, GENERATED_KEYS } from './schema.js';
 import { buildGeneratedSections } from './templates.js';
+import { matchAssessmentActions } from '../engine/actions.js';
 import { validateNarrative, CONTEXT_KINDS } from './validator.js';
 import { callOllama, OLLAMA_OPTIONS, ProviderUnavailableError } from './providers/ollama.js';
 
@@ -139,7 +140,9 @@ function record(attempt, section, errors, response) {
 /**
  * generateNarrative(assessment, options) →
  *   { status: 'ok' | 'failed' | 'unavailable', reason?, message?, narrative, generated, origin,
- *     errors, facts, attempts, model }
+ *     errors, facts, actions, attempts, model }
+ *
+ * actions: the matched catalogue entries, [{ id, triggers }] (Step 8).
  *
  * narrative (ok only): { headline, sections: { overview, ...generated } }.
  * origin: 'ai' | 'generated' per part. No error carries a sentence unless
@@ -157,11 +160,12 @@ export async function generateNarrative(assessment, {
   const returned = errs => (keepSentences ? errs : withoutSentences(errs));
   const facts = buildAssessmentFacts(assessment);
   const modelFacts = selectModelFacts(facts);
-  const generated = buildGeneratedSections(facts);
+  const actions = matchAssessmentActions(assessment);
+  const generated = buildGeneratedSections(facts, actions);
   const schema = buildOutputSchema(modelFacts.map(f => f.id));
   const baseMessage = buildUserMessage(modelFacts);
   const attempts = [];
-  const common = { generated, origin: ORIGIN, facts, attempts, model };
+  const common = { generated, origin: ORIGIN, facts, actions, attempts, model };
   let draft = null;   // the model's current { headline, overview }, once one is usable
   let errors = [];
 
