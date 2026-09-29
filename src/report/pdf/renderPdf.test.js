@@ -15,9 +15,11 @@ import { buildReportDocument } from './reportDocument.js';
 import { loadScenario, scriptedResults, assessmentArb } from '../testSupport.js';
 import { buildAssessmentFacts } from '../facts.js';
 import { buildGeneratedSections } from '../templates.js';
+import { matchAssessmentActions } from '../../engine/actions.js';
 import { DEFAULT_MODEL } from '../generate.js';
 import * as reportWording from '../../data/reportWording.js';
 import * as displayNames from '../../data/displayNames.js';
+import * as actionCatalogue from '../../data/actionCatalogue.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..');
 const font = name => readFileSync(join(ROOT, 'src/assets/fonts', name)).toString('base64');
@@ -83,11 +85,15 @@ describe('font coverage', () => {
 
   const reportTexts = assessment => {
     const facts = buildAssessmentFacts(assessment);
-    return [...facts.map(f => f.text), ...Object.values(buildGeneratedSections(facts)).map(s => s.text)];
+    return [...facts.map(f => f.text), ...Object.values(buildGeneratedSections(facts, matchAssessmentActions(assessment))).map(s => s.text)];
   };
 
   it('the wording modules', () => {
     expect(missing([...stringsOf(reportWording), ...stringsOf(displayNames)])).toEqual([]);
+  });
+
+  it('the action catalogue', () => {
+    expect(missing(stringsOf(actionCatalogue))).toEqual([]);
   });
 
   it.each(SCENARIOS.map(s => [s.file, s.assessment]))('the facts and generated sections of %s', (_, assessment) => {

@@ -16,7 +16,7 @@ import {
   validateNarrative, splitSentences, splitClauses, extractNumbers, VALIDATOR_RULES,
 } from './validator.js';
 import { buildAssessmentFacts } from './facts.js';
-import { SECTION_KEYS } from './schema.js';
+import { SECTION_KEYS, CATALOGUE_KEYS, ACTIONS_KEY } from './schema.js';
 import { loadScenario, assessmentArb, echoNarrative } from './testSupport.js';
 import { ALL_INDICATOR_IDS, STATE } from '../data/indicatorDefinitions.js';
 import { LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
@@ -150,7 +150,15 @@ describe('shape', () => {
 
   it('missing sections object → every section reported', () => {
     const result = validate({ headline: GOOD.headline });
-    expect(result.errors.filter(e => e.rule === 'shape').map(e => e.section)).toEqual(SECTION_KEYS);
+    expect(result.errors.filter(e => e.rule === 'shape').map(e => e.section)).toEqual(SECTION_KEYS.filter(k => !CATALOGUE_KEYS.includes(k)));
+  });
+
+  it('the catalogue section is never checked, even when named (Step 8)', () => {
+    const catalogueText = { factIds: [], text: 'Mean Time to Contain is poor. IH-06 scored 7.3 out of 4. See IEC 62443-3-3 SR 7.3.' };
+    const narrative = { ...GOOD, sections: { ...GOOD.sections, [ACTIONS_KEY]: catalogueText } };
+    expect(validate(narrative)).toEqual({ ok: true, errors: [] });
+    expect(validateNarrative(narrative, FACTS, { parts: [ACTIONS_KEY] })).toEqual({ ok: true, errors: [] });
+    expect(validateNarrative({ headline: GOOD.headline, sections: {} }, FACTS, { parts: CATALOGUE_KEYS }).ok).toBe(true);
   });
 
   it('missing section, bad text, bad factIds', () => {
@@ -710,11 +718,51 @@ describe('baseline re-run: "missing" for an item with no score (check 15)', () =
     expect(rulesOf(overview('Both dimensions are incomplete due to missing effectiveness indicators.'))).toEqual(['missing']);
   });
 
-  it('"missing" with a no-score item as subject fails', () => {
+  it('"missing" with a no-score item as subject fails; the hint matches its state (not measurable)', () => {
     expect(gaps('Mean Time to Contain is missing.').errors).toEqual([expect.objectContaining({
       rule: 'missing',
-      detail: 'Do not call Mean Time to Contain missing: it exists and has no score. Say it has no score.',
+      detail: 'Do not call Mean Time to Contain missing: it exists and has no score. Say it could not be measured.',
     })]);
+  });
+
+  it('the hint matches the state: not yet assessed (indicator and foundational item), otherwise "has no score"', () => {
+    const rec = loadScenario(sparseJson);
+    rec.indicators = { ...rec.indicators, 'IH-08': { state: STATE.NO_QUALIFYING_EVENT } };
+    const facts = buildAssessmentFacts(rec);
+    const cite = facts.filter(f => f.kind === 'no_score' || f.kind === 'l0_unset').map(f => f.id);
+    const detailFor = text => validateNarrative({ sections: { gapsAndMissingEvidence: { factIds: cite, text } } }, facts,
+      { parts: ['gapsAndMissingEvidence'] }).errors.filter(e => e.rule === 'missing').map(e => e.detail);
+    expect(detailFor('Mean Time to Respond is missing.')).toEqual([
+      'Do not call Mean Time to Respond missing: it exists and has no score. Say it is not yet assessed.',
+    ]);
+    expect(detailFor('The risk assessment is missing.')).toEqual([
+      'Do not call Risk assessment per zone missing: it exists and has no score. Say it is not yet assessed.',
+    ]);
+    expect(detailFor('Mean Time to Contain is missing.')).toEqual([
+      'Do not call Mean Time to Contain missing: it exists and has no score. Say it has no score.',
+    ]);
+  });
+
+  it('Oudendijk re-run false positive: "missing A and B scores" passes like "a missing A score"; "missing A and B" fails', () => {
+    const rec = loadScenario(sparseJson);
+    const facts = buildAssessmentFacts(rec);
+    const cite = facts.filter(f => f.kind === 'dim_incomplete').map(f => f.id);
+    const missingOf = text => validateNarrative({ sections: { overview: { factIds: cite, text } } }, facts, { parts: ['overview'] })
+      .errors.filter(e => e.rule === 'missing');
+    // Run 5, attempt 3 (2026-09-29 18:38 run set).
+    expect(missingOf('For Incident Handling, there are three indicators, but the dimension is incomplete due to missing Mean Time to Respond and Mean Time to Contain scores.')).toEqual([]);
+    expect(missingOf('Business Continuity is incomplete due to missing Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate scores.')).toEqual([]);
+    expect(missingOf('Incident Handling is incomplete due to missing Mean Time to Respond and Mean Time to Contain data.')).toEqual([]);
+    // Still fails; as before, the error names the item in the clause with "missing".
+    expect(missingOf('Incident Handling is incomplete due to missing Mean Time to Respond and Mean Time to Contain.').map(e => e.detail)).toEqual([
+      'Do not call Mean Time to Respond missing: it exists and has no score. Say it is not yet assessed.',
+    ]);
+    // One listed "missing … scores" does not excuse another bare "missing".
+    expect(missingOf('Scores are absent due to missing Mean Time to Respond and Mean Time to Contain scores; Zone Availability Rate is missing.').map(e => e.detail)).toEqual([
+      'Do not call Zone Availability Rate missing: it exists and has no score. Say it is not yet assessed.',
+    ]);
+    // Still caught: the names are followed by "indicators", not by what is missing.
+    expect(missingOf('Incident Handling is incomplete due to missing Mean Time to Respond and Mean Time to Contain indicators.')).not.toEqual([]);
   });
 
   it('"missing data", "missing scores", "missing evidence" pass', () => {

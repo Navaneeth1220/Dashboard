@@ -14,6 +14,7 @@ import { generateNarrative, DEFAULT_MODEL, MAX_RETRY_ERRORS, RETRY_TEMPERATURE }
 import { ProviderUnavailableError } from './providers/ollama.js';
 import { buildAssessmentFacts } from './facts.js';
 import { buildGeneratedSections } from './templates.js';
+import { matchAssessmentActions } from '../engine/actions.js';
 import { SYSTEM_PROMPT, buildUserMessage, selectModelFacts } from './prompt.js';
 import { buildOutputSchema, buildSectionSchema } from './schema.js';
 import { loadScenario } from './testSupport.js';
@@ -22,11 +23,12 @@ const ASSESSMENT = loadScenario(baselineJson);
 const FACTS = buildAssessmentFacts(ASSESSMENT);
 const MODEL_FACTS = selectModelFacts(FACTS);
 const BASE_MESSAGE = buildUserMessage(MODEL_FACTS);
-const GENERATED = buildGeneratedSections(FACTS);
+const ACTIONS = matchAssessmentActions(ASSESSMENT);
+const GENERATED = buildGeneratedSections(FACTS, ACTIONS);
 const ORIGIN = {
   headline: 'ai', overview: 'ai',
   measuredPerformance: 'generated', gapsAndMissingEvidence: 'generated', foundationsAndFlags: 'generated', priorities: 'generated',
-  targets: 'generated',
+  targets: 'generated', recommendedActions: 'generated',
 };
 
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -84,6 +86,7 @@ describe('ok', () => {
       origin: ORIGIN,
       errors: [],
       facts: FACTS,
+      actions: ACTIONS,
       attempts: [{ attempt: 1, section: null, errors: [], ...counts }],
       model: DEFAULT_MODEL,
     });
@@ -325,7 +328,7 @@ describe('unavailable', () => {
       expect(result).toEqual({
         status: 'unavailable', reason, message: `message for ${reason}`,
         narrative: null, generated: GENERATED, origin: ORIGIN,
-        errors: [], facts: FACTS, attempts: [], model: DEFAULT_MODEL,
+        errors: [], facts: FACTS, actions: ACTIONS, attempts: [], model: DEFAULT_MODEL,
       });
     });
   }

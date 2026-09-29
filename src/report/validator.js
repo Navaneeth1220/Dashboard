@@ -7,8 +7,8 @@
  * narrative against the facts it was written from; `parts` (default: headline
  * and every section) limits the check to some parts, e.g. the two the model
  * writes. Categories always come from all facts. It reads only the facts
- * (kind, text, refs) and the data definitions; it re-derives no score or
- * state. `detail` uses descriptive names only: it is sent back to the model
+ * (kind, text, refs; a no-score fact's data.status for check 15's hint) and
+ * the data definitions; it re-derives no score or state. `detail` uses descriptive names only: it is sent back to the model
  * on retry and shown in the UI when validation fails.
  *
  * Per section: quoted client name / assessor notes are removed (when their
@@ -31,10 +31,10 @@
  * its own fact.
  */
 
-import { INDICATORS, ALL_INDICATOR_IDS, SCORE_LEVEL_LABELS } from '../data/indicatorDefinitions.js';
+import { INDICATORS, ALL_INDICATOR_IDS, SCORE_LEVEL_LABELS, STATE } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS, LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
 import { displayName, DIMENSION_NAMES } from '../data/displayNames.js';
-import { SECTION_KEYS, MODEL_PARTS, TARGETS_KEY } from './schema.js';
+import { SECTION_KEYS, MODEL_PARTS, TARGETS_KEY, CATALOGUE_KEYS } from './schema.js';
 import { quotedUserText, stripTargetSentence } from './facts.js';
 
 export const VALIDATOR_RULES = [
@@ -202,6 +202,13 @@ const SEVERITY_WORD = { critical: 'CRITICAL', high: 'HIGH', medium: 'MEDIUM NOTE
 const MISSING_INDICATOR = /\bmissing\s+(?:effectiveness\s+)?indicators?\b/i;
 // "a missing § score": the item's name is masked as §; its score is what is missing.
 const MISSING_WORD = /\bmissing\b(?!\s+(?:§\s+)?(?:data|scores?|evidence|values?)\b)/i;
+// The same across a list of names, which the clause split cuts apart: "missing
+// A and B scores", "missing A, B and C data" (Oudendijk re-run, run 5). Only
+// this "missing" is neutralised before the per-clause check.
+const MISSING_LIST = new RegExp(
+  `\\bmissing(?=\\s+${NAME_PATTERN.source}(?:(?:\\s*,\\s*and\\s+|\\s*,\\s*|\\s+and\\s+)${NAME_PATTERN.source})+\\s+(?:data|scores?|evidence|values?)\\b)`,
+  'gi'
+);
 
 // Check 16: judgement words about a scored result (level labels are allowed).
 const JUDGEMENT = /\bbelow average\b|\bweakness(?:es)?\b|\bareas? of concern\b|\bperforming well\b|\bmoderate\b|\bpoor\b|\blow\b|\bweak\b/i;
@@ -233,6 +240,16 @@ const QUOTED = /"([^"]*)"|“([^”]*)”/g;
 
 const OWN_FACT_KINDS = new Set(['scored', 'gap_zero', 'no_score', 'process']);
 
+/**
+ * Check 15's repair hint, matching the item's state (Oudendijk manual check).
+ * The one place the validator reads a fact's data: a no-score fact's status.
+ */
+function missingHint(f) {
+  if (f.kind === 'l0_unset' || f.data?.status === 'unset') return 'Say it is not yet assessed.';
+  if (f.data?.status === STATE.NOT_MEASURABLE) return 'Say it could not be measured.';
+  return 'Say it has no score.';
+}
+
 function categorize(facts) {
   const noJudgement = new Map();   // rule 4: id → why it cannot be judged
   const noScore = new Set();       // rule 4 "measured": no-score indicators
@@ -241,7 +258,7 @@ function categorize(facts) {
   const ownFacts = new Map();      // rule 8: id → the item's own fact
   const criticalItems = new Set(); // rule 9: items whose flag / process fact is CRITICAL
   const flaggedItems = new Set();  // rule 9, per sentence: items with any flag
-  const notScored = new Set();     // rule 15: no-score indicators and unassessed Layer 0 items
+  const notScored = new Map();     // rule 15: no-score indicators and unassessed Layer 0 items → repair hint
   const scored = new Set();        // rule 16: scored indicators and complete dimensions
   const dimensionScores = new Map(); // rule 8: complete dimension → its score as the fact writes it
   const contextNumbers = new Set(facts.filter(f => f.kind === 'context').flatMap(f => extractNumbers(maskNames(f.text))));
@@ -264,7 +281,7 @@ function categorize(facts) {
       const score = f.text.match(DIMENSION_SCORE)?.[1];
       if (score !== undefined) dimensionScores.set(f.refs[0], score);
     }
-    if (f.kind === 'no_score' || f.kind === 'l0_unset') for (const id of f.refs) notScored.add(id);
+    if (f.kind === 'no_score' || f.kind === 'l0_unset') for (const id of f.refs) notScored.set(id, missingHint(f));
     if (f.kind === 'no_score') {
       for (const id of f.refs) {
         noJudgement.set(id, 'has no score');
@@ -587,6 +604,9 @@ function checkSection(section, part, ctx) {
 
     // Check 15: the indicator exists; only its score is missing.
     const missingPhrase = MISSING_INDICATOR.test(sentence);
+    // "missing <names> scores" (or data, …): the scores are missing, not the
+    // items. Same clauses, with that "missing" replaced by a neutral word.
+    const missingClauses = splitClauses(sentence.replace(MISSING_LIST, 'lacking'));
     if (missingPhrase) {
       add('missing', 'Do not write "missing indicator": the indicator exists; say it has no score.', sentence);
     }
@@ -595,7 +615,7 @@ function checkSection(section, part, ctx) {
     // and the verbatim exemption.
     let lastNamed = null;
     let severityReported = false;
-    for (const clause of splitClauses(sentence)) {
+    for (const [clauseIndex, clause] of splitClauses(sentence).entries()) {
       const named = namesIn(clause);
       const subjects = named.length > 0 ? named : (lastNamed ? [lastNamed] : []);
       if (named.length > 0) lastNamed = named[named.length - 1];
@@ -606,9 +626,9 @@ function checkSection(section, part, ctx) {
       if (named.length > 0 && citedTexts.some(t => t.includes(normalize(clause)))) continue;
 
       for (const [rule, detail] of checkClause(clause, subjects, ctx.categories)) add(rule, detail, sentence);
-      if (!missingPhrase && MISSING_WORD.test(maskNames(clause))) {
+      if (!missingPhrase && MISSING_WORD.test(maskNames(missingClauses[clauseIndex] ?? clause))) {
         for (const id of subjects.filter(s => ctx.categories.notScored.has(s))) {
-          add('missing', `Do not call ${nameOf(id)} missing: it exists and has no score. Say it has no score.`, sentence);
+          add('missing', `Do not call ${nameOf(id)} missing: it exists and has no score. ${ctx.categories.notScored.get(id)}`, sentence);
         }
       }
       if (respectively) continue;
@@ -663,7 +683,11 @@ function checkSection(section, part, ctx) {
 // Entry point
 // ---------------------------------------------------------------------------
 
-/** Every part of a full narrative; `options.parts` narrows the check to some of them. */
+/**
+ * Every part of a full narrative; `options.parts` narrows the check to some
+ * of them. The catalogue sections (Step 8) are never checked, even when
+ * named: they state nothing about the assessment.
+ */
 const ALL_PARTS = ['headline', ...SECTION_KEYS];
 
 export function validateNarrative(narrative, facts, { parts: partNames = ALL_PARTS } = {}) {
@@ -683,7 +707,9 @@ export function validateNarrative(narrative, facts, { parts: partNames = ALL_PAR
   }
 
   const sections = narrative.sections !== null && typeof narrative.sections === 'object' ? narrative.sections : {};
-  const parts = partNames.map(key => [key, key === 'headline' ? narrative.headline : sections[key]]);
+  const parts = partNames
+    .filter(key => !CATALOGUE_KEYS.includes(key))
+    .map(key => [key, key === 'headline' ? narrative.headline : sections[key]]);
 
   const seen = new Set();
   const errors = [];

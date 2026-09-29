@@ -21,10 +21,24 @@ export const GENERATED_KEYS = [
   'foundationsAndFlags',
   'priorities',
   'targets',
+  'recommendedActions',
 ];
 
 /** The Targets section (Step 7): the only part whose check 8 reads the target sentences. */
 export const TARGETS_KEY = 'targets';
+
+/** The Recommended actions section (Step 8): catalogue text matched to the assessment. */
+export const ACTIONS_KEY = 'recommendedActions';
+
+/**
+ * Generated sections of fixed, reviewed catalogue text (Step 8). They state
+ * nothing about the assessment, so the validator never checks them; the
+ * catalogue and the matching have their own tests.
+ */
+export const CATALOGUE_KEYS = [ACTIONS_KEY];
+
+/** The generated sections written from the facts: the ones the validator checks. */
+export const FACT_SECTION_KEYS = GENERATED_KEYS.filter(key => !CATALOGUE_KEYS.includes(key));
 
 /** Every section of the assembled report, in reading order. */
 export const SECTION_KEYS = ['overview', ...GENERATED_KEYS];

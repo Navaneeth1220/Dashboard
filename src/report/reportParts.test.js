@@ -42,6 +42,15 @@ describe('reportParts', () => {
     expect(byKey.priorities).toMatchObject({ edited: false, label: 'generated' });
   });
 
+  it('Recommended actions carries its blocks while unedited, and none once edited (Step 8)', async () => {
+    const result = await S.ok();
+    const blocksOf = edits => reportParts(result, edits).find(p => p.key === 'recommendedActions').blocks;
+    expect(blocksOf({})).toEqual(result.generated.recommendedActions.blocks);
+    expect(blocksOf({ recommendedActions: result.generated.recommendedActions.text })).toEqual(result.generated.recommendedActions.blocks);
+    expect(blocksOf({ recommendedActions: 'Edited actions.' })).toBeNull();
+    expect(reportParts(result).filter(p => p.blocks).map(p => p.key)).toEqual(['recommendedActions']);
+  });
+
   it.each([
     ['failed', () => S.failed()],
     ['unavailable', () => S.unavailable('not_running', 'Ollama is not reachable.')],
@@ -59,7 +68,7 @@ describe('provenanceLines', () => {
     const parts = reportParts(await S.ok(), { overview: 'x' });
     expect(provenanceLines(parts, DEFAULT_MODEL)).toEqual([
       `AI-drafted with ${DEFAULT_MODEL}, review before use: Headline, Overview.`,
-      'Generated from the assessment: Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets.',
+      'Generated from the assessment: Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets, Recommended actions.',
       'Edited after generation: Overview.',
     ]);
   });
@@ -67,7 +76,7 @@ describe('provenanceLines', () => {
   it('extra generated titles come first in the generated line', async () => {
     const parts = reportParts(await S.failed());
     expect(provenanceLines(parts, DEFAULT_MODEL, ['Scores at a glance'])).toEqual([
-      'Generated from the assessment: Scores at a glance, Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets.',
+      'Generated from the assessment: Scores at a glance, Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets, Recommended actions.',
     ]);
   });
 });

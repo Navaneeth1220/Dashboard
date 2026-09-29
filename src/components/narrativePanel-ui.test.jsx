@@ -150,6 +150,40 @@ describe('ok', () => {
   });
 });
 
+describe('text boxes size to their content', () => {
+  // jsdom has no layout: scrollHeight is stubbed as 20 px per line of the current value.
+  const linesHeight = el => 20 * el.value.split('\n').length;
+  beforeEach(() => {
+    vi.spyOn(HTMLTextAreaElement.prototype, 'scrollHeight', 'get').mockImplementation(function () { return linesHeight(this); });
+    return () => vi.restoreAllMocks();
+  });
+
+  it('every part is as tall as its content, with no inner scrolling', async () => {
+    const result = await okResult();
+    renderPanel({ result });
+    for (const key of ['headline', 'overview', ...GENERATED_KEYS]) {
+      const box = within(partOfPanel(key)).getByRole('textbox');
+      expect(box.style.height, key).toBe(`${linesHeight(box)}px`);
+      expect(box.style.overflowY, key).toBe('hidden');
+    }
+    const actions = within(partOfPanel('recommendedActions')).getByRole('textbox');
+    expect(parseInt(actions.style.height, 10)).toBeGreaterThan(parseInt(within(partOfPanel('headline')).getByRole('textbox').style.height, 10));
+  });
+
+  it('follows edits, and re-measures when the window is resized', async () => {
+    renderPanel({ result: await okResult() });
+    const box = within(partOfPanel('overview')).getByRole('textbox');
+    fireEvent.change(box, { target: { value: 'one\ntwo\nthree\nfour' } });
+    expect(box.style.height).toBe('80px');
+    fireEvent.change(box, { target: { value: 'one' } });
+    expect(box.style.height).toBe('20px');
+
+    box.style.height = '999px';   // as if the wrapping changed with the width
+    fireEvent(window, new Event('resize'));
+    expect(box.style.height).toBe('20px');
+  });
+});
+
 describe('Copy', () => {
   let writeText;
   beforeEach(() => {
@@ -172,9 +206,10 @@ describe('Copy', () => {
       'Foundations and flags', g.foundationsAndFlags.text, '',
       'Priorities', g.priorities.text, '',
       'Targets', g.targets.text, '',
+      'Recommended actions', g.recommendedActions.text, '',
       '---',
       `AI-drafted with ${DEFAULT_MODEL}, review before use: Headline, Overview.`,
-      'Generated from the assessment: Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets.',
+      'Generated from the assessment: Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets, Recommended actions.',
       'Edited after generation: Overview.',
     ].join('\n'));
     await waitFor(() => expect(screen.getByText(W.copied)).toBeInTheDocument());
@@ -185,7 +220,7 @@ describe('Copy', () => {
     fireEvent.click(screen.getByRole('button', { name: W.copy }));
     const text = writeText.mock.calls[0][0];
     expect(text.startsWith('Measured performance\n')).toBe(true);
-    expect(text.endsWith('---\nGenerated from the assessment: Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets.')).toBe(true);
+    expect(text.endsWith('---\nGenerated from the assessment: Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets, Recommended actions.')).toBe(true);
   });
 
   it('a failing clipboard says so', async () => {

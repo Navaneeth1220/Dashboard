@@ -27,10 +27,11 @@ import { isDeepStrictEqual, parseArgs } from 'node:util';
 import { parseAndValidateImport } from '../src/engine/persistence.js';
 import { buildAssessmentFacts } from '../src/report/facts.js';
 import { buildGeneratedSections } from '../src/report/templates.js';
+import { matchAssessmentActions } from '../src/engine/actions.js';
 import { validateNarrative } from '../src/report/validator.js';
 import { generateNarrative, DEFAULT_MODEL, RETRY_TEMPERATURE } from '../src/report/generate.js';
 import { callOllama, OLLAMA_OPTIONS, PROMPT_TOKEN_WARNING, DEFAULT_TIMEOUT_MS } from '../src/report/providers/ollama.js';
-import { MODEL_PARTS, GENERATED_KEYS } from '../src/report/schema.js';
+import { MODEL_PARTS, GENERATED_KEYS, FACT_SECTION_KEYS } from '../src/report/schema.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
@@ -122,12 +123,13 @@ function renderModelParts(draft) {
 
 /**
  * One run's generated sections against the reference copy: identical, and
- * passing the validator. → failure lines (empty when both hold).
+ * the fact-based ones passing the validator (Recommended actions is catalogue
+ * text the validator skips, Step 8). → failure lines (empty when both hold).
  */
 function checkGenerated(generated, facts, reference) {
   const failures = [];
   if (!isDeepStrictEqual(generated, reference)) failures.push('the generated sections differ from the reference copy');
-  const { errors } = validateNarrative({ sections: generated }, facts, { parts: GENERATED_KEYS });
+  const { errors } = validateNarrative({ sections: generated }, facts, { parts: FACT_SECTION_KEYS });
   for (const e of errors) {
     failures.push(`validator \`${e.rule}\` ${e.section ?? 'narrative'}${e.sentence ? `, "${e.sentence}"` : ''}: ${e.detail}`);
   }
@@ -240,7 +242,7 @@ async function main() {
   }
 
   const referenceFacts = buildAssessmentFacts(assessment);
-  const reference = buildGeneratedSections(referenceFacts);
+  const reference = buildGeneratedSections(referenceFacts, matchAssessmentActions(assessment));
   const referenceFailures = checkGenerated(reference, referenceFacts, reference);
   for (const f of referenceFailures) console.error(`generated sections (reference): ${f}`);
   const before = await getJson('/api/ps');

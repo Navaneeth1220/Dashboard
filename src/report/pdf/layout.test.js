@@ -141,3 +141,120 @@ describe('layoutReport', () => {
     }), { numRuns: 60 });
   });
 });
+
+// ─── Recommended actions formatting (Step 8) ──────────────────────────────────
+
+const ACTION = (title, n = 1) => ({
+  kind: 'action', title,
+  lines: [
+    { label: null, text: `Do the thing called ${title}.` },
+    { label: 'Steps: ', text: paragraph(n) },
+    { label: 'Why it matters: ', text: 'Because it matters.' },
+    { label: 'Who: ', text: 'OT engineering' },
+    { label: 'NIS2 Article 21(2): ', text: '(c) business continuity' },
+  ],
+});
+const BLOCKS = [
+  { kind: 'text', text: 'Each action comes from the catalogue.' },
+  { kind: 'heading', text: 'Incident Handling' },
+  ACTION('Shorten response time', 8),
+  { kind: 'heading', text: 'Business Continuity' },
+  ACTION('Improve zone availability'),
+];
+const textOfBlocks = blocks => blocks.map(b => (b.kind === 'action'
+  ? [b.title, ...b.lines.map(l => `${l.label ?? ''}${l.text}`)].join('\n') : b.text)).join('\n\n');
+function docWithBlocks(before, blocks) {
+  const doc = docWith([...before, textOfBlocks(blocks)]);
+  doc.parts.at(-1).blocks = blocks;
+  return doc;
+}
+
+describe('structured part (Recommended actions)', () => {
+  it('styles: area headings bold and larger than body; titles and labels bold at body size', () => {
+    expect(STYLES.areaHeading.font).toBe('bold');
+    expect(STYLES.areaHeading.size).toBeGreaterThan(STYLES.body.size);
+    expect(STYLES.actionTitle).toEqual({ ...STYLES.body, font: 'bold' });
+    expect(STYLES.fieldLabel).toEqual({ ...STYLES.body, font: 'bold' });
+  });
+
+  it('headings, titles and labels get their styles; the text after a label is regular, on its baseline, right after it', () => {
+    const ops = textOps(layoutReport(docWithBlocks([], BLOCKS), measure)).filter(o => o.part === 0);
+    expect(ops.filter(o => o.role === 'areaHeading').map(o => [o.text, o.style])).toEqual([
+      ['Incident Handling', 'areaHeading'], ['Business Continuity', 'areaHeading'],
+    ]);
+    expect(ops.filter(o => o.role === 'actionTitle').map(o => [o.text, o.style])).toEqual([
+      ['Shorten response time', 'actionTitle'], ['Improve zone availability', 'actionTitle'],
+    ]);
+    const labels = ops.filter(o => o.role === 'fieldLabel');
+    const perAction = ['Steps: ', 'Why it matters: ', 'Who: ', 'NIS2 Article 21(2): '];
+    expect(labels.map(o => o.text)).toEqual([...perAction, ...perAction]);
+    for (const label of labels) {
+      expect(label.style).toBe('fieldLabel');
+      expect(label.x).toBe(PAGE.margin);
+      const after = ops.find(o => o.role === 'body' && o.y === label.y && o.page === label.page);
+      expect(after.x).toBeCloseTo(label.x + measure(label.text, 'fieldLabel'), 9);
+      expect(after.style).toBe('body');
+    }
+    // The action sentence and the lead-in are plain body text.
+    expect(ops.find(o => o.text === 'Do the thing called Shorten response time.').role).toBe('body');
+    expect(ops.find(o => o.text.startsWith('Each action')).role).toBe('body');
+  });
+
+  it('a wrapped labelled line continues at the margin in the regular font', () => {
+    const ops = textOps(layoutReport(docWithBlocks([], BLOCKS), measure)).filter(o => o.part === 0);
+    const steps = ops.filter(o => o.block === 2 && o.row >= 2 && o.row <= 5);
+    expect(steps.filter(o => o.role === 'fieldLabel')).toHaveLength(1);
+    const continuation = steps.filter(o => o.row > steps[0].row);
+    expect(continuation.length).toBeGreaterThan(0);
+    for (const o of continuation.filter(o => o.row < 5)) expect(o).toMatchObject({ x: PAGE.margin, role: 'body' });
+  });
+
+  it('an edited section (no blocks) is plain body text', () => {
+    const doc = docWith([textOfBlocks(BLOCKS)]);
+    const roles = new Set(textOps(layoutReport(doc, measure)).filter(o => o.part === 0).map(o => o.role));
+    expect(roles).toEqual(new Set(['partTitle', 'label', 'body']));
+  });
+
+  it('a heading stays with the next title and its first two lines; a title with its first two lines', () => {
+    for (let n = 1; n <= 70; n++) {
+      const ops = textOps(layoutReport(docWithBlocks([paragraph(n)], BLOCKS), measure)).filter(o => o.part === 1);
+      const rowsOf = block => [...new Set(ops.filter(o => o.block === block).map(o => o.row))].sort((a, b) => a - b);
+      const pageOf = (block, row) => ops.find(o => o.block === block && o.row === row).page;
+      BLOCKS.forEach((b, j) => {
+        if (b.kind === 'heading') {
+          // The next action's title (row 0) and its first two lines.
+          for (const row of rowsOf(j + 1).slice(0, 3)) expect(pageOf(j + 1, row), `n=${n} heading ${j}`).toBe(pageOf(j, 0));
+        }
+        if (b.kind === 'action') {
+          const rows = rowsOf(j);
+          expect(pageOf(j, rows[1]), `n=${n} action ${j}`).toBe(pageOf(j, rows[0]));
+          expect(pageOf(j, rows[2])).toBe(pageOf(j, rows[0]));
+        }
+      });
+      const title = ops.find(o => o.role === 'partTitle');
+      expect(ops.find(o => o.block === 0).page).toBe(title.page);
+    }
+  });
+
+  it('property: every character of the blocks appears once, in order; every line fits', () => {
+    const words = fc.array(fc.stringMatching(/^[A-Za-z0-9≤–]{1,30}$/), { minLength: 1, maxLength: 60 }).map(ws => ws.join(' '));
+    const block = fc.oneof(
+      words.map(text => ({ kind: 'text', text })),
+      words.map(text => ({ kind: 'heading', text })),
+      fc.record({
+        title: words,
+        lines: fc.array(fc.record({ label: fc.option(fc.constantFrom('Steps: ', 'Why it matters: ', 'NIS2 Article 21(2): '), { nil: null }), text: words }), { minLength: 1, maxLength: 5 }),
+      }).map(a => ({ kind: 'action', ...a })),
+    );
+    fc.assert(fc.property(fc.array(block, { minLength: 1, maxLength: 8 }), blocks => {
+      const ops = textOps(layoutReport(docWithBlocks([], blocks), measure));
+      const part = ops.filter(o => o.part === 0 && o.role !== 'partTitle' && o.role !== 'label');
+      expect(squash(part.map(o => o.text).join(''))).toBe(squash(textOfBlocks(blocks)));
+      for (const o of ops) {
+        expect(o.x).toBeGreaterThanOrEqual(PAGE.margin);
+        expect(o.x + measure(o.text, o.style)).toBeLessThanOrEqual(PAGE.width - PAGE.margin + 1e-9);
+        if (o.role !== 'pageNumber' && o.role !== 'footerModel') expect(o.y).toBeLessThanOrEqual(PAGE.contentBottom);
+      }
+    }), { numRuns: 80 });
+  });
+});

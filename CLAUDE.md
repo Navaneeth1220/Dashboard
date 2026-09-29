@@ -85,8 +85,17 @@ next score level, from `computeGapAnalysis` (`projection.js`). Each
 validator reads scored facts without it (checks 2 and 8, verbatim
 exemption), so a target score can never pass as a current score.
 
-Next: the recommended actions from `docs/action-catalogue.md` (reviewed and
-approved), as a section after Targets. Also open: the "Cleanup backlog" section at the end of `docs/ai-report-spec.md`
+Recommended actions (spec Step 8) is merged into `main` (tag `v1.4`): a sixth
+generated section after Targets with the catalogue entries that match the
+assessment. `src/data/actionCatalogue.js` is the catalogue in code (entry IDs
+`ACT-…`, stable, never shown; a test keeps it identical to
+`docs/action-catalogue.md`); `matchActions` (`src/engine/actions.js`)
+decides the matches from engine output. The section is catalogue text
+(`CATALOGUE_KEYS`): the validator skips it; the matching and the catalogue
+text have their own tests. `result.actions` carries the matched IDs. In the
+PDF the section is formatted from its structured `blocks` (unless edited).
+
+Next: step C, the AI picks the top 3 recommended actions by entry ID. Also open: the "Cleanup backlog" section at the end of `docs/ai-report-spec.md`
 (`SCORE_LEVEL` duplicate in `Layer0ItemCard`, "poor" vs "Developing" in the
 cross-indicator advisories, 18 pre-existing lint warnings), on `main` or a
 short-lived branch from it.

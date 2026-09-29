@@ -11,6 +11,7 @@ import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
 import followUpJson from '../../scenarios/Westmaas_2026-06-01_assessment.json?raw';
+import sparseJson from '../../scenarios/Oudendijk_2026-03-01_assessment.json?raw';
 import { buildAssessmentFacts, stripAssessorNote, FACT_KINDS } from './facts.js';
 import { loadScenario, assessmentArb } from './testSupport.js';
 import { computeAssessment, createBlankAssessment, scoreIndicator } from '../engine/scoring.js';
@@ -158,7 +159,7 @@ describe('Westmaas baseline', () => {
       F3: { dimension: 'OVERALL', name: 'Overall score', complete: false, incomplete: ['Incident Handling'] },
       F4: scored('Mean Time to Detect', 'IH', '18 hours', 3, 'Good', true, target(4, 'Excellent', '6 hours', 'max')),
       F5: scored('Mean Time to Respond', 'IH', '30 hours', 2, 'Developing', true, target(3, 'Good', '24 hours', 'max')),
-      F6: { name: 'Mean Time to Contain', dimension: 'IH', status: 'not_measurable', rootCause: null, note: null },
+      F6: { name: 'Mean Time to Contain', dimension: 'IH', status: 'not_measurable', rootCause: null, note: null, groupCount: null },
       F7: scored('Network Operability Under Disruption', 'BC', '85%', 3, 'Good', false, target(4, 'Excellent', '90%', 'min')),
       F8: scored('Zone Availability Rate', 'BC', '40%', 2, 'Developing', false, target(3, 'Good', '70%', 'min')),
       F9: scored('Operational Threshold Violation Rate', 'BC', '12.5%', 2, 'Developing', true, target(3, 'Good', '5%', 'max')),
@@ -672,6 +673,73 @@ describe('property-based tests (fast-check)', () => {
       expect(c).toEqual(c.map((_, i) => `C${i + 1}`));
       expect(other).toEqual(other.map((_, i) => `F${i + 1}`));
       expect(factsOf(facts, 'priority')).toHaveLength(1);
+    }), { numRuns: 200 });
+  });
+});
+
+// ─── Group counts of no-score states (Oudendijk manual check) ─────────────────
+
+describe('no-score group count', () => {
+  const noScoreFacts = rec => buildAssessmentFacts(rec).filter(f => f.kind === 'no_score');
+
+  it('Oudendijk: each of the six unassessed indicators states the group size', () => {
+    const facts = noScoreFacts(loadScenario(sparseJson));
+    expect(facts.map(f => f.refs[0])).toEqual(['IH-07', 'IH-08', 'BC-02', 'BC-04', 'BC-08', 'BC-09']);
+    expect(facts[0].text).toBe(
+      'Mean Time to Respond: not yet assessed. No state was recorded. No score. This says nothing about how Mean Time to Respond performs. ' +
+      'It is one of 6 effectiveness indicators that are not yet assessed.'
+    );
+    for (const f of facts) {
+      expect(f.data.groupCount).toBe(6);
+      expect(f.text.endsWith('It is one of 6 effectiveness indicators that are not yet assessed.')).toBe(true);
+    }
+  });
+
+  it('a single indicator in its state gets no count (Westmaas F6 unchanged)', () => {
+    const f6 = noScoreFacts(loadScenario(baselineJson))[0];
+    expect(f6.data.groupCount).toBeNull();
+    expect(f6.text).not.toMatch(/one of/);
+  });
+
+  it('the count comes before the reason and the assessor note, which stays last', () => {
+    const rec = loadScenario(baselineJson);
+    rec.indicators = {
+      ...rec.indicators,
+      'IH-06': { state: STATE.NOT_MEASURABLE, reason: { text: 'SIEM retention too short' } },
+      'IH-08': { state: STATE.NOT_MEASURABLE },
+    };
+    const [detect, contain] = noScoreFacts(rec);
+    expect(detect.text).toBe(
+      'Mean Time to Detect: not measurable. Evidence to compute the value is absent or unreliable. No score. ' +
+      'This says nothing about how Mean Time to Detect performs. It is one of 2 effectiveness indicators that are not measurable. ' +
+      'Assessor note: "SIEM retention too short"'
+    );
+    expect(contain.text).toMatch(/It is one of 2 effectiveness indicators that are not measurable\. No reason was recorded\.$/);
+  });
+
+  it('each state has its own group and wording', () => {
+    const rec = loadScenario(baselineJson);
+    rec.indicators = {
+      ...rec.indicators,
+      'IH-06': { state: STATE.NO_QUALIFYING_EVENT }, 'IH-07': { state: STATE.NO_QUALIFYING_EVENT },
+      'BC-01': { state: STATE.NO_QUALIFYING_DISRUPTION }, 'BC-02': { state: STATE.NO_QUALIFYING_DISRUPTION },
+      'BC-04': { state: STATE.MEASURED, numerator: '5', denominator: '2' }, 'BC-08': { state: STATE.MEASURED, numerator: '-1', denominator: '2' },
+    };
+    const byId = Object.fromEntries(noScoreFacts(rec).map(f => [f.refs[0], f.text]));
+    expect(byId['IH-06']).toMatch(/It is one of 2 effectiveness indicators that had no qualifying event\.$/);
+    expect(byId['BC-01']).toMatch(/It is one of 2 effectiveness indicators that had no qualifying disruption\.$/);
+    expect(byId['BC-04']).toMatch(/It is one of 2 effectiveness indicators that have an invalid value\.$/);
+    expect(byId['IH-08']).not.toMatch(/one of/);   // the only not-measurable one
+  });
+
+  it('property: the count equals the number of no-score indicators in the same state, stated only for groups of two or more', () => {
+    fc.assert(fc.property(assessmentArb, rec => {
+      const facts = noScoreFacts(rec);
+      for (const f of facts) {
+        const size = facts.filter(g => g.data.status === f.data.status).length;
+        expect(f.data.groupCount).toBe(size >= 2 ? size : null);
+        expect(stripAssessorNote(f.text).includes(`It is one of ${size} effectiveness indicators`)).toBe(size >= 2);
+      }
     }), { numRuns: 200 });
   });
 });

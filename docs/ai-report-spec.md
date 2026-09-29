@@ -1,6 +1,7 @@
 # AI-drafted narrative reports: spec
 
-Status: implemented (Steps 0–5), merged into `main` as `v1.1`. Shown in the
+Status: implemented (Steps 0–5), merged into `main` as `v1.1`; Steps 6–7
+merged as `v1.2` and `v1.3`; Step 8 as `v1.4`. Shown in the
 UI as the "Assessment report". Changes follow the same order as the steps:
 spec first, tests first, replay the logged drafts, then the manual check.
 
@@ -35,14 +36,16 @@ those two parts.
 3. Timeline report: maybe, later.
 
 Out of scope: gap projection (hypothetical values must never be narrated as
-results), recommendations beyond what engine messages already say, any
-cloud provider.
+results), recommendations beyond what engine messages already say and the
+reviewed action catalogue (Step 8), any cloud provider.
 
 ## File layout
 
 ```
 src/report/facts.js            buildAssessmentFacts(assessment) → facts
-src/report/templates.js        buildGeneratedSections(facts) → the generated sections (five since Step 7)
+src/report/templates.js        buildGeneratedSections(facts, actions) → the generated sections (six since Step 8)
+src/engine/actions.js          matchActions(assessment, results, layer0) → the matched catalogue entries (Step 8)
+src/data/actionCatalogue.js    the action catalogue as data (Step 8)
 src/report/prompt.js           SYSTEM_PROMPT, selectModelFacts(facts), buildUserMessage(facts)
 src/report/schema.js           buildOutputSchema(factIds)  (headline + overview)
 src/report/validator.js        validateNarrative(narrative, facts, { parts }) → { ok, errors }
@@ -143,6 +146,16 @@ plus the indicators involved. IDs are assigned in a stable order: C-facts
   alongside RM-04") are copied verbatim except that exact internal IDs are
   replaced by `displayName()`. A bare dimension code followed by a number
   ("BC 1.80") becomes "Business Continuity score 1.80".
+- A `no_score` fact whose status (not measurable, no qualifying event, no
+  qualifying disruption, not yet assessed, invalid value) is shared by at
+  least one other indicator states the group's size, after "This says
+  nothing about how …" and before any reason: "It is one of 6
+  effectiveness indicators that are not yet assessed." (`data.groupCount`;
+  `NO_SCORE_GROUP` in `reportWording.js`). The generated Gaps section
+  counts its groups with these numbers ("Six indicators are not yet
+  assessed: …"), and check 8 ties a number beside an item's name to that
+  item's own fact. `no_score` facts are not sent to the model: the prompt
+  is unchanged.
 - Assessor free-text reasons (not-measurable `reason.text`) are included
   verbatim (whitespace collapsed) at the end of the fact as
   `Assessor note: "…"`. The quoted span is exempt from the text checks (IDs,
@@ -408,7 +421,10 @@ section-level checks); `rule` is one of `shape`, `factIds`, `numbers`,
 the model on retry and shown in the UI on failure). The optional `parts`
 (default: `headline` and all of `SECTION_KEYS`) limits which parts are
 checked; generation checks only `MODEL_PARTS`, the name index and
-categories still come from all facts.
+categories still come from all facts. The catalogue sections
+(`CATALOGUE_KEYS`, today only Recommended actions, Step 8) are never
+checked, even when named in `parts`: they state nothing about the
+assessment.
 
 ### Text preparation
 
@@ -609,10 +625,23 @@ categories still come from all facts.
     "data", "score(s)", "evidence" or "value(s)", directly or after an item
     name ("missing data on Mean Time to Contain", "a missing Mean Time to
     Contain score" pass). Detail: "Do not call <name> missing: it
-    exists and has no score. Say it has no score." (for the phrase:
+    exists and has no score. <hint>", the hint matching the item's state:
+    "Say it is not yet assessed." for a not-yet-assessed indicator
+    (`no_score` status `unset`) or an `l0_unset` item, "Say it could not
+    be measured." for a not-measurable indicator, otherwise "Say it has no
+    score." (found in the Oudendijk manual check: the repair hint "has no
+    score" for six unassessed indicators pulled the model away from the
+    fact's own wording). For this hint the validator reads a `no_score`
+    fact's `data.status`, the only use of `data` in the validator (for the phrase:
     "Do not write "missing indicator": the indicator exists; say it has
     no score."). Enforces the last sentence of prompt rule 3, which the
-    model broke in 3 of 5 baseline runs after it was added.
+    model broke in 3 of 5 baseline runs after it was added. A list of
+    names between "missing" and the allowed word passes like one name
+    ("missing Mean Time to Respond and Mean Time to Contain scores"): that
+    "missing" is neutralised before the clause split, which would
+    otherwise cut the names from "scores" (false positive in the
+    2026-09-29 18:38 Oudendijk run set, run 5). "missing A and B" without
+    the allowed word still fails.
 16. **Judgement** (`judgement`): a sentence that names a scored item (an
     item with a `scored` fact, or the dimension of a `dim_complete`
     fact, including the overall score) or states a score (the score-claim
@@ -796,6 +825,16 @@ Rules:
   disruption, not yet assessed, invalid value, each programme-gap state,
   unassessed foundational items, flagged and non-measured process
   evidence, each advisory rule and variant, each priority fallback.
+- No-score indicators with the same state are grouped into one sentence
+  when there are several: "Six indicators are not yet assessed: A, B, C,
+  D, E and F.", then one consequence sentence for all no-score indicators
+  ("This says nothing about how they perform, but without them …"; "any
+  of these indicators" when there are several groups). The count word
+  comes from the facts' group count (Step 1). Not measurable keeps each
+  item's reason: "For A, the recorded root cause is …", "No reason was
+  recorded for B and C." A single indicator keeps its own sentence. Found
+  in the Oudendijk manual check, where one sentence per unassessed
+  indicator repeated the same words six times.
 - The generated sections always pass the validator (property test over
   random assessments; the check script also asserts it on every run).
 
@@ -981,7 +1020,8 @@ reports progress (an exception it throws is logged as a warning and ignored).
      A reply that is not valid JSON, not an object, or cut off leaves the
      part as it was, with the `shape` error. After each attempt both model
      parts are validated.
-4. Returns `{ status: 'ok' | 'failed' | 'unavailable', reason?, message?, narrative, generated, origin, errors, facts, attempts, model }`.
+4. Returns `{ status: 'ok' | 'failed' | 'unavailable', reason?, message?, narrative, generated, origin, errors, facts, actions, attempts, model }`
+   (`actions`: the matched catalogue entries `[{ id, triggers }]`, Step 8).
    - `narrative` (only on `ok`): `{ headline, sections: { overview,
      ...generated } }`, the assembled report.
    - `generated`: the generated sections, always present (also on
@@ -1280,7 +1320,7 @@ indicator below score 4, the value it needs for the next score level. No
 model is involved; it is labelled "Generated from the assessment" like the
 other generated sections and shown in the panel, Copy and the PDF (through
 `GENERATED_KEYS` and `reportParts`). The catalogue's recommended actions
-will follow after Targets in a later step.
+follow after Targets (Step 8).
 
 ### Where the numbers come from
 
@@ -1407,6 +1447,180 @@ Westmaas baseline, targets (F4, F5, F6, F7, F8, F9, F10, F11):
 
 ---
 
+## Step 8: Recommended actions (`actions.js`, `actionCatalogue.js`)
+
+A sixth generated section, "Recommended actions", after Targets: the
+entries of the reviewed action catalogue (`docs/action-catalogue.md`) that
+match the assessment. No model is involved; it is labelled "Generated from
+the assessment" and shown in the panel, Copy and the PDF (through
+`GENERATED_KEYS` and `reportParts`). Step C will let the model choose the
+top 3 by entry ID; this step shows every match.
+
+### Data (`src/data/actionCatalogue.js`)
+
+The catalogue in code, the single source of truth for the app. A test keeps
+it identical to the doc.
+
+```js
+NIS2_ARTICLE = 'Article 21(2)'
+LOW_SCORE_MAX = 2                      // "score ≤ 2"; score 3 gets a target, not an action
+ACTION_AREAS = [{ key: 'IH' | 'BC' | 'L0' | 'RM', title }]   // catalogue order
+ACTION_CATALOGUE = [{
+  id: 'ACT-IH-04', area: 'IH',
+  title, action, steps, why, who,      // the doc's text, verbatim
+  nis2, standard,                      // verbatim, or null when the doc field is empty
+  trigger: { label, when: [condition] }, // label: the doc's trigger text before the keys
+}]
+```
+
+Conditions (an entry matches when any condition holds for any of its IDs):
+
+| kind | holds when |
+|---|---|
+| `indicatorState { ids, states }` | the indicator's input state is one of `states` |
+| `lowScore { ids }` | state `measured`, engine score not null, not a programme gap, score ≤ `LOW_SCORE_MAX` (a measured 0 included) |
+| `layer0State { ids, states }` | the item's input state is one of `states` |
+| `processFlag { ids }` | state `measured` and the engine's `actionFlags` contain the item |
+
+Entry IDs carry the `ACT-` prefix so they never collide with indicator and
+item IDs (`BC-08` is RTO Achievement Rate, `ACT-BC-08` defines recovery point
+objectives). They are stable and never shown. No entry refers to another
+entry: any subset can match.
+
+### Matching (`src/engine/actions.js`)
+
+`matchActions(assessment, results, layer0)` → `[{ id, triggers }]`, in
+catalogue order, `triggers` the matching indicator / item IDs in the order
+the entry lists them. Pure; reads input states and engine output only. The
+low-score rule reads the engine's score, so Operational Threshold Violation
+Rate (direction-inverted bands) is never reversed again. No entry for unset
+states, invalid values or states, the non-events, scores 3 and 4, or
+satisfactory Layer 0 states. A shared entry (several triggers) appears
+once. `matchAssessmentActions(assessment)` runs `computeAssessment` and
+`computeLayer0` first.
+
+`buildAssessmentFacts` is unchanged: no fact is added, no ID moves, the
+model sees nothing new. `generateNarrative` matches the actions next to the
+facts, passes them to `buildGeneratedSections(facts, actions)` and returns
+them as `result.actions` (for step C).
+
+### Validator
+
+The section is a catalogue section (`CATALOGUE_KEYS` in `schema.js`) and
+the validator never checks it. The validator checks statements about the
+assessment against the facts; this section contains none (no value, score
+or state of the assessment), only fixed, reviewed text, with reference
+numbers (IEC 62443-3-3, SR 7.3, Article 21(2)) that no fact contains. The
+invariant risk is the choice of entries (a low-score action for an
+indicator with no score would judge missing evidence), which a text check
+cannot see. So the guarantees are: property tests on the matching; a
+hygiene test over every catalogue entry (not only those an assessment
+triggers); and a property test over the rendered section. The "generated
+sections pass the validator" property test and the check script cover the
+fact-based sections (`GENERATED_KEYS` without `CATALOGUE_KEYS`).
+
+The section's `factIds` are the own facts (`scored`, `gap_zero`,
+`no_score`, `l0_flag`, `process`) of the triggering items, so "Based on
+facts" shows why each action is there. With no match it cites the priority
+fact.
+
+### Wording (`ACTION_WORDING` in `reportWording.js`)
+
+- Lead-in: "Each action comes from the dashboard's action catalogue and is
+  matched to a result in this assessment. Actions are grouped by area in
+  catalogue order; this is not an order of action."
+- Per area with a match: the area title as its own paragraph, then one
+  paragraph per action, one line each: the title; the action sentence;
+  "Steps: …"; "Why it matters: …"; "Who: …"; "NIS2 Article 21(2): …";
+  "Standard: …". Empty fields are left out.
+- When an indicator or foundational control is not yet assessed: "Indicators
+  and controls that are not yet assessed trigger no action, so their absence
+  here says nothing about them."
+- No match: "No action from the catalogue matches this assessment." (then
+  the sentence above, when it applies).
+
+Westmaas baseline (F5, F6, F8, F9, F10, F11, F13, F14, F15, F16):
+ACT-IH-04, ACT-IH-06, ACT-BC-02, ACT-BC-03, ACT-BC-05, ACT-BC-08,
+ACT-L0-03, ACT-L0-05, ACT-L0-08, ACT-RM-02. Not ACT-BC-07 (RPO Achievement
+Rate is a programme gap, not a measured score), not ACT-RM-03 (Mean Time to
+Remediate is satisfactory, no action flag). The text is pinned in
+`templates.test.js`. June follow-up: ACT-IH-04, ACT-BC-03, ACT-BC-05,
+ACT-L0-03, ACT-RM-02. Oudendijk: ACT-L0-03 and the not-yet-assessed
+sentence.
+
+### PDF formatting
+
+In the PDF only, the section is formatted: area headings bold and slightly
+larger than body text (11.5 pt, `areaHeading`), action titles bold
+(`actionTitle`), field labels ("Steps: ", "Why it matters: ", "Who: ",
+"NIS2 Article 21(2): ", "Standard: ") bold with the text after them regular
+on the same line (`fieldLabel`, then `body`). The panel and Copy stay plain
+text.
+
+The formatting comes from structure, never from parsing the text: the
+section also carries `blocks`, `[{ kind: 'text', text } | { kind: 'heading',
+text } | { kind: 'action', title, lines: [{ label, text }] }]` (`label` null
+for the action sentence), and its `text` is derived from those blocks (the
+same text as before), so the two cannot disagree. `reportParts` passes
+`blocks` only while the part is unedited; an edited section is printed as
+plain body text, like every other part. Blocks are separated by a blank
+line, as the plain text is. An area heading is kept on a page with the
+next action's title and first two lines, an action title with its first
+two lines (as a part title is); the part title keeps its first two lines
+too.
+
+Tests: the template's `blocks` for Westmaas (headings, titles, labels from
+`ACTION_WORDING`) and `text` equal to the blocks' derivation for random
+assessments; `reportParts` drops `blocks` once the part is edited; the PDF
+document carries them for an unedited section (also on `failed` and
+`unavailable`) and not for an edited one; layout: heading bold and larger
+than body, titles bold, each label bold and its text regular on the same
+baseline right after it, every line fits, every character of the blocks
+appears once and in order (property), a heading or action title is never
+separated from its first lines at a page break, an edited section is all
+`body`.
+
+### Tests
+
+- `actionCatalogue.test.js`: the data equals the doc (IDs, order, areas,
+  every text field verbatim, trigger label verbatim, trigger keys as sets
+  of IDs and states, "score ≤ 2" ↔ `lowScore`, "action flag" ↔
+  `processFlag`, "any foundational item" ↔ every qualitative item that
+  allows `not_verifiable`, references with empty ↔ null, the doc's Article
+  21(2) ↔ `NIS2_ARTICLE`); trigger IDs and states exist (`allowedStates`);
+  no non-event state in a trigger; unique IDs `ACT-(IH|BC|L0|RM)-NN`;
+  hygiene: no internal ID, raw enum, "poor", "reverse-scored", "Layer 0/1",
+  no reference to another entry ("entry", an entry ID or another entry's
+  title), numbers only in NIS2 and Standard plus a pinned list; coverage:
+  every flagged Layer 0 state and every indicator problem state has an
+  entry.
+- `actions.test.js`: the three scenarios; each condition kind; score 3 →
+  nothing; a measured 0 matches; a programme gap → only its define entry;
+  Operational Threshold Violation Rate 0% → nothing, 12.5% and 60% → match;
+  invalid value, non-events → nothing; two capability-absent triggers → one
+  entry with both. Property (random assessments): low-score entries match
+  exactly for measured, non-gap scores ≤ 2; an indicator with no score
+  triggers only "make measurable" entries, and only when not measurable; a
+  programme gap triggers only establish / define entries; every Layer 0
+  action flag has a matched entry and every matched Layer 0 / vulnerability
+  entry has a flag; catalogue order, no duplicates.
+- `templates.test.js`: the Westmaas section exactly; June; Oudendijk; no
+  match; empty fields left out; `factIds`; property: no internal or entry
+  IDs, raw enums or "poor", numbers only from the catalogue's references and
+  pinned list, each matched title exactly once.
+- `schema` / `validator` / `generate`: `recommendedActions` last in
+  `GENERATED_KEYS`; the validator skips it; `result.actions`; origin
+  `generated`.
+- Panel, Copy, PDF: the part with the generated label, also on `failed` and
+  `unavailable`; Copy and the PDF closing name it; the font covers the
+  catalogue.
+- Replay: the logged drafts' verdicts are unchanged (the model parts, facts
+  and prompt are unchanged, so the manual check is not re-run). Done: all
+  444 logged model parts get identical verdicts with the old and the new
+  validator.
+
+---
+
 ## Done when
 
 - All steps merged on `feature/ai-reports`, full suite green.
@@ -1428,3 +1642,11 @@ this branch.
   score badges and the generated report say "Developing" for a score of 2.
 - 18 pre-existing oxlint warnings (unused imports and variables, mostly in
   tests).
+- Possible later prompt round: three patterns recur across the Oudendijk
+  run sets and each failed in 3 or more of 5 runs in the 2026-09-29 18:38
+  set: a level label for the scored indicators ("both rated good",
+  `levelLabel`, 4 of 5), "critical" for the only (HIGH) flag
+  (`severity`, 3 of 5 first attempts), and "three and five indicators,
+  respectively" (`respectively`, 3 of 5). The validator catches all
+  three; a prompt change would save attempts. Not changed yet by
+  decision.

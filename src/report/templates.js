@@ -1,9 +1,10 @@
 /**
  * Generated report sections (docs/ai-report-spec.md, Step 3b).
  *
- * buildGeneratedSections(facts) → { measuredPerformance, gapsAndMissingEvidence,
- *   foundationsAndFlags, priorities, targets }, each { factIds, text }
- *   (targets: Step 7)
+ * buildGeneratedSections(facts, actions) → { measuredPerformance, gapsAndMissingEvidence,
+ *   foundationsAndFlags, priorities, targets, recommendedActions }, each { factIds, text }
+ *   (targets: Step 7; recommendedActions: Step 8, from matchActions and the
+ *   action catalogue, and also { blocks, actionIds })
  *
  * Pure and deterministic, no model: every sentence is rendered from the
  * facts' structured data with the dashboard's own labels (score levels,
@@ -11,7 +12,8 @@
  * src/data/reportWording.js. It decides nothing; it only words what the
  * engines decided. Paragraphs are separated by a blank line. factIds lists
  * the facts a section was written from, in fact order. The sections always
- * pass the validator (a property test enforces it).
+ * pass the validator (a property test enforces it), except Recommended
+ * actions: catalogue text the validator never checks (Step 8).
  */
 
 import { SCORE_LEVEL_LABELS, STATE, STATE_PRIORITY_LABELS } from '../data/indicatorDefinitions.js';
@@ -25,7 +27,10 @@ import {
   OUTCOME_WORDING,
   LEAD_IN,
   TARGET_WORDING,
+  ACTION_WORDING,
+  NO_SCORE_GROUP,
 } from '../data/reportWording.js';
+import { ACTION_CATALOGUE, ACTION_AREAS, NIS2_ARTICLE } from '../data/actionCatalogue.js';
 
 const PROGRAMME_GAP = 'programme gap';
 const MEASURED_FAILURE = STATE_PRIORITY_LABELS.measured_zero.chip.toLowerCase();
@@ -136,16 +141,75 @@ function noScoreSentence({ data: d }) {
   }
 }
 
-/** "This says nothing about how X performs, but without it Incident Handling has no score, …" */
-function consequenceSentence(noScore, incomplete) {
+/**
+ * "This says nothing about how X performs, but without it Incident Handling
+ * has no score, …"; `subject` replaces the names after grouped sentences
+ * ("they perform").
+ */
+function consequenceSentence(noScore, incomplete, subject = null) {
   const names = noScore.map(f => f.data.name);
   const one = names.length === 1;
-  const lead = `This says nothing about how ${joinNames(names)} ${one ? 'performs' : 'perform'}`;
+  const lead = `This says nothing about how ${subject ?? `${joinNames(names)} ${one ? 'performs' : 'perform'}`}`;
   const dimensions = incomplete.filter(f => f.data.dimension !== 'OVERALL').map(f => f.data.name);
   if (dimensions.length === 0) return `${lead}.`;
   const overall = incomplete.some(f => f.data.dimension === 'OVERALL') ? ', so there is no overall score either' : '';
   return `${lead}, but without ${one ? 'it' : 'them'} ${joinNames(dimensions)} ` +
     `${dimensions.length === 1 ? 'has' : 'have'} no score${overall}.`;
+}
+
+/** Count words for group sizes (at most the number of indicators); the validator reads them as numbers. */
+const COUNT_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+
+/** A not-measurable item's own reason, as its own sentence inside a group. */
+function reasonSentence({ name, rootCause, note }) {
+  if (rootCause && note) return `For ${name}, the recorded root cause is ${rootCause}, and the assessor noted "${note}".`;
+  if (rootCause) return `For ${name}, the recorded root cause is ${rootCause}.`;
+  return `For ${name}, the assessor noted "${note}".`;
+}
+
+/**
+ * Several no-score indicators in the same state, in one sentence counted
+ * with the facts' group size ("Six indicators are not yet assessed: …").
+ */
+function groupSentences(group) {
+  const status = group[0].data.status;
+  const count = group[0].data.groupCount;
+  const names = joinNames(group.map(f => f.data.name));
+  const lead = NO_SCORE_GROUP.lead(capitalize(COUNT_WORDS[count]), status, names);
+  switch (status) {
+    case STATE.NOT_MEASURABLE: {
+      const withReason = group.filter(f => f.data.rootCause || f.data.note);
+      const without = group.filter(f => !f.data.rootCause && !f.data.note);
+      return [
+        lead,
+        NO_SCORE_GROUP.forEach(lowerFirst(STATE_PRIORITY_LABELS[status].detail)),
+        ...withReason.map(f => reasonSentence(f.data)),
+        ...(without.length === group.length ? [NO_SCORE_GROUP.noReasonForAny] : []),
+        ...(without.length > 0 && without.length < group.length ? [NO_SCORE_GROUP.noReason(joinNames(without.map(f => f.data.name)))] : []),
+      ];
+    }
+    case STATE.NO_QUALIFYING_EVENT:
+    case STATE.NO_QUALIFYING_DISRUPTION:
+      return [lead, NO_SCORE_GROUP.forEach(lowerFirst(STATE_PRIORITY_LABELS[status].detail)), NO_SCORE_GROUP.nothingToAssess];
+    case 'invalid':
+      return [NO_SCORE_GROUP.invalid(COUNT_WORDS[count], names)];
+    default:
+      return [lead];
+  }
+}
+
+/** The no-score indicators, grouped by state in fact order; a single indicator keeps its own sentence. */
+function missingParagraph(noScore, incomplete) {
+  const groups = [];
+  for (const f of noScore) {
+    const group = groups.find(g => g[0].data.status === f.data.status);
+    if (group) group.push(f);
+    else groups.push([f]);
+  }
+  const sentences = groups.flatMap(g => (g.length === 1 ? [noScoreSentence(g[0])] : groupSentences(g)));
+  if (groups.every(g => g.length === 1)) return [...sentences, consequenceSentence(noScore, incomplete)].join(' ');
+  const subject = groups.length === 1 ? 'they perform' : 'any of these indicators performs';
+  return [...sentences, consequenceSentence(noScore, incomplete, subject)].join(' ');
 }
 
 function gapsAndMissingEvidence(facts) {
@@ -158,9 +222,7 @@ function gapsAndMissingEvidence(facts) {
       ['No evidence is missing and no programme gaps were found: every effectiveness indicator has a score.']);
   }
 
-  const missing = noScore.length > 0
-    ? [...noScore.map(noScoreSentence), consequenceSentence(noScore, incomplete)].join(' ')
-    : null;
+  const missing = noScore.length > 0 ? missingParagraph(noScore, incomplete) : null;
   const programmeGaps = gaps.map(({ data: d }) =>
     `${PROGRAMME_GAP_WORDING[d.state](d.name)}, so it scores 0 as a programme gap; this is not a measured failure.`).join(' ');
 
@@ -350,15 +412,79 @@ function targets(facts) {
 }
 
 // ---------------------------------------------------------------------------
+// Recommended actions (Step 8)
+// ---------------------------------------------------------------------------
+
+/** The fact that states an indicator's or item's own result. */
+const OWN_FACT_KINDS = new Set(['scored', 'gap_zero', 'no_score', 'l0_flag', 'process']);
+
+/**
+ * One action as a block: its title and lines, verbatim from the catalogue;
+ * label null for the action sentence, empty references left out.
+ */
+function actionBlock(entry) {
+  const lines = [
+    { label: null, text: entry.action },
+    { label: ACTION_WORDING.steps, text: entry.steps },
+    { label: ACTION_WORDING.why, text: entry.why },
+    { label: ACTION_WORDING.who, text: entry.who },
+    entry.nis2 ? { label: ACTION_WORDING.nis2Label(NIS2_ARTICLE), text: entry.nis2 } : null,
+    entry.standard ? { label: ACTION_WORDING.standard, text: entry.standard } : null,
+  ].filter(Boolean);
+  return { kind: 'action', title: entry.title, lines };
+}
+
+/** The section's plain text (panel, Copy): blocks separated by a blank line, one line per action line. */
+function textOfBlocks(blocks) {
+  return blocks.map(b => (b.kind === 'action'
+    ? [b.title, ...b.lines.map(l => `${l.label ?? ''}${l.text}`)].join('\n')
+    : b.text)).join('\n\n');
+}
+
+/**
+ * The matched catalogue entries, grouped by area in catalogue order. Cites
+ * the triggering items' own facts ("Based on facts" shows why each action is
+ * there); with no match, the priority fact. `blocks` is the structure the PDF
+ * formats; `text` is derived from it, so the two cannot disagree.
+ */
+function recommendedActions(facts, actions) {
+  const matched = ACTION_CATALOGUE.filter(entry => actions.some(a => a.id === entry.id));
+  const triggers = new Set(actions.flatMap(a => a.triggers));
+  const notAssessed = facts.some(f => f.kind === 'l0_unset' || (f.kind === 'no_score' && f.data.status === 'unset'))
+    ? ACTION_WORDING.notAssessed : null;
+  const withBlocks = (cited, blocks, actionIds) =>
+    ({ ...section(facts, cited, [textOfBlocks(blocks)]), blocks, actionIds });
+
+  if (matched.length === 0) {
+    const text = [ACTION_WORDING.noMatch, notAssessed].filter(Boolean).join(' ');
+    return withBlocks(facts.filter(f => f.kind === 'priority'), [{ kind: 'text', text }], []);
+  }
+
+  const blocks = [
+    { kind: 'text', text: ACTION_WORDING.leadIn },
+    ...ACTION_AREAS.flatMap(({ key, title }) => {
+      const entries = matched.filter(e => e.area === key);
+      return entries.length === 0 ? [] : [{ kind: 'heading', text: title }, ...entries.map(actionBlock)];
+    }),
+    ...(notAssessed ? [{ kind: 'text', text: notAssessed }] : []),
+  ];
+  const cited = facts.filter(f => OWN_FACT_KINDS.has(f.kind) && f.refs.some(id => triggers.has(id)));
+  return withBlocks(cited, blocks, matched.map(e => e.id));
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
-export function buildGeneratedSections(facts) {
+/** actions: matchActions output (src/engine/actions.js), [{ id, triggers }]. */
+export function buildGeneratedSections(facts, actions) {
+  if (!Array.isArray(actions)) throw new TypeError('buildGeneratedSections needs the matched actions');
   return {
     measuredPerformance: measuredPerformance(facts),
     gapsAndMissingEvidence: gapsAndMissingEvidence(facts),
     foundationsAndFlags: foundationsAndFlags(facts),
     priorities: priorities(facts),
     targets: targets(facts),
+    recommendedActions: recommendedActions(facts, actions),
   };
 }
