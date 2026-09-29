@@ -1515,6 +1515,38 @@ Remediate is satisfactory, no action flag). The text is pinned in
 ACT-L0-03, ACT-RM-02. Oudendijk: ACT-L0-03 and the not-yet-assessed
 sentence.
 
+### PDF formatting
+
+In the PDF only, the section is formatted: area headings bold and slightly
+larger than body text (11.5 pt, `areaHeading`), action titles bold
+(`actionTitle`), field labels ("Steps: ", "Why it matters: ", "Who: ",
+"NIS2 Article 21(2): ", "Standard: ") bold with the text after them regular
+on the same line (`fieldLabel`, then `body`). The panel and Copy stay plain
+text.
+
+The formatting comes from structure, never from parsing the text: the
+section also carries `blocks`, `[{ kind: 'text', text } | { kind: 'heading',
+text } | { kind: 'action', title, lines: [{ label, text }] }]` (`label` null
+for the action sentence), and its `text` is derived from those blocks (the
+same text as before), so the two cannot disagree. `reportParts` passes
+`blocks` only while the part is unedited; an edited section is printed as
+plain body text, like every other part. Blocks are separated by a blank
+line, as the plain text is. An area heading is kept on a page with the
+next action's title and first two lines, an action title with its first
+two lines (as a part title is); the part title keeps its first two lines
+too.
+
+Tests: the template's `blocks` for Westmaas (headings, titles, labels from
+`ACTION_WORDING`) and `text` equal to the blocks' derivation for random
+assessments; `reportParts` drops `blocks` once the part is edited; the PDF
+document carries them for an unedited section (also on `failed` and
+`unavailable`) and not for an edited one; layout: heading bold and larger
+than body, titles bold, each label bold and its text regular on the same
+baseline right after it, every line fits, every character of the blocks
+appears once and in order (property), a heading or action title is never
+separated from its first lines at a page break, an edited section is all
+`body`.
+
 ### Tests
 
 - `actionCatalogue.test.js`: the data equals the doc (IDs, order, areas,
