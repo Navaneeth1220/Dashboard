@@ -3,13 +3,15 @@
  *
  * Pure renderer of useNarrative's state and generateNarrative's result. It
  * computes nothing: no scores, states or wording decisions. Its own state is
- * only the user's edits and the Copy status, both dropped when a new result
- * arrives. On `failed` and `unavailable` only the generated sections are
+ * only the user's edits and the Copy and PDF status, all dropped when a new
+ * result arrives. Which parts are shown, their text and label come from
+ * reportParts (shared with Copy and the PDF, Step 6). On `failed` and `unavailable` only the generated sections are
  * shown; model text never reaches this panel then (the result carries none).
  */
 
 import { useState } from 'react';
-import { SECTION_KEYS, GENERATED_KEYS } from '../report/schema.js';
+import { reportParts, provenanceLines } from '../report/reportParts.js';
+import { downloadReportPdf } from '../report/pdf/download.js';
 import { SECTION_TITLES, NARRATIVE_WORDING as W } from '../data/reportWording.js';
 
 const LABEL_STYLE = {
@@ -33,27 +35,12 @@ const buttonStyle = disabled => ({
 
 const codeStyle = { fontFamily: 'monospace', backgroundColor: '#f3f4f6', padding: '1px 5px', borderRadius: '3px' };
 
-/** The parts shown for a result: all six on `ok`, the four generated sections otherwise. */
-function partsOf(result) {
-  if (!result) return [];
-  if (result.status === 'ok') {
-    return ['headline', ...SECTION_KEYS].map(key => [key, key === 'headline' ? result.narrative.headline : result.narrative.sections[key]]);
-  }
-  return GENERATED_KEYS.map(key => [key, result.generated[key]]);
-}
-
-/** The text Copy writes: each part under its title, then the footer. */
-function copyText(parts, textOf, isEdited, origin, model) {
-  const titlesWhere = test => parts.filter(([key]) => test(key)).map(([key]) => SECTION_TITLES[key]);
-  const ai = titlesWhere(key => origin[key] === 'ai');
-  const generated = titlesWhere(key => origin[key] === 'generated');
-  const edited = titlesWhere(isEdited);
+/** The text Copy writes: each part under its title, then the provenance lines. */
+function copyText(parts, model) {
   return [
-    ...parts.flatMap(([key]) => [SECTION_TITLES[key], textOf(key), '']),
+    ...parts.flatMap(p => [p.title, p.text, '']),
     '---',
-    ...(ai.length > 0 ? [W.footer.ai(model, ai)] : []),
-    ...(generated.length > 0 ? [W.footer.generated(generated)] : []),
-    ...(edited.length > 0 ? [W.footer.edited(edited)] : []),
+    ...provenanceLines(parts, model),
   ].join('\n');
 }
 
@@ -67,20 +54,20 @@ function Label({ kind }) {
   );
 }
 
-function Part({ partKey, part, text, edited, origin, facts, onChange }) {
-  const title = SECTION_TITLES[partKey];
-  const cited = (part.factIds ?? []).map(id => facts.find(f => f.id === id)).filter(Boolean);
+function Part({ part, facts, onChange }) {
+  const { key, title, text } = part;
+  const cited = part.factIds.map(id => facts.find(f => f.id === id)).filter(Boolean);
   return (
-    <div data-testid={`narrative-part-${partKey}`} style={{ marginBottom: '16px' }}>
+    <div data-testid={`narrative-part-${key}`} style={{ marginBottom: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
         <div style={{ fontWeight: 700, fontSize: '13px', color: '#111827' }}>{title}</div>
-        <Label kind={edited ? 'edited' : origin} />
+        <Label kind={part.label} />
       </div>
       <textarea
         aria-label={title}
         value={text}
-        onChange={e => onChange(partKey, e.target.value)}
-        rows={partKey === 'headline' ? 2 : 5}
+        onChange={e => onChange(key, e.target.value)}
+        rows={key === 'headline' ? 2 : 5}
         style={{
           width: '100%', boxSizing: 'border-box', padding: '8px 10px', fontSize: '13px', lineHeight: 1.5,
           fontFamily: 'inherit', border: '1px solid #d1d5db', borderRadius: '4px', resize: 'vertical',
@@ -135,26 +122,33 @@ function Failed({ errors }) {
   );
 }
 
-export default function NarrativePanel({ phase, attempt, maxAttempts, result, model, stale, onGenerate, onCancel }) {
-  // Edits and the Copy status belong to one result; a new result drops them.
-  const [local, setLocal] = useState({ source: null, texts: {}, copy: null });
-  const own = local.source === result ? local : { source: result, texts: {}, copy: null };
+export default function NarrativePanel({ phase, attempt, maxAttempts, result, generatedAt, model, stale, onGenerate, onCancel }) {
+  // Edits and the Copy and PDF status belong to one result; a new result drops them.
+  const [local, setLocal] = useState({ source: null, texts: {}, copy: null, pdf: null });
+  const own = local.source === result ? local : { source: result, texts: {}, copy: null, pdf: null };
+  const update = change => setLocal(l => ({ ...(l.source === result ? l : own), ...change }));
 
   const running = phase === 'running';
   const shown = phase === 'done' ? result : null;
-  const parts = partsOf(shown);
-  const original = Object.fromEntries(parts.map(([key, part]) => [key, part.text]));
-  const textOf = key => own.texts[key] ?? original[key];
-  const isEdited = key => own.texts[key] !== undefined && own.texts[key] !== original[key];
+  const parts = reportParts(shown, own.texts);
+  const preparing = own.pdf === 'preparing';
 
-  const onChange = (key, value) => setLocal({ ...own, texts: { ...own.texts, [key]: value }, copy: null });
+  const onChange = (key, value) => setLocal({ ...own, texts: { ...own.texts, [key]: value }, copy: null, pdf: null });
   const onCopy = async () => {
-    const text = copyText(parts, textOf, isEdited, shown.origin, shown.model ?? model);
     try {
-      await navigator.clipboard.writeText(text);
-      setLocal(l => ({ ...(l.source === result ? l : own), copy: 'copied' }));
+      await navigator.clipboard.writeText(copyText(parts, shown.model ?? model));
+      update({ copy: 'copied' });
     } catch {
-      setLocal(l => ({ ...(l.source === result ? l : own), copy: 'failed' }));
+      update({ copy: 'failed' });
+    }
+  };
+  const onDownload = async () => {
+    update({ pdf: 'preparing' });
+    try {
+      await downloadReportPdf({ result: shown, edits: own.texts, generatedAt, model });
+      update({ pdf: null });
+    } catch {
+      update({ pdf: 'failed' });
     }
   };
 
@@ -192,13 +186,18 @@ export default function NarrativePanel({ phase, attempt, maxAttempts, result, mo
             {shown.status === 'failed' && <Failed errors={shown.errors} />}
             {shown.status === 'unavailable' && <Unavailable result={shown} model={model} />}
 
-            {parts.map(([key, part]) => (
-              <Part key={key} partKey={key} part={part} text={textOf(key)} edited={isEdited(key)}
-                origin={shown.origin[key]} facts={shown.facts} onChange={onChange} />
+            {parts.map(part => (
+              <Part key={part.key} part={part} facts={shown.facts} onChange={onChange} />
             ))}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <button type="button" onClick={onCopy} style={buttonStyle(false)}>{W.copy}</button>
+              <button type="button" onClick={onDownload} disabled={stale || preparing} style={buttonStyle(stale || preparing)}>
+                {W.downloadPdf}
+              </button>
+              {stale && <span style={{ fontSize: '12px', color: '#92400e' }}>{W.regenerateFirst}</span>}
+              {preparing && <span style={{ fontSize: '12px', color: '#374151' }}>{W.preparingPdf}</span>}
+              {own.pdf === 'failed' && <span role="alert" style={{ fontSize: '12px', color: '#991b1b' }}>{W.pdfFailed}</span>}
               {own.copy === 'copied' && <span style={{ fontSize: '12px', color: '#166534' }}>{W.copied}</span>}
               {own.copy === 'failed' && <span style={{ fontSize: '12px', color: '#991b1b' }}>{W.copyFailed}</span>}
             </div>

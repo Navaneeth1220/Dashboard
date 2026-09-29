@@ -20,7 +20,8 @@ demonstration, and evaluation of the system are documented in the thesis;
 the artifact as evaluated is tagged `v1.0-thesis`.
 
 Since the thesis, the dashboard has gained an optional assessment report:
-a short management summary of an assessment, drafted locally (see
+a short management summary of an assessment, drafted locally and
+downloadable as a PDF (see
 [Assessment report](#assessment-report-optional)).
 
 ## Repository structure
@@ -73,6 +74,14 @@ The model runs on your own machine; no assessment data leaves it. Every
 part can be edited before copying; edited parts are labelled as such and
 listed in the copied text. The design, its rules and the validator's
 checks are in `docs/ai-report-spec.md`.
+
+**Download PDF** saves the report as a PDF file in one click (for example
+`Westmaas_2026-01-01_report.pdf`), with the current text including edits,
+each part's label, a "Scores at a glance" table, page numbers and the
+model name. It is made in the browser and works offline; the font
+(Liberation Sans, SIL Open Font License) is bundled in
+`src/assets/fonts/`. When the assessment has changed since the report was
+generated, the button is disabled until the report is generated again.
 
 ### Setup
 

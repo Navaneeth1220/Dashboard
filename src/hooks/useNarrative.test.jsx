@@ -47,6 +47,17 @@ describe('useNarrative', () => {
     expect(result.current.snapshot).toBe(JSON.stringify(ASSESSMENT));
   });
 
+  it('generatedAt: null until a result arrives, then the time it arrived', async () => {
+    const provider = vi.fn(async () => { throw new ProviderUnavailableError('not_running', 'Ollama is not reachable.'); });
+    const { result } = renderHook(() => useNarrative({ provider }));
+    expect(result.current.generatedAt).toBeNull();
+    const before = Date.now();
+    await act(async () => { await result.current.generate(ASSESSMENT); });
+    const at = Date.parse(result.current.generatedAt);
+    expect(at).toBeGreaterThanOrEqual(before);
+    expect(at).toBeLessThanOrEqual(Date.now());
+  });
+
   it('cancel aborts the call: the result is unavailable/cancelled', async () => {
     const { provider } = heldProvider();
     const { result } = renderHook(() => useNarrative({ provider }));

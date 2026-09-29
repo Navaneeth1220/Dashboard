@@ -364,6 +364,7 @@ function App() {
             attempt={narrative.attempt}
             maxAttempts={narrative.maxAttempts}
             result={narrative.result}
+            generatedAt={narrative.generatedAt}
             model={DEFAULT_MODEL}
             stale={narrativeStale}
             onGenerate={() => narrative.generate(narrativeSnapshot)}

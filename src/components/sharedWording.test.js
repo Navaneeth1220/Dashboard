@@ -116,6 +116,22 @@ describe('shared wording: components do not hardcode it', () => {
     expect(findHardcoded(source)).toEqual([]);
   });
 
+  it('the PDF export wording (Step 6) is hardcoded in no component and no PDF module', () => {
+    const W = reportWording.NARRATIVE_WORDING;
+    const strings = [W.downloadPdf, W.preparingPdf, W.pdfFailed, W.regenerateFirst,
+      ...Object.values(W.pdf).filter(v => typeof v === 'string'), 'Page ', 'Model: '];
+    const pdfDir = join(DIR, '../report/pdf');
+    const files = [
+      ...COMPONENT_FILES.map(f => join(DIR, f)),
+      ...readdirSync(pdfDir).filter(f => f.endsWith('.js') && !f.includes('.test.')).map(f => join(pdfDir, f)),
+    ];
+    expect(files.some(f => f.endsWith('layout.js'))).toBe(true);
+    for (const file of files) {
+      const code = stripComments(readFileSync(file, 'utf8'));
+      for (const s of strings) expect(code, `${file}: "${s}"`).not.toContain(`'${s}`);
+    }
+  });
+
   it('the components that show these strings take them from the shared modules', () => {
     const read = file => readFileSync(join(DIR, file), 'utf8');
     expect(read('PriorityView.jsx')).toMatch(/\{NOTHING_TO_ASSESS\}/);

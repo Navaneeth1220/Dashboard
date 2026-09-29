@@ -1126,6 +1126,135 @@ shared-wording test covers the new component.
 
 ---
 
+## Step 6: PDF export (`src/report/pdf/`)
+
+A "Download PDF" button in the Assessment report panel downloads the report
+as a PDF file in one click, without a print dialog, e.g.
+`Westmaas_2026-01-01_report.pdf`. It works offline: no CDN, no server.
+
+### Library and font
+
+jsPDF (pinned), drawing text only: `.html()` is never used, so its optional
+dependencies (html2canvas, dompurify, canvg) are never loaded. jsPDF and the
+font are loaded with `import()` on the first click, so the main bundle does
+not grow. `vite.config.js` pre-bundles jsPDF (`optimizeDeps.include`):
+otherwise the dev server discovers it on the first click and reloads the
+page, which drops a generated report (found in the manual check).
+
+jsPDF's standard fonts cover only Windows-1252, and the engine's wording uses
+`≤ ≥ → − ∞ § ·`. The PDF uses Liberation Sans Regular and Bold (SIL OFL 1.1,
+WGL4 coverage), bundled in `src/assets/fonts/` with its licence. jsPDF
+embeds only the glyphs that are used. A character outside the font (an emoji
+typed in an edit) prints as an empty box; that is a known limitation.
+
+### Files
+
+```
+src/report/reportParts.js       reportParts(result, edits) → the parts shown, and
+                                 provenanceLines(parts, model, extraGenerated): shared by
+                                 the panel, Copy and the PDF
+src/report/pdf/reportDocument.js buildReportDocument({ result, edits, generatedAt, model })
+                                 → the PDF's content (pure; wording from reportWording.js)
+src/report/pdf/layout.js        layoutReport(doc, measure) → pages of positioned text runs
+                                 (pure; `measure(text, style)` is passed in)
+src/report/pdf/renderPdf.js     renderReportPdf(doc, fonts) → Blob (jsPDF replays the layout)
+src/report/pdf/createPdf.js     loads the fonts, calls renderReportPdf (the lazy chunk)
+src/report/pdf/download.js      downloadReportPdf(input): build → import() → render → save
+```
+
+`reportParts` replaces the panel's own part and edit logic, so the panel,
+Copy and the PDF cannot disagree about which parts are shown, their text or
+their label.
+
+### Content
+
+- Header: "Assessment report", then Client, Assessment date and Generated.
+  Client and assessment date come from the result's context fact, which
+  `generateNarrative` built from the snapshot the report was generated from,
+  never from live App state. Generated is the time the result arrived,
+  recorded by `useNarrative` as `generatedAt` (`generate.js` is unchanged).
+  An empty value prints "not recorded".
+- "Scores at a glance" (labelled "Generated from the assessment"): one row
+  per dimension fact (Incident Handling, Business Continuity, Overall score)
+  with its score as the fact gives it, or "no score (incomplete)". It uses
+  the fact's data, never a recomputation. A score of 0.00 and "no score
+  (incomplete)" stay distinct.
+- The parts, in panel order: the title, its label ("AI-drafted — review
+  before use", "Generated from the assessment" or "Edited") in small grey
+  type, and the current on-screen text, edits included. `ok`: all six.
+  `failed` and `unavailable`: the four generated sections only; the builder
+  enforces this from the result's status, whatever the caller passes. The
+  validation errors, the unavailable messages and the "Based on facts" lists
+  are on-screen status and are not printed.
+- Closing: `provenanceLines`, the same lines Copy writes, with "Scores at a
+  glance" added to the generated titles.
+- Page footer: "Model: <model>" on the left, only when an AI-drafted part is
+  in the PDF; "Page N of M" on the right.
+- Filename: `<client>_<assessment date>_report.pdf` from the same context
+  fact. Characters not allowed in Windows filenames and whitespace become
+  `_`. An empty client gives `assessment`; an empty date is left out.
+
+### Layout
+
+A4 portrait, 20 mm side margins, Liberation Sans. Title 18 pt bold, header
+lines 10 pt, part titles 12 pt bold, labels 8 pt grey, body 10.5 pt with a
+line height of 1.4, closing 8.5 pt grey, footer 8 pt grey. Text wraps at the
+measured width. A word wider than the line is broken by characters. Each line
+of a part's text is a paragraph (edits keep their line breaks). A part title
+is never last on its page: the title, its label and the first two lines of
+text move to the next page together. The scores table and the closing are
+never split. Page numbers are added once the page count is known.
+
+### Panel
+
+- "Download PDF" sits next to Copy whenever parts are shown.
+- Stale draft: the button is disabled, with the hint "Regenerate the report
+  first".
+- While the PDF is built: "Preparing PDF…" and the button is disabled. A
+  failure shows "Creating the PDF failed." (like Copy's failure).
+- The panel computes nothing for the PDF. It passes the result, its edit
+  state, `generatedAt` and the model to `downloadReportPdf`.
+
+### Tests
+
+- `reportParts.test.js`: which parts are shown per status, edited text and
+  labels, and the provenance lines (Copy's footer, unchanged).
+- `reportDocument.test.js`, Westmaas baseline via `generateNarrative` with a
+  scripted provider:
+  - `ok`: six parts with labels; an edit changes the text and the label to
+    "Edited"; the model footer is present.
+  - `failed` and each unavailable reason: only the four generated sections,
+    no model footer, no draft text anywhere (marker sentence), even when the
+    caller passes edits for the AI keys.
+  - Header from the result's context fact: a result for client A with an
+    input carrying client B gives A.
+  - Scores table rows equal the engine's dimension scores (formatScore);
+    Oudendijk or a random incomplete assessment gives "no score
+    (incomplete)".
+  - Filename sanitising and fallbacks; generated date formatting; "not
+    recorded".
+  - No internal ID pattern anywhere in the document.
+- `layout.test.js` with a fixed-width `measure`: lines stay inside the
+  margins, nothing enters the footer area, a title is never last on its page,
+  "Page N of M" on every page (one page and many pages). Property
+  (fast-check): for arbitrary part texts, the non-whitespace characters of
+  every part appear in the output exactly once and in order, and every line
+  fits.
+- `renderPdf.test.js`: the Blob starts with `%PDF-` and has the layout's page
+  count. The font covers every character of the wording modules, the facts
+  and generated sections of every scenario file, and the generated sections
+  of random assessments.
+- Panel (`download.js` mocked): the button appears with the parts; clicking
+  passes the edits; disabled with the hint when stale; preparing and failure
+  states.
+- App (`reportPdf-app.test.jsx`, fetch stubbed so Ollama is unavailable):
+  after generating, the download receives the snapshot's client. Changing the
+  client field makes the draft stale and disables the button.
+- `useNarrative`: `generatedAt` is set when the result arrives.
+- The shared-wording test covers the new strings.
+
+---
+
 ## Done when
 
 - All steps merged on `feature/ai-reports`, full suite green.

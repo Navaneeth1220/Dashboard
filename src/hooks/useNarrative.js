@@ -9,11 +9,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { generateNarrative } from '../report/generate.js';
 
-const IDLE = { phase: 'idle', attempt: 0, maxAttempts: 0, result: null, snapshot: null };
+const IDLE = { phase: 'idle', attempt: 0, maxAttempts: 0, result: null, snapshot: null, generatedAt: null };
 
 /**
  * useNarrative({ provider? }) →
- *   { phase: 'idle' | 'running' | 'done', attempt, maxAttempts, result, snapshot, generate, cancel }
+ *   { phase: 'idle' | 'running' | 'done', attempt, maxAttempts, result, snapshot, generatedAt, generate, cancel }
+ *
+ * generatedAt: ISO time the result arrived (the PDF's "Generated", Step 6).
  *
  * provider exists only for tests; the app uses generateNarrative's default.
  */
@@ -46,7 +48,7 @@ export function useNarrative({ provider } = {}) {
     });
 
     controller.current = null;
-    if (mounted.current) setState({ phase: 'done', attempt: 0, maxAttempts: 0, result, snapshot: json });
+    if (mounted.current) setState({ phase: 'done', attempt: 0, maxAttempts: 0, result, snapshot: json, generatedAt: new Date().toISOString() });
   }, [provider]);
 
   const cancel = useCallback(() => controller.current?.abort(), []);

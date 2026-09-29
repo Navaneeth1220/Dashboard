@@ -11,6 +11,10 @@ import { INDICATORS, ALL_INDICATOR_IDS, STATE } from '../data/indicatorDefinitio
 import { LAYER0_ITEMS, LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
 import { SECTION_KEYS } from './schema.js';
 import { splitSentences, CONTEXT_KINDS } from './validator.js';
+import { buildAssessmentFacts } from './facts.js';
+import { selectModelFacts } from './prompt.js';
+import { generateNarrative } from './generate.js';
+import { ProviderUnavailableError } from './providers/ollama.js';
 
 export function loadScenario(json) {
   const res = parseAndValidateImport(json);
@@ -64,5 +68,35 @@ export function echoNarrative(facts) {
   return {
     headline: { factIds: [finding.id], text: asSentence(splitSentences(finding.text)[0]) },
     sections: Object.fromEntries(SECTION_KEYS.map(k => [k, part(cited[k])])),
+  };
+}
+
+/**
+ * Scripted generateNarrative results for one assessment (PDF export tests,
+ * docs/ai-report-spec.md, Step 6). The same drafts as the panel test: VALID
+ * passes the validator; INVALID adds a judgement on a missing score (POOR)
+ * and a MARKER sentence that must never leave generateNarrative.
+ */
+export function scriptedResults(assessment) {
+  const modelFacts = selectModelFacts(buildAssessmentFacts(assessment));
+  const asSentence = t => (/[.!?]$/.test(t) ? t : `${t}.`);
+  const partOf = fs => ({ factIds: fs.map(f => f.id), text: fs.map(f => asSentence(f.text)).join(' ') });
+  const headlineFacts = modelFacts.filter(f => f.id === 'F2');
+  const VALID = {
+    headline: { factIds: ['F2'], text: headlineFacts[0].text.split('. ')[0] + '.' },
+    overview: partOf(modelFacts.filter(f => !headlineFacts.includes(f))),
+  };
+  const POOR = 'Mean Time to Contain is poor.';
+  const MARKER = 'This sentence only exists in the rejected draft.';
+  const INVALID = { ...VALID, overview: { ...VALID.overview, text: `${VALID.overview.text} ${POOR} ${MARKER}` } };
+  const reply = value => ({
+    content: JSON.stringify(value), promptEvalCount: 800, evalCount: 180, doneReason: 'stop', durationMs: 1000,
+  });
+  const run = provider => generateNarrative(assessment, { provider });
+  return {
+    VALID, INVALID, POOR, MARKER,
+    ok: () => run(async () => reply(VALID)),
+    failed: () => run(async ({ user }) => (user.includes('Write only') ? reply(INVALID.overview) : reply(INVALID))),
+    unavailable: (reason, message) => run(async () => { throw new ProviderUnavailableError(reason, message); }),
   };
 }
