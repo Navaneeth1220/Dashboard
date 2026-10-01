@@ -95,7 +95,17 @@ decides the matches from engine output. The section is catalogue text
 text have their own tests. `result.actions` carries the matched IDs. In the
 PDF the section is formatted from its structured `blocks` (unless edited).
 
-Next: step C, the AI picks the top 3 recommended actions by entry ID. Also open: the "Cleanup backlog" section at the end of `docs/ai-report-spec.md`
+Where to start (spec Step 9, step C) is on `feature/report-where-to-start`,
+awaiting approval before merging: a second AI-drafted part after the
+overview, with its own call, prompt, schema and loop
+(`WHERE_TO_START_PROMPT`, `buildPicksSchema`, `validatePicks`). The model
+picks min(3, n) of `result.actions` by ID (schema enum) and writes one
+reason each, checked against that action's trigger facts (`triggerFacts`);
+a CRITICAL flag's action must be picked. It runs whatever the
+headline/overview gave and fails or goes unavailable on its own
+(`result.whereToStart`); Recommended actions stays complete.
+
+Also open: the "Cleanup backlog" section at the end of `docs/ai-report-spec.md`
 (`SCORE_LEVEL` duplicate in `Layer0ItemCard`, "poor" vs "Developing" in the
 cross-indicator advisories, 18 pre-existing lint warnings), on `main` or a
 short-lived branch from it.
