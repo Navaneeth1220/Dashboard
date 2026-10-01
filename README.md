@@ -63,38 +63,27 @@ Chapter 5.
 Below the dashboard's panels, **Generate report** produces a short
 management summary of the current assessment. It is a hybrid:
 
-- Six sections (measured performance, gaps and missing evidence,
-  foundations and flags, priorities, targets, recommended actions) are
-  generated from the
-  assessment by fixed templates, using the dashboard's own labels. They are
-  labelled "Generated from the assessment" and need no model. Targets gives,
-  for each measured indicator below score 4, the value it needs for the
-  next score level, taken from the scoring bands; a programme gap gets the
-  step that comes first (define the objective, or establish the
-  capability) instead of a number, and an indicator without a score gets
-  no target. Recommended actions lists the entries of the reviewed action
-  catalogue (`docs/action-catalogue.md`) that match the assessment, with
-  steps, why each matters, who acts, and the NIS2 and IEC 62443
-  references; missing evidence only ever leads to an action that makes the
-  next assessment measurable.
-- The headline and the overview are drafted by a local language model
-  (Ollama, `qwen2.5:7b`) from a pre-worded list of facts, and checked by a
-  validator before they are shown. They are labelled "AI-drafted — review
-  before use". A draft that still fails validation after three attempts is
-  not shown; the generated sections still are.
+- **AI-drafted** (labelled "AI-drafted — review before use"): the headline,
+  the overview and **Where to start**, which picks up to three of the
+  matched recommended actions, each with one sentence on the finding it
+  addresses. A local language model (Ollama, `qwen2.5:7b`) writes them from
+  a pre-worded list of facts, and a validator checks every part before it
+  is shown; an action for a critical flag is always among the picks. A
+  part that still fails after three attempts is not shown, and the rest of
+  the report is unaffected.
+- **Generated from the assessment** by fixed templates, no model: measured
+  performance, gaps and missing evidence, foundations and flags,
+  priorities, **Targets** (the value each measured indicator below score 4
+  needs for its next level) and **Recommended actions** (the entries of the
+  reviewed action catalogue, `docs/action-catalogue.md`, that match the
+  assessment, with NIS2 and IEC 62443 references).
 
 The model runs on your own machine; no assessment data leaves it. Every
-part can be edited before copying; edited parts are labelled as such and
-listed in the copied text. The design, its rules and the validator's
-checks are in `docs/ai-report-spec.md`.
-
-**Download PDF** saves the report as a PDF file in one click (for example
-`Westmaas_2026-01-01_report.pdf`), with the current text including edits,
-each part's label, a "Scores at a glance" table, page numbers and the
-model name. It is made in the browser and works offline; the font
-(Liberation Sans, SIL Open Font License) is bundled in
-`src/assets/fonts/`. When the assessment has changed since the report was
-generated, the button is disabled until the report is generated again.
+part can be edited; edits are labelled. **Copy** and **Download PDF**
+(for example `Westmaas_2026-01-01_report.pdf`, made in the browser,
+offline, with the bundled Liberation Sans font) include the current text
+and each part's label. The design, the validator's checks and the known
+limitations are in `docs/ai-report-spec.md`.
 
 ### Setup
 
