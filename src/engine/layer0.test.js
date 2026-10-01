@@ -199,10 +199,10 @@ describe('RM-05 four-state severity mapping', () => {
     expect(r.severity).toBeNull();
   });
 
-  it('no_remediated_vulnerabilities message contains the "interpret alongside RM-04" caveat and does NOT read as all-clear', () => {
+  it('no_remediated_vulnerabilities message contains the "interpret alongside Vulnerability Remediation Rate" caveat and does NOT read as all-clear', () => {
     const r = evaluateItem('RM-05', { state: L0_STATE.NO_REMEDIATED_VULNERABILITIES });
     // Exact caveat phrase required by spec (RM-05 non-event is ambiguous, not positive)
-    expect(r.message).toContain('interpret alongside RM-04');
+    expect(r.message).toContain('interpret alongside Vulnerability Remediation Rate');
     // Must NOT imply "all clear" / good / no issues
     expect(r.message).not.toMatch(/all clear|no issues|good|healthy|fine/i);
   });

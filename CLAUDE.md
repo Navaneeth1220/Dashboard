@@ -108,6 +108,13 @@ goes unavailable on its own (`result.whereToStart`); Recommended actions
 stays complete. Process facts use the band form ("60%, in the 50–69% band,
 which is below target").
 
+No internal IDs in user-facing text is merged into `main` (tag `v1.6`):
+engine and data messages (Rules A/B/D, import errors) use `displayName()`,
+dimensions show their full names, and `src/components/noIds-ui.test.jsx`
+(scenarios, crafted states and a property test) fails on any ID, fact ID or
+bare IH/BC in rendered text. User-typed text and a file's unknown keys are
+shown as they are.
+
 Also open: the "Cleanup backlog" section at the end of `docs/ai-report-spec.md`
 (`SCORE_LEVEL` duplicate in `Layer0ItemCard`, "poor" vs "Developing" in the
 cross-indicator advisories, 18 pre-existing lint warnings), on `main` or a

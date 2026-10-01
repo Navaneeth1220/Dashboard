@@ -233,7 +233,7 @@ describe('OverallPanel score hierarchy', () => {
     // one secondary Overall block, explicitly labelled
     const secondary = container.querySelector('[data-score-role="secondary"]');
     expect(secondary).not.toBeNull();
-    expect(secondary.textContent).toMatch(/Overall — secondary summary of IH and BC/i);
+    expect(secondary.textContent).toMatch(/Overall — secondary summary of Incident Handling and Business Continuity/i);
     // the Overall value itself is unchanged (still mean(IH,BC), rendered 2dp)
     const expected = ((results.ih.score + results.bc.score) / 2).toFixed(2);
     expect(secondary.textContent).toContain(expected);

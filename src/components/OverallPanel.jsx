@@ -3,7 +3,7 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, Tooltip,
 } from 'recharts';
 import { INDICATORS } from '../data/indicatorDefinitions.js';
-import { formatScore } from '../data/displayNames.js';
+import { formatScore, DIMENSION_NAMES } from '../data/displayNames.js';
 
 // Primary dimension score — IH and BC are the headline outputs.
 function DimensionSummary({ label, result }) {
@@ -64,8 +64,8 @@ export default function OverallPanel({ ih, bc, overall, indicatorResults }) {
       <div style={{ padding: '16px' }}>
         {/* IH + BC dimension row — PRIMARY */}
         <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
-          <DimensionSummary label="Incident Handling (IH)" result={ih} />
-          <DimensionSummary label="Business Continuity (BC)" result={bc} />
+          <DimensionSummary label={DIMENSION_NAMES.IH} result={ih} />
+          <DimensionSummary label={DIMENSION_NAMES.BC} result={bc} />
         </div>
 
         {/* Overall — SECONDARY, demoted and explicitly labelled */}
@@ -75,7 +75,7 @@ export default function OverallPanel({ ih, bc, overall, indicatorResults }) {
           backgroundColor: '#f3f4f6', border: '1px dashed #d1d5db', borderRadius: '6px',
         }}>
           <span style={{ fontSize: '11px', color: '#6b7280' }}>
-            Overall — secondary summary of IH and BC
+            Overall — secondary summary of Incident Handling and Business Continuity
           </span>
           <ScoreBadge score={overall.score} size="sm" />
           {overall.incomplete

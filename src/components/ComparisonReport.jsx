@@ -10,7 +10,7 @@
 
 import { INDICATORS, STATE_PRIORITY_LABELS } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS, L0_STATE_LABELS } from '../data/layer0Definitions.js';
-import { formatScore } from '../data/displayNames.js';
+import { formatScore, DIMENSION_NAMES } from '../data/displayNames.js';
 
 // ── State label helpers (no raw enums ever) ──────────────────────────────────
 
@@ -190,12 +190,14 @@ function dimDeltaText(label, d) {
   return `${label} ${d.direction} ${deltaSign(d.delta)}`;
 }
 
-// IH / BC — PRIMARY, visually dominant.
-function DimRow({ label, dim }) {
+// Incident Handling / Business Continuity — PRIMARY, visually dominant.
+// `code` (IH / BC) is the data-dim hook; the label is the dimension's name.
+function DimRow({ code, dim }) {
+  const label = DIMENSION_NAMES[code];
   if (dim.comparable) {
     const tone = toneFor(dim);
     return (
-      <div data-dim={label} data-score-role="primary" data-comparable="true" style={{
+      <div data-dim={code} data-score-role="primary" data-comparable="true" style={{
         flex: 1, padding: '14px', borderRadius: '8px', textAlign: 'center',
         backgroundColor: tone.bg, border: `2px solid ${tone.color}`,
       }}>
@@ -210,7 +212,7 @@ function DimRow({ label, dim }) {
     );
   }
   return (
-    <div data-dim={label} data-score-role="primary" data-comparable="false" style={{
+    <div data-dim={code} data-score-role="primary" data-comparable="false" style={{
       flex: 1, padding: '14px', borderRadius: '8px', textAlign: 'center',
       backgroundColor: '#f3f4f6', border: '2px solid #d1d5db',
     }}>
@@ -232,7 +234,7 @@ function OverallDimRow({ dim, ih, bc }) {
         padding: '8px 12px', borderRadius: '6px', backgroundColor: '#f3f4f6', border: '1px dashed #d1d5db', marginTop: '8px',
       }}>
         <span style={{ fontSize: '11px', color: '#6b7280' }}>
-          Overall — secondary summary of IH and BC · Not comparable — incomplete in {dim.incompleteIn}.
+          Overall — secondary summary of Incident Handling and Business Continuity · Not comparable — incomplete in {dim.incompleteIn}.
         </span>
       </div>
     );
@@ -248,9 +250,9 @@ function OverallDimRow({ dim, ih, bc }) {
           Mixed — dimensions moved in opposite directions
         </div>
         <div data-mixed-dimensions style={{ fontSize: '12px', color: '#374151', marginTop: '3px' }}>
-          <span style={{ color: toneFor(ih).color, fontWeight: 600 }}>{dimDeltaText('IH', ih)}</span>
+          <span style={{ color: toneFor(ih).color, fontWeight: 600 }}>{dimDeltaText(DIMENSION_NAMES.IH, ih)}</span>
           <span style={{ color: '#9ca3af', margin: '0 6px' }}>·</span>
-          <span style={{ color: toneFor(bc).color, fontWeight: 600 }}>{dimDeltaText('BC', bc)}</span>
+          <span style={{ color: toneFor(bc).color, fontWeight: 600 }}>{dimDeltaText(DIMENSION_NAMES.BC, bc)}</span>
         </div>
         <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '3px' }}>
           Overall (secondary summary) {formatScore(dim.scoreA)} → {formatScore(dim.scoreB)}, net {deltaSign(dim.delta)} —
@@ -269,13 +271,13 @@ function OverallDimRow({ dim, ih, bc }) {
       display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
       padding: '8px 12px', borderRadius: '6px', backgroundColor: '#f3f4f6', border: '1px dashed #d1d5db', marginTop: '8px',
     }}>
-      <span style={{ fontSize: '11px', color: '#6b7280' }}>Overall — secondary summary of IH and BC:</span>
+      <span style={{ fontSize: '11px', color: '#6b7280' }}>Overall — secondary summary of Incident Handling and Business Continuity:</span>
       <span style={{ fontSize: '12px', color: '#374151', fontWeight: 600 }}>
         {formatScore(dim.scoreA)} → {formatScore(dim.scoreB)}, {note}
       </span>
       {movement === 'partial_move' && (
         <span data-mixed-dimensions style={{ fontSize: '11px', color: '#6b7280' }}>
-          ({dimDeltaText('IH', ih)} · {dimDeltaText('BC', bc)})
+          ({dimDeltaText(DIMENSION_NAMES.IH, ih)} · {dimDeltaText(DIMENSION_NAMES.BC, bc)})
         </span>
       )}
     </div>
@@ -356,11 +358,11 @@ export default function ComparisonReport({ comparison }) {
         {/* Dimension comparison — IH & BC primary; Overall a secondary summary */}
         <div style={{ padding: '12px 16px' }}>
           <div style={{ fontSize: '12px', fontWeight: 700, color: '#6b7280', marginBottom: '8px' }}>
-            Dimension deltas <span style={{ fontWeight: 400 }}>— IH and BC are the primary outputs; Overall is a secondary summary</span>
+            Dimension deltas <span style={{ fontWeight: 400 }}>— Incident Handling and Business Continuity are the primary outputs; Overall is a secondary summary</span>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <DimRow label="IH" dim={dimensions.ih} />
-            <DimRow label="BC" dim={dimensions.bc} />
+            <DimRow code="IH" dim={dimensions.ih} />
+            <DimRow code="BC" dim={dimensions.bc} />
           </div>
           <OverallDimRow dim={dimensions.overall} ih={dimensions.ih} bc={dimensions.bc} />
         </div>

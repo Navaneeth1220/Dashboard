@@ -12,7 +12,7 @@
  */
 
 import { INDICATORS, STATE_PRIORITY_LABELS } from '../data/indicatorDefinitions.js';
-import { displayName, formatScore } from '../data/displayNames.js';
+import { displayName, formatScore, DIMENSION_NAMES } from '../data/displayNames.js';
 import { NOT_YET_ASSESSED } from '../data/reportWording.js';
 
 const SCORE_BADGE = { 4: '#1a7f4b', 3: '#2e7d32', 2: '#f59e0b', 1: '#dc2626', 0: '#7f1d1d' };
@@ -193,7 +193,9 @@ function TargetRow({ indicatorId, ind, onTargetChange }) {
   );
 }
 
-function DimensionProjection({ label, dim }) {
+// `code` (IH / BC) is the data-proj-dim hook; the label is the dimension's name.
+function DimensionProjection({ code, dim }) {
+  const label = DIMENSION_NAMES[code];
   const hasScore = Object.prototype.hasOwnProperty.call(dim, 'score');
   const hasSubset = Object.prototype.hasOwnProperty.call(dim, 'subsetScore');
   const capList = dim.assumesCapabilityIndicators ?? [];
@@ -206,7 +208,7 @@ function DimensionProjection({ label, dim }) {
 
   if (hasScore) {
     return (
-      <div data-proj-dim={label} data-proj-kind="complete" style={{
+      <div data-proj-dim={code} data-proj-kind="complete" style={{
         flex: 1, padding: '12px', borderRadius: '6px', backgroundColor: '#f0fdf4',
         border: '1px solid #bbf7d0', textAlign: 'center',
       }}>
@@ -221,7 +223,7 @@ function DimensionProjection({ label, dim }) {
 
   if (hasSubset) {
     return (
-      <div data-proj-dim={label} data-proj-kind="partial" style={{
+      <div data-proj-dim={code} data-proj-kind="partial" style={{
         flex: 1, padding: '12px', borderRadius: '6px', backgroundColor: '#fffbeb',
         border: '1px dashed #f59e0b', textAlign: 'center',
       }}>
@@ -231,7 +233,7 @@ function DimensionProjection({ label, dim }) {
         <div style={{ fontSize: '11px', color: '#92400e', marginTop: '2px' }}>
           {dim.coverage
             ? `Projected average of ${dim.coverage.scored} of ${dim.coverage.total} ${label} indicators — not a complete ${label} score`
-            : `Partial — based on a planning scenario in ${(dim.partialDimensions ?? []).join(', ')} — not a complete ${label} score`}
+            : `Partial — based on a planning scenario in ${(dim.partialDimensions ?? []).map(c => DIMENSION_NAMES[c] ?? c).join(', ')} — not a complete ${label} score`}
         </div>
         <div style={{ fontSize: '20px', fontWeight: 700, color: '#92400e', marginTop: '4px' }}>
           {dim.subsetScore.toFixed(2)}
@@ -248,7 +250,7 @@ function DimensionProjection({ label, dim }) {
 
   // Unscoreable — no number at all
   return (
-    <div data-proj-dim={label} data-proj-kind="unscoreable" style={{
+    <div data-proj-dim={code} data-proj-kind="unscoreable" style={{
       flex: 1, padding: '12px', borderRadius: '6px', backgroundColor: '#f3f4f6',
       border: '1px solid #d1d5db', textAlign: 'center',
     }}>
@@ -300,8 +302,8 @@ function ProjectionSection({ projectionResult, onTargetChange }) {
 
       {/* Projected dimension scores */}
       <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-        <DimensionProjection label="IH" dim={projectionResult.ih} />
-        <DimensionProjection label="BC" dim={projectionResult.bc} />
+        <DimensionProjection code="IH" dim={projectionResult.ih} />
+        <DimensionProjection code="BC" dim={projectionResult.bc} />
         <DimensionProjection label="Overall" dim={projectionResult.overall} />
       </div>
     </div>
