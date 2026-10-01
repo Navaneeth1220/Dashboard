@@ -9,13 +9,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
 import NarrativePanel from './NarrativePanel.jsx';
-import { generateNarrative, DEFAULT_MODEL } from '../report/generate.js';
+import { DEFAULT_MODEL } from '../report/generate.js';
 import { buildAssessmentFacts } from '../report/facts.js';
 import { selectModelFacts } from '../report/prompt.js';
 import { GENERATED_KEYS } from '../report/schema.js';
-import { ProviderUnavailableError } from '../report/providers/ollama.js';
-import { loadScenario } from '../report/testSupport.js';
-import { SECTION_TITLES, NARRATIVE_WORDING as W } from '../data/reportWording.js';
+import { loadScenario, scriptedResults } from '../report/testSupport.js';
+import { SECTION_TITLES, NARRATIVE_WORDING as W, WHERE_TO_START_WORDING as WTS } from '../data/reportWording.js';
 import { downloadReportPdf } from '../report/pdf/download.js';
 import { buildReportDocument } from '../report/pdf/reportDocument.js';
 
@@ -35,18 +34,13 @@ const VALID = {
 };
 const POOR = 'Mean Time to Contain is poor.';
 const MARKER = 'This sentence only exists in the rejected draft.';
-const INVALID = { ...VALID, overview: { ...VALID.overview, text: `${VALID.overview.text} ${POOR} ${MARKER}` } };
 
-const reply = value => ({
-  content: JSON.stringify(value), promptEvalCount: 800, evalCount: 180, doneReason: 'stop', durationMs: 1000,
-});
-
-async function resultWith(provider) {
-  return generateNarrative(ASSESSMENT, { provider });
-}
-const okResult = () => resultWith(vi.fn(async () => reply(VALID)));
-const failedResult = () => resultWith(vi.fn(async ({ user }) => (user.includes('Write only') ? reply(INVALID.overview) : reply(INVALID))));
-const unavailableResult = (reason, message) => resultWith(vi.fn(async () => { throw new ProviderUnavailableError(reason, message); }));
+// The same drafts as above; Where to start (Step 9) passes with `ok` and
+// fails with `failed` (both parts fail), so `failed` still shows no AI part.
+const S = scriptedResults(ASSESSMENT);
+const okResult = () => S.ok();
+const failedResult = () => S.failed();
+const unavailableResult = (reason, message) => S.unavailable(reason, message);
 
 const noop = () => {};
 function renderPanel(props) {
@@ -201,6 +195,7 @@ describe('Copy', () => {
     expect(writeText).toHaveBeenCalledWith([
       'Headline', VALID.headline.text, '',
       'Overview', 'Edited overview text.', '',
+      'Where to start', result.whereToStart.part.text, '',
       'Measured performance', g.measuredPerformance.text, '',
       'Gaps and missing evidence', g.gapsAndMissingEvidence.text, '',
       'Foundations and flags', g.foundationsAndFlags.text, '',
@@ -208,7 +203,7 @@ describe('Copy', () => {
       'Targets', g.targets.text, '',
       'Recommended actions', g.recommendedActions.text, '',
       '---',
-      `AI-drafted with ${DEFAULT_MODEL}, review before use: Headline, Overview.`,
+      `AI-drafted with ${DEFAULT_MODEL}, review before use: Headline, Overview, Where to start.`,
       'Generated from the assessment: Measured performance, Gaps and missing evidence, Foundations and flags, Priorities, Targets, Recommended actions.',
       'Edited after generation: Overview.',
     ].join('\n'));
@@ -354,5 +349,93 @@ describe('Download PDF (Step 6)', () => {
     fireEvent.click(pdfButton());
     await waitFor(() => expect(screen.getByText(W.pdfFailed)).toBeInTheDocument());
     expect(pdfButton()).toBeEnabled();
+  });
+});
+
+describe('Where to start (Step 9)', () => {
+  const keysShown = () => screen.getAllByTestId(/^narrative-part-/).map(el => el.dataset.testid.replace('narrative-part-', ''));
+  const shownText = container => container.textContent + [...container.querySelectorAll('textarea')].map(t => t.value).join(' ');
+
+  it('ok: directly after the overview, AI-drafted, with the catalogue titles and reasons; facts are the trigger facts', async () => {
+    const result = await okResult();
+    expect(result.whereToStart.status).toBe('ok');
+    renderPanel({ result });
+
+    expect(keysShown()).toEqual(['headline', 'overview', 'whereToStart', ...GENERATED_KEYS]);
+    expect(within(partOfPanel('whereToStart')).getByText('Where to start')).toBeInTheDocument();
+    expect(labelOf('whereToStart')).toBe(W.label.ai);
+    expect(textOf('whereToStart')).toBe(result.whereToStart.part.text);
+    expect(textOf('whereToStart').startsWith(WTS.leadIn)).toBe(true);
+    for (const pick of result.whereToStart.picks) {
+      expect(textOf('whereToStart')).toContain(`${pick.title}\n${pick.reason}`);
+    }
+    const facts = within(partOfPanel('whereToStart')).getAllByTestId('narrative-fact').map(li => li.textContent);
+    expect(facts).toEqual(result.whereToStart.part.factIds.map(id => FACTS.find(f => f.id === id).text));
+  });
+
+  it('editable: an edit makes its label "Edited"', async () => {
+    renderPanel({ result: await okResult() });
+    fireEvent.change(within(partOfPanel('whereToStart')).getByRole('textbox'), { target: { value: 'My own start.' } });
+    expect(labelOf('whereToStart')).toBe(W.label.edited);
+    expect(textOf('whereToStart')).toBe('My own start.');
+  });
+
+  it('the headline/overview failed but Where to start passed: it is shown first, with the error list for the others', async () => {
+    const result = await S.failedWithPicks();
+    expect(result.status).toBe('failed');
+    const { container } = renderPanel({ result });
+    expect(screen.getByText(W.failed)).toBeInTheDocument();
+    expect(keysShown()).toEqual(['whereToStart', ...GENERATED_KEYS]);
+    expect(labelOf('whereToStart')).toBe(W.label.ai);
+    expect(shownText(container)).not.toContain(MARKER);
+  });
+
+  it('Where to start failed: a notice with its errors, no part and no rejected text; the rest is shown', async () => {
+    const result = await S.picksFailed();
+    expect(result.status).toBe('ok');
+    expect(result.whereToStart.status).toBe('failed');
+    const { container } = renderPanel({ result });
+
+    expect(keysShown()).toEqual(['headline', 'overview', ...GENERATED_KEYS]);
+    const notice = screen.getByTestId('where-to-start-notice');
+    expect(notice).toHaveTextContent(WTS.failed);
+    expect(within(notice).getAllByTestId('narrative-error')[0]).toHaveTextContent('Write the reason as exactly one sentence.');
+    expect(screen.queryByText(W.failed)).toBeNull();
+    expect(shownText(container)).not.toContain(MARKER);
+    // The notice sits where the part would be: after the overview.
+    expect(partOfPanel('overview').compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('Where to start unavailable: its message; cancelled is neutral', async () => {
+    renderPanel({ result: await S.picksUnavailable('timeout', 'No response from Ollama within 300 s.') });
+    expect(screen.getByTestId('where-to-start-notice')).toHaveTextContent(WTS.unavailable('No response from Ollama within 300 s.'));
+    expect(screen.queryByTestId('narrative-part-whereToStart')).toBeNull();
+  });
+
+  it('Where to start cancelled: neutral, not an error', async () => {
+    renderPanel({ result: await S.picksUnavailable('cancelled', 'Generation was cancelled.') });
+    expect(screen.getByTestId('where-to-start-notice')).toHaveTextContent(WTS.cancelled);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('the whole report unavailable: no separate Where to start notice', async () => {
+    renderPanel({ result: await unavailableResult('timeout', 'No response.') });
+    expect(screen.queryByTestId('where-to-start-notice')).toBeNull();
+  });
+
+  it('running Where to start: its own attempt counter', () => {
+    renderPanel({ phase: 'running', attempt: 1, maxAttempts: 3, attemptPart: 'whereToStart' });
+    expect(screen.getByText('Drafting Where to start… attempt 1 of 3')).toBeInTheDocument();
+  });
+
+  it('Copy leaves a failed Where to start out', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    renderPanel({ result: await S.picksFailed() });
+    fireEvent.click(screen.getByRole('button', { name: W.copy }));
+    const text = writeText.mock.calls[0][0];
+    expect(text).not.toContain('Where to start');
+    expect(text).not.toContain(MARKER);
+    expect(text).toContain(`AI-drafted with ${DEFAULT_MODEL}, review before use: Headline, Overview.`);
   });
 });

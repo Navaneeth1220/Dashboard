@@ -7,12 +7,14 @@
  * result arrives. Which parts are shown, their text and label come from
  * reportParts (shared with Copy and the PDF, Step 6). On `failed` and `unavailable` only the generated sections are
  * shown; model text never reaches this panel then (the result carries none).
+ * Where to start (Step 9) has its own status: a failed or unavailable Where
+ * to start gets a notice where the part would be, never its text.
  */
 
 import { useState, useRef, useLayoutEffect } from 'react';
 import { reportParts, provenanceLines } from '../report/reportParts.js';
 import { downloadReportPdf } from '../report/pdf/download.js';
-import { SECTION_TITLES, NARRATIVE_WORDING as W } from '../data/reportWording.js';
+import { SECTION_TITLES, NARRATIVE_WORDING as W, WHERE_TO_START_WORDING as WTS } from '../data/reportWording.js';
 
 const LABEL_STYLE = {
   ai:        { backgroundColor: '#fef3c7', color: '#92400e' },
@@ -144,7 +146,37 @@ function Failed({ errors }) {
   );
 }
 
-export default function NarrativePanel({ phase, attempt, maxAttempts, result, generatedAt, model, stale, onGenerate, onCancel }) {
+/**
+ * Where to start failed or unavailable (Step 9): a notice in its place. Not
+ * shown when the whole report is unavailable (that notice covers it).
+ */
+function WhereToStartNotice({ result }) {
+  const own = result.whereToStart;
+  if (result.status === 'unavailable' || !own || !['failed', 'unavailable'].includes(own.status)) return null;
+  const neutral = { fontSize: '13px', color: '#6b7280', marginBottom: '14px' };
+  const alert = { fontSize: '13px', color: '#7f1d1d', backgroundColor: '#fef2f2', border: '1px solid #fecaca',
+    borderRadius: '6px', padding: '10px 12px', marginBottom: '14px' };
+  if (own.status === 'unavailable' && own.reason === 'cancelled') {
+    return <div data-testid="where-to-start-notice" style={neutral}>{WTS.cancelled}</div>;
+  }
+  if (own.status === 'unavailable') {
+    return <div data-testid="where-to-start-notice" role="alert" style={alert}>{WTS.unavailable(own.message)}</div>;
+  }
+  return (
+    <div data-testid="where-to-start-notice" role="alert" style={alert}>
+      <div style={{ fontWeight: 700 }}>{WTS.failed}</div>
+      <ul style={{ margin: '6px 0 0', paddingLeft: '18px' }}>
+        {own.errors.map((e, i) => (
+          <li key={i} data-testid="narrative-error">{e.title ? `${e.title}: ` : ''}{e.detail}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default function NarrativePanel({
+  phase, attempt, maxAttempts, attemptPart = null, result, generatedAt, model, stale, onGenerate, onCancel,
+}) {
   // Edits and the Copy and PDF status belong to one result; a new result drops them.
   const [local, setLocal] = useState({ source: null, texts: {}, copy: null, pdf: null });
   const own = local.source === result ? local : { source: result, texts: {}, copy: null, pdf: null };
@@ -154,6 +186,8 @@ export default function NarrativePanel({ phase, attempt, maxAttempts, result, ge
   const shown = phase === 'done' ? result : null;
   const parts = reportParts(shown, own.texts);
   const preparing = own.pdf === 'preparing';
+  // A failed or unavailable Where to start: its notice goes where the part would be.
+  const noticeAt = parts.findIndex(p => p.key === 'overview') + 1;
 
   const onChange = (key, value) => setLocal({ ...own, texts: { ...own.texts, [key]: value }, copy: null, pdf: null });
   const onCopy = async () => {
@@ -193,7 +227,8 @@ export default function NarrativePanel({ phase, attempt, maxAttempts, result, ge
       <div style={{ padding: '14px 16px' }}>
         {running && (
           <div style={{ fontSize: '13px', color: '#374151' }}>
-            {attempt > 0 ? W.attempt(attempt, maxAttempts) : W.generating}
+            {attempt === 0 ? W.generating
+              : attemptPart === 'whereToStart' ? WTS.attempt(attempt, maxAttempts) : W.attempt(attempt, maxAttempts)}
           </div>
         )}
 
@@ -208,8 +243,11 @@ export default function NarrativePanel({ phase, attempt, maxAttempts, result, ge
             {shown.status === 'failed' && <Failed errors={shown.errors} />}
             {shown.status === 'unavailable' && <Unavailable result={shown} model={model} />}
 
-            {parts.map(part => (
-              <Part key={part.key} part={part} facts={shown.facts} onChange={onChange} />
+            {parts.map((part, i) => (
+              <div key={part.key}>
+                {i === noticeAt && <WhereToStartNotice result={shown} />}
+                <Part part={part} facts={shown.facts} onChange={onChange} />
+              </div>
             ))}
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>

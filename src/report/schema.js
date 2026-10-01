@@ -65,3 +65,59 @@ export function buildOutputSchema(factIds) {
     additionalProperties: false,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Where to start (Step 9): its own call, schema and validation
+// ---------------------------------------------------------------------------
+
+/** The Where to start part. Not in MODEL_PARTS or SECTION_KEYS: it has its own call and validator. */
+export const WHERE_TO_START_KEY = 'whereToStart';
+
+/** At most this many actions are picked. */
+export const MAX_PICKS = 3;
+
+/** The number of picks for n matched actions: all of them when n ≤ MAX_PICKS. */
+export function pickCount(n) {
+  return Math.min(MAX_PICKS, n);
+}
+
+/**
+ * buildPicksSchema(actionIds) → JSON Schema for { picks: [{ actionId, reason }] },
+ * exactly pickCount(n) picks; actionId (an enum of the matched action IDs)
+ * comes before reason, so the model picks first and then writes. A pick's
+ * facts are its trigger facts, decided by the engine, so the model sends none.
+ */
+export function buildPicksSchema(actionIds) {
+  const count = pickCount(actionIds.length);
+  return {
+    type: 'object',
+    properties: {
+      picks: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            actionId: { type: 'string', enum: [...actionIds] },
+            reason: { type: 'string', minLength: 1 },
+          },
+          required: ['actionId', 'reason'],
+          additionalProperties: false,
+        },
+        minItems: count,
+        maxItems: count,
+      },
+    },
+    required: ['picks'],
+    additionalProperties: false,
+  };
+}
+
+/** The schema of a single-pick repair call: one reason. */
+export function buildReasonSchema() {
+  return {
+    type: 'object',
+    properties: { reason: { type: 'string', minLength: 1 } },
+    required: ['reason'],
+    additionalProperties: false,
+  };
+}

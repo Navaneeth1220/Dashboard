@@ -128,6 +128,19 @@ export function stripTargetSentence(text) {
   return i === -1 ? text : text.slice(0, i);
 }
 
+/** The kinds of an item's own fact: the facts that can explain why an action matched. */
+export const TRIGGER_FACT_KINDS = new Set(['scored', 'gap_zero', 'no_score', 'l0_flag', 'process']);
+
+/**
+ * triggerFacts(facts, triggers) → the own facts of the triggering indicators
+ * and items, in fact order (Step 9). Recommended actions cites these for all
+ * matched triggers; Where to start, per action.
+ */
+export function triggerFacts(facts, triggers) {
+  const ids = new Set(triggers);
+  return facts.filter(f => TRIGGER_FACT_KINDS.has(f.kind) && f.refs.some(id => ids.has(id)));
+}
+
 const CLIENT_PATTERN = /^Assessment of "(.*)", (?:dated .*|undated)\.$/;
 
 /**
@@ -358,15 +371,23 @@ function layer0Facts(assessment, layer0) {
     const valid = result.state === L0_STATE.MEASURED && !result.invalidInput;
     const value = valid ? withUnit(measuredValue(def, assessment?.layer0?.[id] ?? {}, result), def.valueUnit) : null;
     const message = result.message ? withDisplayNames(result.message) : null;
+    const band = valid ? (def.processBands[result.processScore] ?? null) : null;
     const parts = [];
 
     if (flag) parts.push(severityPrefix(flag.severity));
-    if (result.state === L0_STATE.MEASURED) {
-      parts.push(valid ? `${displayName(id)}: ${value}.` : `${displayName(id)}: invalid value entered.`);
+    if (band?.band) {
+      // The band form of the generated section, instead of the engine's
+      // "below target (50–69%)", which was read as a target the value missed.
+      const advice = band.advice ? ` — ${band.advice}` : '';
+      parts.push(`${displayName(id)}: ${value}, in the ${band.band} band, which is ${band.verdict}${advice}.`);
     } else {
-      parts.push(`${displayName(id)}: ${lowerFirst(L0_STATE_LABELS[result.state])}.`);
+      if (result.state === L0_STATE.MEASURED) {
+        parts.push(valid ? `${displayName(id)}: ${value}.` : `${displayName(id)}: invalid value entered.`);
+      } else {
+        parts.push(`${displayName(id)}: ${lowerFirst(L0_STATE_LABELS[result.state])}.`);
+      }
+      if (message) parts.push(message);
     }
-    if (message) parts.push(message);
     parts.push('Process evidence, not scored.');
 
     facts.push(fact('process', parts.join(' '), [id], {
@@ -374,7 +395,7 @@ function layer0Facts(assessment, layer0) {
       state: result.state,
       value,
       severity: flag?.severity ?? null,
-      band: valid ? (def.processBands[result.processScore] ?? null) : null,
+      band,
       message,
     }));
   }

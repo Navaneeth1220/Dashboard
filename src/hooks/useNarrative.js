@@ -9,12 +9,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { generateNarrative } from '../report/generate.js';
 
-const IDLE = { phase: 'idle', attempt: 0, maxAttempts: 0, result: null, snapshot: null, generatedAt: null };
+const IDLE = { phase: 'idle', attempt: 0, maxAttempts: 0, attemptPart: null, result: null, snapshot: null, generatedAt: null };
 
 /**
  * useNarrative({ provider? }) →
- *   { phase: 'idle' | 'running' | 'done', attempt, maxAttempts, result, snapshot, generatedAt, generate, cancel }
+ *   { phase: 'idle' | 'running' | 'done', attempt, maxAttempts, attemptPart, result, snapshot, generatedAt, generate, cancel }
  *
+ * attemptPart: the part being drafted, 'summary' or 'whereToStart' (Step 9); null when not running.
  * generatedAt: ISO time the result arrived (the PDF's "Generated", Step 6).
  *
  * provider exists only for tests; the app uses generateNarrative's default.
@@ -37,18 +38,20 @@ export function useNarrative({ provider } = {}) {
     const ctrl = new AbortController();
     controller.current = ctrl;
     const json = JSON.stringify(snapshot);
-    setState(s => ({ ...s, phase: 'running', attempt: 0, maxAttempts: 0 }));
+    setState(s => ({ ...s, phase: 'running', attempt: 0, maxAttempts: 0, attemptPart: null }));
 
     const result = await generateNarrative(snapshot, {
       ...(provider ? { provider } : {}),
       signal: ctrl.signal,
-      onAttempt: ({ attempt, maxAttempts }) => {
-        if (mounted.current) setState(s => ({ ...s, attempt, maxAttempts }));
+      onAttempt: ({ attempt, maxAttempts, part }) => {
+        if (mounted.current) setState(s => ({ ...s, attempt, maxAttempts, attemptPart: part }));
       },
     });
 
     controller.current = null;
-    if (mounted.current) setState({ phase: 'done', attempt: 0, maxAttempts: 0, result, snapshot: json, generatedAt: new Date().toISOString() });
+    if (mounted.current) {
+      setState({ phase: 'done', attempt: 0, maxAttempts: 0, attemptPart: null, result, snapshot: json, generatedAt: new Date().toISOString() });
+    }
   }, [provider]);
 
   const cancel = useCallback(() => controller.current?.abort(), []);

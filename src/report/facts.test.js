@@ -12,7 +12,8 @@ import * as fc from 'fast-check';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
 import followUpJson from '../../scenarios/Westmaas_2026-06-01_assessment.json?raw';
 import sparseJson from '../../scenarios/Oudendijk_2026-03-01_assessment.json?raw';
-import { buildAssessmentFacts, stripAssessorNote, FACT_KINDS } from './facts.js';
+import { buildAssessmentFacts, stripAssessorNote, FACT_KINDS, triggerFacts, TRIGGER_FACT_KINDS } from './facts.js';
+import { matchAssessmentActions } from '../engine/actions.js';
 import { loadScenario, assessmentArb } from './testSupport.js';
 import { computeAssessment, createBlankAssessment, scoreIndicator } from '../engine/scoring.js';
 import { computeGapAnalysis } from '../engine/projection.js';
@@ -122,9 +123,9 @@ describe('Westmaas baseline', () => {
       { id: 'F15', kind: 'l0_flag', refs: ['L0-bc-plan-tested'],
         text: 'HIGH. No BC plan test was performed during the assessment period — a scheduled action was not completed.' },
       { id: 'F16', kind: 'process', refs: ['RM-04'],
-        text: 'MEDIUM NOTE. Vulnerability Remediation Rate: 60%. Vulnerability remediation rate is below target (50–69%) — moderate programme improvement warranted. Process evidence, not scored.' },
+        text: 'MEDIUM NOTE. Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted. Process evidence, not scored.' },
       { id: 'F17', kind: 'process', refs: ['RM-05'],
-        text: 'Mean Time to Remediate: 75 days. Mean time to remediate is satisfactory (31–90 days) — continue monitoring. Process evidence, not scored.' },
+        text: 'Mean Time to Remediate: 75 days, in the 31–90 days band, which is satisfactory — continue monitoring. Process evidence, not scored.' },
       { id: 'F18', kind: 'advisory', refs: ['L0-multi-homed', 'IH-08'],
         text: 'Zero uncontrolled multi-homed devices is in a weak state (Uncontrolled multi-homing found) and Mean Time to Contain is not measurable. Establishing the architecture foundation and the evidence needed to measure Mean Time to Contain are both measurement-readiness actions — address them together.' },
       { id: 'F19', kind: 'advisory', refs: ['L0-multi-homed', 'BC-02'],
@@ -741,5 +742,77 @@ describe('no-score group count', () => {
         expect(stripAssessorNote(f.text).includes(`It is one of ${size} effectiveness indicators`)).toBe(size >= 2);
       }
     }), { numRuns: 200 });
+  });
+});
+
+// ─── Step 9: trigger facts ────────────────────────────────────────────────────
+
+describe('triggerFacts (Step 9)', () => {
+  const rec = loadScenario(baselineJson);
+  const facts = buildAssessmentFacts(rec);
+  const ids = triggers => triggerFacts(facts, triggers).map(f => f.id);
+
+  it('the own facts of the triggering items, in fact order', () => {
+    expect([...TRIGGER_FACT_KINDS].sort()).toEqual(['gap_zero', 'l0_flag', 'no_score', 'process', 'scored']);
+    expect(ids(['IH-07'])).toEqual(['F5']);
+    expect(ids(['IH-08'])).toEqual(['F6']);
+    expect(ids(['BC-09'])).toEqual(['F11']);
+    expect(ids(['L0-multi-homed'])).toEqual(['F13']);
+    expect(ids(['RM-04'])).toEqual(['F16']);
+    expect(ids(['L0-bc-plan-tested', 'IH-07'])).toEqual(['F5', 'F15']);
+    expect(ids([])).toEqual([]);
+  });
+
+  it('Westmaas: one fact per matched action', () => {
+    const perAction = Object.fromEntries(matchAssessmentActions(rec).map(a => [a.id, ids(a.triggers)]));
+    expect(perAction).toEqual({
+      'ACT-IH-04': ['F5'], 'ACT-IH-06': ['F6'], 'ACT-BC-02': ['F8'], 'ACT-BC-03': ['F9'], 'ACT-BC-05': ['F10'],
+      'ACT-BC-08': ['F11'], 'ACT-L0-03': ['F14'], 'ACT-L0-05': ['F13'], 'ACT-L0-08': ['F15'], 'ACT-RM-02': ['F16'],
+    });
+  });
+
+  it('property: every trigger of every matched action has exactly one own fact', () => {
+    fc.assert(fc.property(assessmentArb, a => {
+      const fs = buildAssessmentFacts(a);
+      for (const action of matchAssessmentActions(a)) {
+        for (const id of action.triggers) {
+          expect(triggerFacts(fs, [id])).toHaveLength(1);
+        }
+      }
+    }), { numRuns: 200 });
+  });
+});
+
+// ─── Process facts in the band form (second Where to start manual check) ─────
+
+describe('process facts: the band form for a band with a range', () => {
+  it('June follow-up: the same band form', () => {
+    const facts = buildAssessmentFacts(loadScenario(followUpJson));
+    expect(facts.find(f => f.refs[0] === 'RM-04').text).toBe('MEDIUM NOTE. Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted. Process evidence, not scored.');
+    expect(facts.find(f => f.refs[0] === 'RM-05').text).toBe('Mean Time to Remediate: 75 days, in the 31–90 days band, which is satisfactory — continue monitoring. Process evidence, not scored.');
+  });
+
+  it('every band of both items; a band without a range keeps the engine message', () => {
+    const cases = [
+      ['RM-04', { numerator: '0', denominator: '10' }, 'CRITICAL. Vulnerability Remediation Rate: 0%. Vulnerability remediation rate: 0% — no vulnerabilities are being addressed. Process evidence, not scored.'],
+      ['RM-04', { numerator: '4', denominator: '10' }, 'HIGH. Vulnerability Remediation Rate: 40%, in the < 50% band, which is very low — remediation programme is largely ineffective. Process evidence, not scored.'],
+      ['RM-04', { numerator: '8', denominator: '10' }, 'Vulnerability Remediation Rate: 80%, in the 70–89% band, which is satisfactory — continue monitoring. Process evidence, not scored.'],
+      ['RM-05', { value: '400' }, 'CRITICAL. Mean Time to Remediate: 400 days. Mean time to remediate exceeds 1 year — vulnerabilities remain exposed for an unacceptably long period. Process evidence, not scored.'],
+      ['RM-05', { value: '200' }, 'HIGH. Mean Time to Remediate: 200 days, in the 181–365 days band, which is very slow — vulnerabilities remain exposed for an extended period. Process evidence, not scored.'],
+      ['RM-05', { value: '120' }, 'MEDIUM NOTE. Mean Time to Remediate: 120 days, in the 91–180 days band, which is below target — moderate improvement warranted. Process evidence, not scored.'],
+    ];
+    for (const [id, input, text] of cases) {
+      const rec = loadScenario(baselineJson);
+      rec.layer0[id] = { state: 'measured', ...input };
+      expect(buildAssessmentFacts(rec).find(f => f.kind === 'process' && f.refs[0] === id).text).toBe(text);
+    }
+  });
+
+  it('property: no process fact reads a band range as a target ("below target (…)")', () => {
+    fc.assert(fc.property(assessmentArb, a => {
+      for (const f of buildAssessmentFacts(a).filter(x => x.kind === 'process')) {
+        expect(f.text).not.toMatch(/\b(?:below target|satisfactory|very low|very slow) \(/);
+      }
+    }), { numRuns: 300 });
   });
 });

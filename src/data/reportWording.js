@@ -172,6 +172,22 @@ export const ACTION_WORDING = {
 };
 
 // ---------------------------------------------------------------------------
+// Where to start (docs/ai-report-spec.md, Step 9)
+// ---------------------------------------------------------------------------
+
+/** The frame around the AI-drafted picks; titles come from the catalogue, reasons from the model. */
+export const WHERE_TO_START_WORDING = {
+  leadIn:
+    'Actions to start with, chosen by the AI draft from the recommended actions; they are not ranked. ' +
+    'Every matched action is listed under Recommended actions.',
+  failed:
+    'Where to start did not pass validation and is not shown. Every matched action is listed under Recommended actions.',
+  unavailable: message => `Where to start could not be drafted: ${message}`,
+  cancelled:   'Where to start was cancelled.',
+  attempt:     (attempt, maxAttempts) => `Drafting Where to start… attempt ${attempt} of ${maxAttempts}`,
+};
+
+// ---------------------------------------------------------------------------
 // Lead-ins of the generated sections
 // ---------------------------------------------------------------------------
 
@@ -191,6 +207,7 @@ export const LEAD_IN = {
 export const SECTION_TITLES = {
   headline:               'Headline',
   overview:               'Overview',
+  whereToStart:           'Where to start',
   measuredPerformance:    'Measured performance',
   gapsAndMissingEvidence: 'Gaps and missing evidence',
   foundationsAndFlags:    'Foundations and flags',

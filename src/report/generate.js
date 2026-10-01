@@ -13,17 +13,31 @@
  * against all facts; the generated sections are not validated at runtime
  * (a property test covers them).
  *
+ * Where to start (Step 9) follows as its own stage, whatever the headline
+ * and overview gave (unless the provider was unavailable): the model picks
+ * min(3, n) of the matched actions and writes one reason each. A broken set
+ * of picks is asked for again whole; otherwise only the failing reasons are
+ * repaired, one call each, and passing picks are kept exactly. Its failure
+ * or unavailability never touches the rest of the report.
+ *
  * It never throws. `generated` is returned whatever the status. A draft that
- * fails validation is never returned: `failed` carries no narrative, and
- * attempt records hold errors and token counts only.
+ * fails validation is never returned: `failed` carries no narrative (and a
+ * failed Where to start no picks), and attempt records hold errors and token
+ * counts only.
  */
 
-import { buildAssessmentFacts } from './facts.js';
-import { SYSTEM_PROMPT, SECTION_DESCRIPTIONS, buildUserMessage, selectModelFacts } from './prompt.js';
-import { buildOutputSchema, buildSectionSchema, MODEL_PARTS, GENERATED_KEYS } from './schema.js';
-import { buildGeneratedSections } from './templates.js';
+import { buildAssessmentFacts, triggerFacts } from './facts.js';
+import {
+  SYSTEM_PROMPT, SECTION_DESCRIPTIONS, buildUserMessage, selectModelFacts,
+  WHERE_TO_START_PROMPT, buildWhereToStartMessage, buildPickMessage,
+} from './prompt.js';
+import {
+  buildOutputSchema, buildSectionSchema, buildPicksSchema, buildReasonSchema, MODEL_PARTS, GENERATED_KEYS, WHERE_TO_START_KEY,
+} from './schema.js';
+import { buildGeneratedSections, buildWhereToStartPart } from './templates.js';
 import { matchAssessmentActions } from '../engine/actions.js';
-import { validateNarrative, CONTEXT_KINDS } from './validator.js';
+import { ACTION_CATALOGUE } from '../data/actionCatalogue.js';
+import { validateNarrative, validatePicks, CONTEXT_KINDS } from './validator.js';
 import { callOllama, OLLAMA_OPTIONS, ProviderUnavailableError } from './providers/ollama.js';
 
 export const DEFAULT_MODEL = 'qwen2.5:7b';
@@ -38,6 +52,7 @@ export const RETRY_TEMPERATURE = 0.5;
 const ORIGIN = Object.fromEntries([
   ...MODEL_PARTS.map(key => [key, 'ai']),
   ...GENERATED_KEYS.map(key => [key, 'generated']),
+  [WHERE_TO_START_KEY, 'ai'],
 ]);
 
 /** The unavailable reason an error from the provider maps to (a plain error is provider_error). */
@@ -45,11 +60,21 @@ function reasonOf(error) {
   return error instanceof ProviderUnavailableError ? error.reason : 'provider_error';
 }
 
+/** A provider error as { reason, message }. */
+function unavailableOf(error) {
+  const e = error instanceof ProviderUnavailableError
+    ? error
+    : new ProviderUnavailableError('provider_error', String(error?.message ?? error));
+  return { reason: e.reason, message: e.message };
+}
+
+const UNPARSEABLE_DETAIL = 'The response was cut off or was not valid JSON.';
+
 const UNPARSEABLE = {
   section: null,
   sentence: null,
   rule: 'shape',
-  detail: 'The response was cut off or was not valid JSON.',
+  detail: UNPARSEABLE_DETAIL,
 };
 
 /** The parsed reply as an object, or null when it was cut off, is not JSON, or is not an object. */
@@ -125,11 +150,8 @@ function withoutSentences(errors) {
   return errors.map(e => ({ ...e, sentence: null }));
 }
 
-function record(attempt, section, errors, response) {
+function counts(response) {
   return {
-    attempt,
-    section,
-    errors,
     promptEvalCount: response?.promptEvalCount ?? null,
     evalCount: response?.evalCount ?? null,
     doneReason: response?.doneReason ?? null,
@@ -137,55 +159,25 @@ function record(attempt, section, errors, response) {
   };
 }
 
+function record(attempt, section, errors, response) {
+  return { attempt, section, errors, ...counts(response) };
+}
+
 /**
- * generateNarrative(assessment, options) →
- *   { status: 'ok' | 'failed' | 'unavailable', reason?, message?, narrative, generated, origin,
- *     errors, facts, actions, attempts, model }
- *
- * actions: the matched catalogue entries, [{ id, triggers }] (Step 8).
- *
- * narrative (ok only): { headline, sections: { overview, ...generated } }.
- * origin: 'ai' | 'generated' per part. No error carries a sentence unless
- * keepSentences is set.
+ * The headline and overview (Step 4) → { status, reason?, message?, narrative, errors }.
+ * `run` holds what both stages share: the provider call, progress, attempts.
  */
-export async function generateNarrative(assessment, {
-  model = DEFAULT_MODEL,
-  provider = callOllama,
-  maxAttempts = 3,
-  timeoutMs,
-  signal,
-  onAttempt,
-  keepSentences = false,
-} = {}) {
-  const returned = errs => (keepSentences ? errs : withoutSentences(errs));
-  const facts = buildAssessmentFacts(assessment);
-  const modelFacts = selectModelFacts(facts);
-  const actions = matchAssessmentActions(assessment);
-  const generated = buildGeneratedSections(facts, actions);
+async function draftSummary(run, { facts, modelFacts, generated }) {
   const schema = buildOutputSchema(modelFacts.map(f => f.id));
   const baseMessage = buildUserMessage(modelFacts);
-  const attempts = [];
-  const common = { generated, origin: ORIGIN, facts, actions, attempts, model };
   let draft = null;   // the model's current { headline, overview }, once one is usable
   let errors = [];
 
-  const unavailable = error => {
-    const e = error instanceof ProviderUnavailableError
-      ? error
-      : new ProviderUnavailableError('provider_error', String(error?.message ?? error));
-    return { status: 'unavailable', reason: e.reason, message: e.message, narrative: null, errors: [], ...common };
-  };
+  const unavailable = error => ({ status: 'unavailable', ...unavailableOf(error), narrative: null, errors: [] });
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      onAttempt?.({ attempt, maxAttempts });
-    } catch (error) {
-      console.warn(`onAttempt callback threw; continuing generation: ${error?.message ?? error}`);
-    }
-    const temperature = attempt === 1 ? OLLAMA_OPTIONS.temperature : RETRY_TEMPERATURE;
-    const call = async (user, callSchema) => provider({
-      model, system: SYSTEM_PROMPT, user, schema: callSchema, temperature, timeoutMs, signal,
-    });
+  for (let attempt = 1; attempt <= run.maxAttempts; attempt++) {
+    run.progress(attempt, 'summary');
+    const call = (user, callSchema) => run.call(SYSTEM_PROMPT, attempt, user, callSchema);
 
     const failing = draft === null ? [] : MODEL_PARTS.filter(key => errors.some(e => e.section === key));
 
@@ -208,7 +200,7 @@ export async function generateNarrative(assessment, {
       }
       draft = parseObject(response);
       errors = draft === null ? [UNPARSEABLE] : validateDraft(draft, facts);
-      attempts.push(record(attempt, null, returned(errors), response));
+      run.attempts.push(record(attempt, null, run.returned(errors), response));
     } else {
       // Repair each failing part; a part that passed stays exactly as it is.
       const calls = [];
@@ -236,15 +228,172 @@ export async function generateNarrative(assessment, {
         ...validated.filter(e => e.section === key),
       ]);
       for (const { key, response } of calls) {
-        attempts.push(record(attempt, key, returned(errors.filter(e => e.section === key)), response));
+        run.attempts.push(record(attempt, key, run.returned(errors.filter(e => e.section === key)), response));
       }
     }
 
     if (errors.length === 0) {
       const narrative = { headline: draft.headline, sections: { overview: draft.overview, ...generated } };
-      return { status: 'ok', narrative, errors: [], ...common };
+      return { status: 'ok', narrative, errors: [] };
     }
   }
 
-  return { status: 'failed', narrative: null, errors: returned(errors), ...common };
+  return { status: 'failed', narrative: null, errors: run.returned(errors) };
+}
+
+// ---------------------------------------------------------------------------
+// Where to start (Step 9)
+// ---------------------------------------------------------------------------
+
+const titleOf = id => ACTION_CATALOGUE.find(entry => entry.id === id)?.title ?? id;
+
+const unparseablePick = pick => ({ section: WHERE_TO_START_KEY, pick, sentence: null, rule: 'shape', detail: UNPARSEABLE_DETAIL });
+
+/** Whole retry of the picks: the unchanged message plus the latest errors (never the draft). */
+function buildPicksRetryMessage(baseMessage, errors) {
+  return [
+    baseMessage,
+    '',
+    'Your previous picks broke these rules:',
+    ...errorLines(errors, e => `- ${e.pick ?? 'picks'}${e.sentence ? `, "${e.sentence}"` : ''}: ${e.detail}`),
+    'Pick again and write every reason again from the facts above, following every rule.',
+  ].join('\n');
+}
+
+/** One reason's repair: that action's trigger facts and line, and its errors. */
+function buildReasonMessage(facts, action, errors) {
+  return [
+    buildPickMessage(facts, action),
+    '',
+    'Write only the reason for this action: one sentence stating the finding in its facts that the action addresses.',
+    'Your previous reason broke these rules:',
+    ...errorLines(errors, e => (e.sentence ? `- "${e.sentence}": ${e.detail}` : `- ${e.detail}`)),
+    'Write the reason again from the facts above, following every rule.',
+  ].join('\n');
+}
+
+/**
+ * Where to start → { status: 'ok' | 'failed' | 'unavailable' | 'none', reason?, message?, picks, part, errors }.
+ * picks (ok only): [{ actionId, title, reason, factIds }] in catalogue order.
+ */
+async function draftWhereToStart(run, { facts, actions }) {
+  const empty = { picks: null, part: null, errors: [] };
+  if (actions.length === 0) return { status: 'none', ...empty };
+
+  const baseMessage = buildWhereToStartMessage(facts, actions);
+  const schema = buildPicksSchema(actions.map(a => a.id));
+  // Per-pick errors name the action's catalogue title for the panel's error list.
+  const returned = errs => run.returned(errs).map(e => (e.pick ? { ...e, title: titleOf(e.pick) } : e));
+  const record = (attempt, pick, errs, response) =>
+    ({ attempt, section: WHERE_TO_START_KEY, pick, errors: returned(errs), ...counts(response) });
+  let draft = null;   // the model's current { picks }, once one is usable
+  let errors = [];
+
+  for (let attempt = 1; attempt <= run.maxAttempts; attempt++) {
+    run.progress(attempt, WHERE_TO_START_KEY);
+    const call = (user, callSchema) => run.call(WHERE_TO_START_PROMPT, attempt, user, callSchema);
+    // A broken set (or no usable draft) is asked for again whole; otherwise
+    // only the failing reasons are repaired.
+    const whole = draft === null || errors.some(e => e.pick === null);
+
+    try {
+      if (whole) {
+        const response = await call(attempt === 1 ? baseMessage : buildPicksRetryMessage(baseMessage, errors), schema);
+        draft = parseObject(response);
+        errors = draft === null ? [unparseablePick(null)] : validatePicks(draft, facts, actions).errors;
+        run.attempts.push(record(attempt, null, errors, response));
+      } else {
+        const failing = actions.filter(a => errors.some(e => e.pick === a.id));
+        const calls = [];
+        const unusable = new Set();
+        for (const action of failing) {
+          const response = await call(
+            buildReasonMessage(facts, action, errors.filter(e => e.pick === action.id)), buildReasonSchema());
+          const reply = parseObject(response);
+          if (reply === null) unusable.add(action.id);
+          else draft = { picks: draft.picks.map(p => (p.actionId === action.id ? { ...p, reason: reply.reason } : p)) };
+          calls.push({ action, response });
+        }
+        const validated = validatePicks(draft, facts, actions).errors;
+        errors = [
+          ...validated.filter(e => e.pick === null),
+          ...actions.flatMap(a => [
+            ...(unusable.has(a.id) ? [unparseablePick(a.id)] : []),
+            ...validated.filter(e => e.pick === a.id),
+          ]),
+        ];
+        for (const { action, response } of calls) {
+          run.attempts.push(record(attempt, action.id, errors.filter(e => e.pick === action.id), response));
+        }
+      }
+    } catch (error) {
+      return { status: 'unavailable', ...unavailableOf(error), ...empty };
+    }
+
+    if (errors.length === 0) {
+      const picks = actions
+        .map(a => [a, draft.picks.find(p => p.actionId === a.id)])
+        .filter(([, pick]) => pick)
+        .map(([a, pick]) => ({
+          actionId: a.id, title: titleOf(a.id), reason: pick.reason, factIds: triggerFacts(facts, a.triggers).map(f => f.id),
+        }));
+      return { status: 'ok', picks, part: buildWhereToStartPart(picks, facts), errors: [] };
+    }
+  }
+
+  return { status: 'failed', ...empty, errors: returned(errors) };
+}
+
+/**
+ * generateNarrative(assessment, options) →
+ *   { status: 'ok' | 'failed' | 'unavailable', reason?, message?, narrative, generated, origin,
+ *     errors, facts, actions, attempts, model, whereToStart }
+ *
+ * actions: the matched catalogue entries, [{ id, triggers }] (Step 8).
+ * whereToStart: its own status, picks and part (Step 9); `unavailable` with
+ * the same reason, without a call, when the headline/overview were.
+ *
+ * narrative (ok only): { headline, sections: { overview, ...generated } }.
+ * origin: 'ai' | 'generated' per part. No error carries a sentence unless
+ * keepSentences is set. onAttempt({ attempt, maxAttempts, part }), part
+ * 'summary' or 'whereToStart'.
+ */
+export async function generateNarrative(assessment, {
+  model = DEFAULT_MODEL,
+  provider = callOllama,
+  maxAttempts = 3,
+  timeoutMs,
+  signal,
+  onAttempt,
+  keepSentences = false,
+} = {}) {
+  const facts = buildAssessmentFacts(assessment);
+  const modelFacts = selectModelFacts(facts);
+  const actions = matchAssessmentActions(assessment);
+  const generated = buildGeneratedSections(facts, actions);
+  const attempts = [];
+  const run = {
+    maxAttempts,
+    attempts,
+    returned: errs => (keepSentences ? errs : withoutSentences(errs)),
+    progress: (attempt, part) => {
+      try {
+        onAttempt?.({ attempt, maxAttempts, part });
+      } catch (error) {
+        console.warn(`onAttempt callback threw; continuing generation: ${error?.message ?? error}`);
+      }
+    },
+    call: (system, attempt, user, schema) => provider({
+      model, system, user, schema,
+      temperature: attempt === 1 ? OLLAMA_OPTIONS.temperature : RETRY_TEMPERATURE,
+      timeoutMs, signal,
+    }),
+  };
+
+  const summary = await draftSummary(run, { facts, modelFacts, generated });
+  const whereToStart = summary.status === 'unavailable'
+    ? { status: 'unavailable', reason: summary.reason, message: summary.message, picks: null, part: null, errors: [] }
+    : await draftWhereToStart(run, { facts, actions });
+
+  return { ...summary, generated, origin: ORIGIN, facts, actions, attempts, model, whereToStart };
 }

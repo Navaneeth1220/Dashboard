@@ -97,7 +97,9 @@ export const L0_SEVERITY_LABELS = {
 // `aliases`: other ways an AI-drafted narrative names the item (from the
 // first manual check, docs/ai-report-manual-check.md). Used only by the
 // narrative validator to recognise the item; never displayed. Bare "BC plan"
-// is not an alias: it is ambiguous between the two BC plan items.
+// is not an alias: it is ambiguous between the two BC plan items. "multi-homed
+// device" and "BC plan for critical processes" come from the engine's own
+// flag messages (Step 9: a Where to start reason must name its item).
 // ---------------------------------------------------------------------------
 export const LAYER0_ITEMS = {
 
@@ -204,7 +206,7 @@ export const LAYER0_ITEMS = {
   'L0-multi-homed': {
     id:             'L0-multi-homed',
     name:           'Zero uncontrolled multi-homed devices',
-    aliases:        ['multi-homed devices', 'multi-homing'],
+    aliases:        ['multi-homed devices', 'multi-homed device', 'multi-homing'],
     subclass:       '0A',
     inputType:      'qualitative',
     baseTag:        L0_TAG.ARCHITECTURE,
@@ -228,7 +230,7 @@ export const LAYER0_ITEMS = {
   'L0-bc-plan-doc': {
     id:             'L0-bc-plan-doc',
     name:           'BC plan documented for critical processes',
-    aliases:        ['documented BC plan', 'BC plan documentation'],
+    aliases:        ['documented BC plan', 'BC plan documentation', 'BC plan for critical processes'],
     subclass:       '0A',
     inputType:      'qualitative',
     baseTag:        L0_TAG.PREREQUISITE,

@@ -14,6 +14,10 @@
  * returning them. Appends a dated run set to docs/ai-report-manual-check.md;
  * the Review part is filled in by hand.
  *
+ * Where to start (Step 9) is recorded like the headline and overview: every
+ * call and raw reply, the picks and reasons of each run, and a summary of
+ * the pick sets.
+ *
  * The generated sections (templates, no model) are built once up front and
  * printed once per run set. Every run asserts that its generated sections
  * are identical to that copy and pass the validator; a failed assertion is
@@ -31,7 +35,8 @@ import { matchAssessmentActions } from '../src/engine/actions.js';
 import { validateNarrative } from '../src/report/validator.js';
 import { generateNarrative, DEFAULT_MODEL, RETRY_TEMPERATURE } from '../src/report/generate.js';
 import { callOllama, OLLAMA_OPTIONS, PROMPT_TOKEN_WARNING, DEFAULT_TIMEOUT_MS } from '../src/report/providers/ollama.js';
-import { MODEL_PARTS, GENERATED_KEYS, FACT_SECTION_KEYS } from '../src/report/schema.js';
+import { MODEL_PARTS, GENERATED_KEYS, FACT_SECTION_KEYS, WHERE_TO_START_KEY } from '../src/report/schema.js';
+import { ACTION_CATALOGUE } from '../src/data/actionCatalogue.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
@@ -60,7 +65,22 @@ const REVIEW_POINTS = [
   'Prompt conformance (one-sentence headline, 2–4 sentences per section, no bullets, cited facts fit each section)',
   'Items named without their fact cited',
   'Band ranges read as the band the value falls in, not a missed target',
+  'Where to start: plausible picks; each reason grounded in its own facts, no urgency or consequence',
 ];
+
+const titleOf = id => ACTION_CATALOGUE.find(e => e.id === id)?.title ?? id;
+const isPicksCall = a => a.section === WHERE_TO_START_KEY;
+const summaryAttempts = result => result.attempts.filter(a => !isPicksCall(a));
+const picksAttempts = result => result.attempts.filter(isPicksCall);
+const callLabel = a => (isPicksCall(a) ? (a.pick ? `repair of Where to start ${a.pick}` : 'Where to start picks')
+  : a.section === null ? 'whole narrative' : `repair of ${a.section}`);
+const errorLine = e => `- \`${e.rule}\` ${e.section ?? 'narrative'}${e.pick ? ` ${e.pick}` : ''}${e.sentence ? `, "${e.sentence}"` : ''}: ${e.detail}`;
+const pickSetOf = result => (result.whereToStart?.status === 'ok' ? result.whereToStart.picks.map(p => p.actionId).join(', ') : '—');
+
+/** Accepted picks: title (ID), facts, reason. */
+function renderPicks(picks) {
+  return picks.flatMap(p => [`- **${p.title}** (${p.actionId}; ${p.factIds.join(', ')}): ${p.reason}`]);
+}
 
 function loadAssessment() {
   if (!existsSync(SCENARIO_PATH)) {
@@ -136,23 +156,37 @@ function checkGenerated(generated, facts, reference) {
   return failures;
 }
 
-/** A raw reply: the model parts (section null) or one repaired part. */
-function renderReply(content, section) {
+/** A raw reply: the model parts (section null), one repaired part, or Where to start picks or a reason. */
+function renderReply(content, section, pick = null) {
   let reply;
   try {
     reply = JSON.parse(content);
   } catch {
     return ['```text', content, '```'];
   }
+  if (section === WHERE_TO_START_KEY) {
+    if (pick && typeof reply?.reason === 'string') return [`- ${pick}: ${reply.reason}`, ''];
+    if (!pick && Array.isArray(reply?.picks) && reply.picks.every(p => typeof p?.reason === 'string')) {
+      return [...reply.picks.map(p => `- ${p.actionId}: ${p.reason}`), ''];
+    }
+    return ['```json', JSON.stringify(reply, null, 2), '```'];
+  }
   if (section === null) return renderModelParts(reply);
   return typeof reply?.text === 'string' ? renderPart(section, reply) : ['```json', JSON.stringify(reply, null, 2), '```'];
 }
 
-const roundsOf = result => Math.max(0, ...result.attempts.map(a => a.attempt));
+const roundsOf = result => Math.max(0, ...summaryAttempts(result).map(a => a.attempt));
+const pickRoundsOf = result => Math.max(0, ...picksAttempts(result).map(a => a.attempt));
 
 function renderRun({ n, result, raw, wallMs, generatedFailures }) {
-  const lines = [`#### Run ${n}: ${result.status} (${roundsOf(result)} attempt(s), ${result.attempts.length} call(s), ${seconds(wallMs)})`, ''];
+  const wts = result.whereToStart;
+  const lines = [
+    `#### Run ${n}: ${result.status} (${roundsOf(result)} attempt(s), ${summaryAttempts(result).length} call(s)); ` +
+      `Where to start ${wts.status} (${pickRoundsOf(result)} attempt(s), ${picksAttempts(result).length} call(s)); ${seconds(wallMs)}`,
+    '',
+  ];
   if (result.status === 'unavailable') lines.push(`Unavailable: \`${result.reason}\`: ${result.message}`, '');
+  if (wts.status === 'unavailable' && result.status !== 'unavailable') lines.push(`Where to start unavailable: \`${wts.reason}\`: ${wts.message}`, '');
   if (generatedFailures.length === 0) {
     lines.push('Generated sections: identical to the reference copy, pass the validator.', '');
   } else {
@@ -160,23 +194,22 @@ function renderRun({ n, result, raw, wallMs, generatedFailures }) {
   }
 
   result.attempts.forEach((a, i) => {
-    const what = a.section === null ? 'whole narrative' : `repair of ${a.section}`;
+    const what = callLabel(a);
     lines.push(`Attempt ${a.attempt}, ${what}: prompt_eval_count ${a.promptEvalCount}, eval_count ${a.evalCount}, ${tps(tokensPerSecond(raw[i]))} tokens/s, done_reason ${a.doneReason}, ${seconds(a.durationMs)}`);
     if (a.errors.length === 0) lines.push('- no validator errors');
-    for (const e of a.errors) {
-      lines.push(`- \`${e.rule}\` ${e.section ?? 'narrative'}${e.sentence ? `, "${e.sentence}"` : ''}: ${e.detail}`);
-    }
+    for (const e of a.errors) lines.push(errorLine(e));
     lines.push('', `<details><summary>Attempt ${a.attempt} reply (${what})</summary>`, '');
-    lines.push(...renderReply(raw[i]?.content ?? '', a.section), '</details>', '');
+    lines.push(...renderReply(raw[i]?.content ?? '', a.section, a.pick ?? null), '</details>', '');
   });
 
   if (result.status === 'ok') {
     lines.push('<details><summary>Final model parts (accepted)</summary>', '', ...renderModelParts(result.narrative), '</details>', '');
   }
+  if (wts.status === 'ok') lines.push('Where to start (accepted, catalogue order):', '', ...renderPicks(wts.picks), '');
   return lines;
 }
 
-function renderRunSet({ version, before, after, factCount, reference, referenceFailures, runs }) {
+function renderRunSet({ version, before, after, factCount, reference, referenceFailures, runs, actions }) {
   const attempts = runs.flatMap(r => r.result.attempts);
   const promptCounts = attempts.map(a => a.promptEvalCount).filter(n => n !== null);
   const speeds = runs.flatMap(r => r.raw.map(tokensPerSecond)).filter(v => v !== null);
@@ -190,6 +223,7 @@ function renderRunSet({ version, before, after, factCount, reference, referenceF
     `- Model: ${MODEL} · Ollama ${version} · options \`${JSON.stringify(OLLAMA_OPTIONS)}\``,
     `- Timeout ${seconds(DEFAULT_TIMEOUT_MS)} per call · ${seconds(COOLDOWN_MS)} cooldown between runs · retries at temperature ${RETRY_TEMPERATURE}, repairing failing sections only`,
     `- Scenario: ${SCENARIO} (${factCount} facts)`,
+    `- Where to start candidates (${actions.length}): ${actions.map(a => `${a.id} ${titleOf(a.id)}`).join('; ') || 'none'}`,
     '',
     '| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |',
     '|---|---|---|---|---|---|',
@@ -202,8 +236,12 @@ function renderRunSet({ version, before, after, factCount, reference, referenceF
     '|---|---|',
     `| ok | ${runs.filter(r => r.result.status === 'ok').length} of ${runs.length} |`,
     `| generated sections identical and valid | ${runs.filter(r => r.generatedFailures.length === 0).length} of ${runs.length} |`,
-    `| attempts per run (calls) | ${runs.map(r => `${roundsOf(r.result)} (${r.result.attempts.length})`).join(', ')} |`,
-    `| errors by rule (all attempts) | ${countByRule(attempts.flatMap(a => a.errors))} |`,
+    `| attempts per run (calls) | ${runs.map(r => `${roundsOf(r.result)} (${summaryAttempts(r.result).length})`).join(', ')} |`,
+    `| Where to start ok | ${runs.filter(r => r.result.whereToStart.status === 'ok').length} of ${runs.length} |`,
+    `| Where to start attempts per run (calls) | ${runs.map(r => `${pickRoundsOf(r.result)} (${picksAttempts(r.result).length})`).join(', ')} |`,
+    `| Where to start picks per run | ${runs.map(r => `${r.n}: ${pickSetOf(r.result)}`).join('; ')} |`,
+    `| errors by rule (headline/overview) | ${countByRule(attempts.filter(a => !isPicksCall(a)).flatMap(a => a.errors))} |`,
+    `| errors by rule (Where to start) | ${countByRule(attempts.filter(isPicksCall).flatMap(a => a.errors))} |`,
     `| max prompt_eval_count | ${promptCounts.length ? Math.max(...promptCounts) : '?'} (warning above ${PROMPT_TOKEN_WARNING}) |`,
     `| generation speed (tokens/s, eval_duration) | ${speedSummary} |`,
     '',
@@ -221,7 +259,7 @@ function renderRunSet({ version, before, after, factCount, reference, referenceF
     '| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |',
     '|---|---|---|---|---|---|---|---|---|---|',
     ...runs.flatMap(r => r.result.attempts.map((a, i) =>
-      `| ${r.n} | ${r.result.status} | ${a.attempt} | ${a.section ?? 'whole'} | ${seconds(a.durationMs)} | ${a.promptEvalCount} | ${a.evalCount} | ${tps(tokensPerSecond(r.raw[i]))} | ${a.doneReason} | ${countByRule(a.errors)} |`)),
+      `| ${r.n} | ${isPicksCall(a) ? r.result.whereToStart.status : r.result.status} | ${a.attempt} | ${isPicksCall(a) ? `whereToStart ${a.pick ?? 'whole'}` : a.section ?? 'whole'} | ${seconds(a.durationMs)} | ${a.promptEvalCount} | ${a.evalCount} | ${tps(tokensPerSecond(r.raw[i]))} | ${a.doneReason} | ${countByRule(a.errors)} |`)),
     '',
     ...runs.flatMap(renderRun),
     '### Review',
@@ -242,7 +280,8 @@ async function main() {
   }
 
   const referenceFacts = buildAssessmentFacts(assessment);
-  const reference = buildGeneratedSections(referenceFacts, matchAssessmentActions(assessment));
+  const actions = matchAssessmentActions(assessment);
+  const reference = buildGeneratedSections(referenceFacts, actions);
   const referenceFailures = checkGenerated(reference, referenceFacts, reference);
   for (const f of referenceFailures) console.error(`generated sections (reference): ${f}`);
   const before = await getJson('/api/ps');
@@ -269,11 +308,11 @@ async function main() {
     const result = await generateNarrative(assessment, {
       provider,
       model: MODEL,
-      onAttempt: ({ attempt, maxAttempts }) => console.log(`run ${n}/${RUNS}, attempt ${attempt}/${maxAttempts}…`),
+      onAttempt: ({ attempt, maxAttempts, part }) => console.log(`run ${n}/${RUNS}, ${part}, attempt ${attempt}/${maxAttempts}…`),
       keepSentences: true,   // the review needs the rejected sentences; the app never sets this
     });
     const wallMs = Date.now() - started;
-    console.log(`run ${n}: ${result.status} after ${roundsOf(result)} attempt(s), ${result.attempts.length} call(s), ${seconds(wallMs)}`);
+    console.log(`run ${n}: ${result.status} after ${roundsOf(result)} attempt(s); Where to start ${result.whereToStart.status} (${pickSetOf(result)}); ${result.attempts.length} call(s), ${seconds(wallMs)}`);
     const generatedFailures = checkGenerated(result.generated, result.facts, reference);
     for (const f of generatedFailures) console.error(`run ${n}, generated sections: ${f}`);
     runs.push({ n, result, raw, wallMs, generatedFailures });
@@ -281,7 +320,7 @@ async function main() {
 
   const after = await getJson('/api/ps');
   const section = renderRunSet({
-    version, before, after, factCount: referenceFacts.length, reference, referenceFailures, runs,
+    version, before, after, factCount: referenceFacts.length, reference, referenceFailures, runs, actions,
   });
 
   const logPath = join(ROOT, LOG);

@@ -5450,3 +5450,3846 @@ instead of six) and passes the validator in every run.
 Result: 3 of 5 ok (earlier Oudendijk sets: 5, 5, 5, 1, 4 of 5). Failed
 runs: run 3 (`flagCount`, then `levelLabel`, then `respectively`), run 5
 (`respectively` and `levelLabel`, then the `missing` false positive).
+## Run set 2026-10-01 13:01 UTC: Westmaas_2026-01-01_assessment.json
+
+- Model: qwen2.5:7b · Ollama 0.35.0 · options `{"temperature":0.2,"num_ctx":4096,"num_predict":1024}`
+- Timeout 300.0 s per call · 60.0 s cooldown between runs · retries at temperature 0.5, repairing failing sections only
+- Scenario: scenarios/Westmaas_2026-01-01_assessment.json (23 facts)
+- Where to start candidates (10): ACT-IH-04 Shorten response time; ACT-IH-06 Make incident handling measurable; ACT-BC-02 Improve zone availability; ACT-BC-03 Reduce operational threshold violations; ACT-BC-05 Meet recovery time objectives; ACT-BC-08 Define recovery point objectives; ACT-L0-03 Document asset interdependencies; ACT-L0-05 Remove or control multi-homed devices; ACT-L0-08 Test the BC plan; ACT-RM-02 Improve the remediation rate
+
+| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |
+|---|---|---|---|---|---|
+| before | (no model loaded) | | | | |
+| after | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+
+### Summary
+
+| Measure | Value |
+|---|---|
+| ok | 5 of 5 |
+| generated sections identical and valid | 5 of 5 |
+| attempts per run (calls) | 2 (2), 2 (2), 1 (1), 1 (1), 2 (2) |
+| Where to start ok | 5 of 5 |
+| Where to start attempts per run (calls) | 1 (1), 1 (1), 1 (1), 1 (1), 1 (1) |
+| Where to start picks per run | 1: ACT-BC-02, ACT-BC-03, ACT-L0-05; 2: ACT-BC-02, ACT-BC-03, ACT-L0-05; 3: ACT-BC-02, ACT-BC-03, ACT-L0-05; 4: ACT-BC-02, ACT-BC-03, ACT-L0-05; 5: ACT-BC-02, ACT-BC-03, ACT-L0-05 |
+| errors by rule (headline/overview) | missing ×2, respectively ×1 |
+| errors by rule (Where to start) | — |
+| max prompt_eval_count | 964 (warning above 3000) |
+| generation speed (tokens/s, eval_duration) | first 15.3, last 13.3, min 13.3, max 15.3 |
+
+### Generated sections
+
+Built from the facts by templates (no model); every run asserts it gets exactly this.
+
+The reference copy passes the validator.
+
+**measuredPerformance** (C3, F4, F5, F7, F8, F9, F10): Each effectiveness indicator is scored from 0 to 4, where 4 is best. In Incident Handling, Mean Time to Detect was 18 hours (score 3, Good) and Mean Time to Respond was 30 hours (score 2, Developing). In Business Continuity, Network Operability Under Disruption was 85% (score 3, Good), Zone Availability Rate was 40% (score 2, Developing), Operational Threshold Violation Rate was 12.5% (score 2, Developing) and RTO Achievement Rate was 50% (score 2, Developing). For Mean Time to Detect, Mean Time to Respond and Operational Threshold Violation Rate, lower values are better.
+
+**gapsAndMissingEvidence** (F1, F3, F6, F11): Mean Time to Contain is not measurable: evidence to compute the value is absent or unreliable, and no reason was recorded. This says nothing about how Mean Time to Contain performs, but without it Incident Handling has no score, so there is no overall score either.
+
+No recovery point objective has been established for RPO Achievement Rate, so it scores 0 as a programme gap; this is not a measured failure.
+
+**foundationsAndFlags** (F12, F13, F14, F15, F16, F17, F18, F19): In place: Asset inventory maintained, Risk assessment per zone, Controlled IT/OT boundary separation and BC plan documented for critical processes.
+
+The following issues were flagged (listed by severity; this is not an order of action). Critical: uncontrolled inter-zone multi-homed devices were identified. High: asset interdependency documentation is incomplete or outdated, and no BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+Process evidence is reported without a score. Vulnerability Remediation Rate is 60%, in the 50–69% band, which is below target — moderate programme improvement warranted (medium note). Mean Time to Remediate is 75 days, in the 31–90 days band, which is satisfactory — continue monitoring.
+
+Read together (advisory only; no scores change): the uncontrolled multi-homed devices and Zone Availability Rate (score 2, Developing) may be related, because a segmentation bypass can affect zone availability; review them together. Removing the multi-homed devices and establishing the evidence to measure Mean Time to Contain are both measurement-readiness actions; address them together.
+
+**priorities** (F6, F20): Ranked by score, where a lower score is more urgent: the lowest effectiveness result is RPO Achievement Rate, a programme gap at score 0. Next, at score 2 and of equal priority, are Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate and RTO Achievement Rate, listed in catalogue order. Mean Time to Contain is not ranked because it has no score.
+
+**targets** (F4, F5, F6, F7, F8, F9, F10, F11): Each target is the value an indicator needs for its next score level, taken from the scoring bands.
+
+In Incident Handling, Mean Time to Detect, now 18 hours (score 3, Good), reaches score 4 (Excellent) at 6 hours or less. Mean Time to Respond, now 30 hours (score 2, Developing), reaches score 3 (Good) at 24 hours or less.
+
+In Business Continuity, Network Operability Under Disruption, now 85% (score 3, Good), reaches score 4 (Excellent) at 90% or more. Zone Availability Rate, now 40% (score 2, Developing), reaches score 3 (Good) at 70% or more. Operational Threshold Violation Rate, now 12.5% (score 2, Developing), reaches score 3 (Good) at 5% or less. RTO Achievement Rate, now 50% (score 2, Developing), reaches score 3 (Good) at 75% or more.
+
+RPO Achievement Rate has no numeric target yet: no recovery point objective has been established. Define the objective first; the scoring bands apply once it exists.
+
+Mean Time to Contain has no score, so it has no target.
+
+**recommendedActions** (F5, F6, F8, F9, F10, F11, F13, F14, F15, F16): Each action comes from the dashboard's action catalogue and is matched to a result in this assessment. Actions are grouped by area in catalogue order; this is not an order of action.
+
+Incident Handling
+
+Shorten response time
+Reduce the time from detection to the start of a response.
+Steps: Set target response times per incident severity. Arrange on-call cover that includes someone with OT knowledge. Review recent incidents for hand-over delays between IT, security and operations.
+Why it matters: Delays between detection and response are often organisational, not technical, and can be fixed without new tooling.
+Who: Security team with plant operations
+NIS2 Article 21(2): (b) incident handling
+
+Make incident handling measurable
+Record detection, response and containment times for every incident.
+Steps: Add mandatory timestamp fields to incident tickets: incident start (if known), detection, response start, containment. Agree which clock is authoritative. Check the fields are filled in when a ticket is closed.
+Why it matters: The next assessment can only score these indicators if the times are recorded. This says nothing about current performance.
+Who: Security team
+NIS2 Article 21(2): (b) incident handling; (f) assessing the effectiveness of measures
+
+Business Continuity
+
+Improve zone availability
+Address the main causes of zone outages.
+Steps: Use the disruption log to find the most common causes of zones becoming unavailable. Fix the top causes first. Check whether uncontrolled connections between zones, such as multi-homed devices, contribute.
+Why it matters: Zone outages directly affect the processes running in them.
+Who: OT engineering
+NIS2 Article 21(2): (c) business continuity
+Standard: IEC 62443-3-3 FR 7 (resource availability)
+
+Reduce operational threshold violations
+Reduce how often process parameters leave their safe operating range during disruptions.
+Steps: Review each violation: which disruption caused it, and how long it lasted. Improve operator procedures for degraded operation. Check that alarms for these parameters work and reach operators in time.
+Why it matters: Threshold violations are where a cyber disruption turns into a process or safety impact.
+Who: Plant operations with process engineering
+NIS2 Article 21(2): (c) business continuity
+
+Meet recovery time objectives
+Make recovery of OT systems faster and more predictable.
+Steps: Analyse recoveries that exceeded their RTO. Keep tested recovery media and system images for HMIs, servers and engineering workstations. Write step-by-step rebuild procedures and practise them.
+Why it matters: Recoveries that take longer than agreed extend process downtime.
+Who: OT engineering
+NIS2 Article 21(2): (c) business continuity, disaster recovery
+Standard: IEC 62443-3-3 SR 7.4 (control system recovery and reconstitution)
+
+Define recovery point objectives
+Define recovery point objectives for critical processes.
+Steps: Agree with operations the maximum acceptable data loss per critical process. Align backup frequency for historians, SCADA/PLC configurations and engineering workstations with it. Verify with a restore test on a test system or spare hardware.
+Why it matters: Without an RPO, recovery cannot be measured, so the indicator stays at 0.
+Who: Plant operations with OT engineering
+NIS2 Article 21(2): (c) business continuity, backup management
+Standard: IEC 62443-3-3 SR 7.3 (control system backup)
+
+Foundational controls
+
+Document asset interdependencies
+Document which assets and services each critical process depends on.
+Steps: For each critical process, list the PLCs, HMIs, servers, network paths and IT services it needs. Include external dependencies such as vendor remote access. Keep it linked to the asset inventory.
+Why it matters: Without this, the impact of losing an asset is guesswork, both during incidents and when planning recovery.
+Who: OT engineering with plant operations
+NIS2 Article 21(2): (c) business continuity (supports)
+
+Remove or control multi-homed devices
+Remove or control hosts connected to more than one zone.
+Steps: List every host with interfaces in more than one zone. Remove the second interface, or route that traffic through a controlled conduit with a firewall. Re-scan to confirm none remain.
+Why it matters: A dual-homed host bypasses the zone boundary and can connect zones that should be separated.
+Who: OT engineering
+Standard: IEC 62443-3-3 SR 5.1 (network segmentation), SR 5.2 (zone boundary protection)
+
+Test the BC plan
+Test the BC plan within the defined period.
+Steps: Schedule a test: a tabletop exercise at minimum, ideally including a restore of at least one OT system to a test environment. Record the results and fix the gaps found.
+Why it matters: An untested plan often fails on details nobody noticed on paper.
+Who: Plant operations with OT engineering
+NIS2 Article 21(2): (c) business continuity; (f) assessing the effectiveness of measures
+
+Vulnerability management
+
+Improve the remediation rate
+Remediate more of the known vulnerabilities, prioritising by risk.
+Steps: Prioritise by exposure and process criticality, for example known-exploited vulnerabilities on reachable systems first. Use vendor-approved patches. Where patching is not possible, apply and document compensating controls.
+Why it matters: In OT, not every vulnerability can be patched, but every one needs a decision.
+Who: OT engineering with the security team
+NIS2 Article 21(2): (e) vulnerability handling
+Standard: IEC TR 62443-2-3 (patch management in the IACS environment)
+
+### Runs
+
+| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | ok | 1 | whole | 56.6 s | 875 | 182 | 15.3 | stop | missing ×1 |
+| 1 | ok | 2 | overview | 11.2 s | 825 | 150 | 15.3 | stop | — |
+| 1 | ok | 1 | whereToStart whole | 10.7 s | 964 | 113 | 14.9 | stop | — |
+| 2 | ok | 1 | whole | 13.8 s | 875 | 184 | 14.7 | stop | missing ×1 |
+| 2 | ok | 2 | overview | 11.5 s | 825 | 156 | 14.7 | stop | — |
+| 2 | ok | 1 | whereToStart whole | 8.5 s | 964 | 114 | 13.8 | stop | — |
+| 3 | ok | 1 | whole | 13.8 s | 875 | 178 | 14.1 | stop | — |
+| 3 | ok | 1 | whereToStart whole | 8.2 s | 964 | 112 | 14.0 | stop | — |
+| 4 | ok | 1 | whole | 11.4 s | 875 | 170 | 15.2 | stop | — |
+| 4 | ok | 1 | whereToStart whole | 8.4 s | 964 | 114 | 13.9 | stop | — |
+| 5 | ok | 1 | whole | 12.4 s | 875 | 173 | 14.3 | stop | respectively ×1 |
+| 5 | ok | 2 | overview | 13.1 s | 833 | 169 | 14.1 | stop | — |
+| 5 | ok | 1 | whereToStart whole | 8.7 s | 964 | 114 | 13.3 | stop | — |
+
+#### Run 1: ok (2 attempt(s), 2 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 78.5 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 182, 15.3 tokens/s, done_reason stop, 56.6 s
+- `missing` overview, "Incident Handling is incomplete due to a missing indicator, resulting in no overall score.": Do not write "missing indicator": the indicator exists; say it has no score.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to a missing indicator, resulting in no overall score. Business Continuity scored 1.80 out of 4. The assessment flagged critical issues with uncontrolled inter-zone multi-homed devices and high severity concerns about incomplete asset interdependency documentation and untested BC plans.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 825, eval_count 150, 15.3 tokens/s, done_reason stop, 11.2 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Business Continuity is complete and scored 1.80 out of 4, including a programme gap score of 0 for RPO Achievement Rate. Incident Handling is incomplete, as the Mean Time to Contain has no score, leading to no overall score. The assessment flagged three issues: CRITICAL uncontrolled inter-zone multi-homed devices, HIGH incomplete or outdated asset interdependency documentation, and HIGH no BC plan test performed during the assessment period.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 964, eval_count 113, 14.9 tokens/s, done_reason stop, 10.7 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified (CRITICAL flag).
+- ACT-BC-02: Zone Availability Rate is measured at 40% (score 2).
+- ACT-BC-03: Operational Threshold Violation Rate is measured at 12.5% (score 2).
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Business Continuity is complete and scored 1.80 out of 4, including a programme gap score of 0 for RPO Achievement Rate. Incident Handling is incomplete, as the Mean Time to Contain has no score, leading to no overall score. The assessment flagged three issues: CRITICAL uncontrolled inter-zone multi-homed devices, HIGH incomplete or outdated asset interdependency documentation, and HIGH no BC plan test performed during the assessment period.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Improve zone availability** (ACT-BC-02; F8): Zone Availability Rate is measured at 40% (score 2).
+- **Reduce operational threshold violations** (ACT-BC-03; F9): Operational Threshold Violation Rate is measured at 12.5% (score 2).
+- **Remove or control multi-homed devices** (ACT-L0-05; F13): Uncontrolled inter-zone multi-homed devices were identified (CRITICAL flag).
+
+#### Run 2: ok (2 attempt(s), 2 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 33.8 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 184, 14.7 tokens/s, done_reason stop, 13.8 s
+- `missing` overview, "Incident Handling is incomplete due to a missing indicator, resulting in no overall score.": Do not write "missing indicator": the indicator exists; say it has no score.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to a missing indicator, resulting in no overall score. Business Continuity scored 1.80 out of 4. The assessment flagged three critical and high severity issues: uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and a missing BC plan test.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 825, eval_count 156, 14.7 tokens/s, done_reason stop, 11.5 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Business Continuity is complete with a score of 1.80 out of 4, including a programme gap of 0 for RPO Achievement Rate. Incident Handling is incomplete, as the Mean Time to Contain has no score. Consequently, no overall score is available. The assessment flagged three issues: Uncontrolled inter-zone multi-homed devices (CRITICAL), incomplete or outdated asset interdependency documentation (HIGH), and no BC plan test performed during the assessment period (HIGH).
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 964, eval_count 114, 13.8 tokens/s, done_reason stop, 8.5 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified (CRITICAL flag).
+- ACT-BC-02: Zone Availability Rate is measured at 40% (score 2).
+- ACT-BC-03: Operational Threshold Violation Rate is measured at 12.5% (score 2).
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Business Continuity is complete with a score of 1.80 out of 4, including a programme gap of 0 for RPO Achievement Rate. Incident Handling is incomplete, as the Mean Time to Contain has no score. Consequently, no overall score is available. The assessment flagged three issues: Uncontrolled inter-zone multi-homed devices (CRITICAL), incomplete or outdated asset interdependency documentation (HIGH), and no BC plan test performed during the assessment period (HIGH).
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Improve zone availability** (ACT-BC-02; F8): Zone Availability Rate is measured at 40% (score 2).
+- **Reduce operational threshold violations** (ACT-BC-03; F9): Operational Threshold Violation Rate is measured at 12.5% (score 2).
+- **Remove or control multi-homed devices** (ACT-L0-05; F13): Uncontrolled inter-zone multi-homed devices were identified (CRITICAL flag).
+
+#### Run 3: ok (1 attempt(s), 1 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 22.0 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 178, 14.1 tokens/s, done_reason stop, 13.8 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80. The overall score is unavailable. Critical and high severity flags were raised for uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and lack of BC plan testing.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 964, eval_count 112, 14.0 tokens/s, done_reason stop, 8.2 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified (CRITICAL flag).
+- ACT-BC-02: Zone Availability Rate measured at 40% (score 2).
+- ACT-BC-03: Operational Threshold Violation Rate measured at 12.5% (score 2).
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80. The overall score is unavailable. Critical and high severity flags were raised for uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and lack of BC plan testing.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Improve zone availability** (ACT-BC-02; F8): Zone Availability Rate measured at 40% (score 2).
+- **Reduce operational threshold violations** (ACT-BC-03; F9): Operational Threshold Violation Rate measured at 12.5% (score 2).
+- **Remove or control multi-homed devices** (ACT-L0-05; F13): Uncontrolled inter-zone multi-homed devices were identified (CRITICAL flag).
+
+#### Run 4: ok (1 attempt(s), 1 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 19.8 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 170, 15.2 tokens/s, done_reason stop, 11.4 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): Westmaas faces critical and high severity issues with uncontrolled network devices and incomplete documentation, posing significant risks to business continuity.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80. The overall score is unavailable. Critical and high severity flags were identified for uncontrolled network devices and incomplete documentation, highlighting urgent areas for improvement.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 964, eval_count 114, 13.9 tokens/s, done_reason stop, 8.4 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified (CRITICAL flag).
+- ACT-BC-02: Zone Availability Rate is measured at 40% (score 2).
+- ACT-BC-03: Operational Threshold Violation Rate is measured at 12.5% (score 2).
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): Westmaas faces critical and high severity issues with uncontrolled network devices and incomplete documentation, posing significant risks to business continuity.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80. The overall score is unavailable. Critical and high severity flags were identified for uncontrolled network devices and incomplete documentation, highlighting urgent areas for improvement.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Improve zone availability** (ACT-BC-02; F8): Zone Availability Rate is measured at 40% (score 2).
+- **Reduce operational threshold violations** (ACT-BC-03; F9): Operational Threshold Violation Rate is measured at 12.5% (score 2).
+- **Remove or control multi-homed devices** (ACT-L0-05; F13): Uncontrolled inter-zone multi-homed devices were identified (CRITICAL flag).
+
+#### Run 5: ok (2 attempt(s), 2 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 34.3 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 173, 14.3 tokens/s, done_reason stop, 12.4 s
+- `respectively` overview, "CRITICAL and HIGH severity flags were raised for uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation, respectively.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): CRITICAL and HIGH severity issues were identified, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across 2 dimensions. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80 out of 4. The overall score is unavailable. CRITICAL and HIGH severity flags were raised for uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation, respectively.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 833, eval_count 169, 14.1 tokens/s, done_reason stop, 13.1 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Business Continuity was complete and scored 1.80 out of 4 (5 indicators), including a programme gap score of 0 for RPO Achievement Rate. Incident Handling was incomplete, with no score available due to the lack of a Mean Time to Contain indicator. The overall score was not available due to the incomplete dimension. CRITICAL severity was flagged for uncontrolled inter-zone multi-homed devices, and HIGH severity was flagged for incomplete asset interdependency documentation and for the absence of a BC plan test during the assessment period.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 964, eval_count 114, 13.3 tokens/s, done_reason stop, 8.7 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified (CRITICAL flag).
+- ACT-BC-02: Zone Availability Rate is measured at 40% (score 2).
+- ACT-BC-03: Operational Threshold Violation Rate is measured at 12.5% (score 2).
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): CRITICAL and HIGH severity issues were identified, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Business Continuity was complete and scored 1.80 out of 4 (5 indicators), including a programme gap score of 0 for RPO Achievement Rate. Incident Handling was incomplete, with no score available due to the lack of a Mean Time to Contain indicator. The overall score was not available due to the incomplete dimension. CRITICAL severity was flagged for uncontrolled inter-zone multi-homed devices, and HIGH severity was flagged for incomplete asset interdependency documentation and for the absence of a BC plan test during the assessment period.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Improve zone availability** (ACT-BC-02; F8): Zone Availability Rate is measured at 40% (score 2).
+- **Reduce operational threshold violations** (ACT-BC-03; F9): Operational Threshold Violation Rate is measured at 12.5% (score 2).
+- **Remove or control multi-homed devices** (ACT-L0-05; F13): Uncontrolled inter-zone multi-homed devices were identified (CRITICAL flag).
+
+### Review
+
+Context: first run set with Where to start (Step 9): its own call after
+the headline and overview, 10 candidates, 3 picks, ACT-L0-05 (CRITICAL)
+mandatory. The headline/overview prompt, facts and validator verdicts are
+unchanged (replay of 472 logged parts: identical).
+
+1. Invariant breaks the validator missed: headline/overview none new;
+   accepted text with known, unvalidated weaknesses: run 4 "posing
+   significant risks to business continuity", "highlighting urgent areas
+   for improvement" (prompt rule 14, not validated), "uncontrolled network
+   devices" (paraphrase). Where to start: none.
+2. Validator errors that look wrong: none.
+3. Paraphrased item names: "uncontrolled network devices" (run 4, for the
+   multi-homed devices; not added: too generic).
+4. Prompt conformance: headlines one sentence; overviews 3–5 sentences.
+   Where to start: one sentence per reason, every reason close to its
+   fact's own wording ("Zone Availability Rate is measured at 40% (score
+   2).", "Uncontrolled inter-zone multi-homed devices were identified
+   (CRITICAL flag)."). Picks identical in all 5 runs: ACT-BC-02, ACT-BC-03,
+   ACT-L0-05. The CRITICAL action was always picked; the two HIGH flags
+   (ACT-L0-03, ACT-L0-08) and the programme gap (ACT-BC-08, the lowest
+   result) never were, although the prompt prefers "the most severe flags
+   and the lowest results". Valid by the rules; questionable as advice.
+5. Items named without their fact cited: not applicable to Where to start
+   (its facts are fixed per pick).
+6. Band ranges: not narrated (F16 not cited by the model parts; ACT-RM-02
+   not picked).
+
+Result: 5 of 5 ok; Where to start 5 of 5 ok on the first call, no
+validator error.
+
+## Run set 2026-10-01 13:07 UTC: Westmaas_2026-06-01_assessment.json
+
+- Model: qwen2.5:7b · Ollama 0.35.0 · options `{"temperature":0.2,"num_ctx":4096,"num_predict":1024}`
+- Timeout 300.0 s per call · 60.0 s cooldown between runs · retries at temperature 0.5, repairing failing sections only
+- Scenario: scenarios/Westmaas_2026-06-01_assessment.json (19 facts)
+- Where to start candidates (5): ACT-IH-04 Shorten response time; ACT-BC-03 Reduce operational threshold violations; ACT-BC-05 Meet recovery time objectives; ACT-L0-03 Document asset interdependencies; ACT-RM-02 Improve the remediation rate
+
+| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |
+|---|---|---|---|---|---|
+| before | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+| after | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+
+### Summary
+
+| Measure | Value |
+|---|---|
+| ok | 5 of 5 |
+| generated sections identical and valid | 5 of 5 |
+| attempts per run (calls) | 2 (2), 2 (3), 2 (2), 2 (2), 2 (2) |
+| Where to start ok | 5 of 5 |
+| Where to start attempts per run (calls) | 1 (1), 1 (1), 1 (1), 1 (1), 1 (1) |
+| Where to start picks per run | 1: ACT-IH-04, ACT-BC-03, ACT-L0-03; 2: ACT-IH-04, ACT-BC-03, ACT-L0-03; 3: ACT-IH-04, ACT-BC-03, ACT-L0-03; 4: ACT-IH-04, ACT-BC-03, ACT-L0-03; 5: ACT-IH-04, ACT-BC-03, ACT-L0-03 |
+| errors by rule (headline/overview) | respectively ×5, judgement ×1 |
+| errors by rule (Where to start) | — |
+| max prompt_eval_count | 822 (warning above 3000) |
+| generation speed (tokens/s, eval_duration) | first 12.4, last 14.0, min 10.3, max 15.3 |
+
+### Generated sections
+
+Built from the facts by templates (no model); every run asserts it gets exactly this.
+
+The reference copy passes the validator.
+
+**measuredPerformance** (C3, F4, F5, F6, F7, F8, F9, F10, F11): Each effectiveness indicator is scored from 0 to 4, where 4 is best. In Incident Handling, Mean Time to Detect was 18 hours (score 3, Good), Mean Time to Respond was 30 hours (score 2, Developing) and Mean Time to Contain was 20 hours (score 3, Good). In Business Continuity, Network Operability Under Disruption was 85% (score 3, Good), Zone Availability Rate was 82% (score 3, Good), Operational Threshold Violation Rate was 12.5% (score 2, Developing), RTO Achievement Rate was 50% (score 2, Developing) and RPO Achievement Rate was 100% (score 4, Excellent). For Mean Time to Detect, Mean Time to Respond, Mean Time to Contain and Operational Threshold Violation Rate, lower values are better.
+
+**gapsAndMissingEvidence** (F1, F2, F3): No evidence is missing and no programme gaps were found: every effectiveness indicator has a score.
+
+**foundationsAndFlags** (F12, F13, F14, F15): In place: Asset inventory maintained, Risk assessment per zone, Controlled IT/OT boundary separation, Zero uncontrolled multi-homed devices, BC plan documented for critical processes and BC plan tested within defined period.
+
+The following issues were flagged (listed by severity; this is not an order of action). High: asset interdependency documentation is incomplete or outdated.
+
+Process evidence is reported without a score. Vulnerability Remediation Rate is 60%, in the 50–69% band, which is below target — moderate programme improvement warranted (medium note). Mean Time to Remediate is 75 days, in the 31–90 days band, which is satisfactory — continue monitoring.
+
+**priorities** (F16): Ranked by score, where a lower score is more urgent: the lowest effectiveness results, at score 2 and of equal priority, are Mean Time to Respond, Operational Threshold Violation Rate and RTO Achievement Rate, listed in catalogue order.
+
+**targets** (F4, F5, F6, F7, F8, F9, F10, F11): Each target is the value an indicator needs for its next score level, taken from the scoring bands.
+
+In Incident Handling, Mean Time to Detect, now 18 hours (score 3, Good), reaches score 4 (Excellent) at 6 hours or less. Mean Time to Respond, now 30 hours (score 2, Developing), reaches score 3 (Good) at 24 hours or less. Mean Time to Contain, now 20 hours (score 3, Good), reaches score 4 (Excellent) at 6 hours or less.
+
+In Business Continuity, Network Operability Under Disruption, now 85% (score 3, Good), reaches score 4 (Excellent) at 90% or more. Zone Availability Rate, now 82% (score 3, Good), reaches score 4 (Excellent) at 90% or more. Operational Threshold Violation Rate, now 12.5% (score 2, Developing), reaches score 3 (Good) at 5% or less. RTO Achievement Rate, now 50% (score 2, Developing), reaches score 3 (Good) at 75% or more.
+
+Already at the highest level (score 4, Excellent): RPO Achievement Rate.
+
+**recommendedActions** (F5, F9, F10, F13, F14): Each action comes from the dashboard's action catalogue and is matched to a result in this assessment. Actions are grouped by area in catalogue order; this is not an order of action.
+
+Incident Handling
+
+Shorten response time
+Reduce the time from detection to the start of a response.
+Steps: Set target response times per incident severity. Arrange on-call cover that includes someone with OT knowledge. Review recent incidents for hand-over delays between IT, security and operations.
+Why it matters: Delays between detection and response are often organisational, not technical, and can be fixed without new tooling.
+Who: Security team with plant operations
+NIS2 Article 21(2): (b) incident handling
+
+Business Continuity
+
+Reduce operational threshold violations
+Reduce how often process parameters leave their safe operating range during disruptions.
+Steps: Review each violation: which disruption caused it, and how long it lasted. Improve operator procedures for degraded operation. Check that alarms for these parameters work and reach operators in time.
+Why it matters: Threshold violations are where a cyber disruption turns into a process or safety impact.
+Who: Plant operations with process engineering
+NIS2 Article 21(2): (c) business continuity
+
+Meet recovery time objectives
+Make recovery of OT systems faster and more predictable.
+Steps: Analyse recoveries that exceeded their RTO. Keep tested recovery media and system images for HMIs, servers and engineering workstations. Write step-by-step rebuild procedures and practise them.
+Why it matters: Recoveries that take longer than agreed extend process downtime.
+Who: OT engineering
+NIS2 Article 21(2): (c) business continuity, disaster recovery
+Standard: IEC 62443-3-3 SR 7.4 (control system recovery and reconstitution)
+
+Foundational controls
+
+Document asset interdependencies
+Document which assets and services each critical process depends on.
+Steps: For each critical process, list the PLCs, HMIs, servers, network paths and IT services it needs. Include external dependencies such as vendor remote access. Keep it linked to the asset inventory.
+Why it matters: Without this, the impact of losing an asset is guesswork, both during incidents and when planning recovery.
+Who: OT engineering with plant operations
+NIS2 Article 21(2): (c) business continuity (supports)
+
+Vulnerability management
+
+Improve the remediation rate
+Remediate more of the known vulnerabilities, prioritising by risk.
+Steps: Prioritise by exposure and process criticality, for example known-exploited vulnerabilities on reachable systems first. Use vendor-approved patches. Where patching is not possible, apply and document compensating controls.
+Why it matters: In OT, not every vulnerability can be patched, but every one needs a decision.
+Who: OT engineering with the security team
+NIS2 Article 21(2): (e) vulnerability handling
+Standard: IEC TR 62443-2-3 (patch management in the IACS environment)
+
+### Runs
+
+| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | ok | 1 | whole | 13.7 s | 822 | 157 | 12.4 | stop | respectively ×1 |
+| 1 | ok | 2 | overview | 13.2 s | 803 | 138 | 11.5 | stop | — |
+| 1 | ok | 1 | whereToStart whole | 12.8 s | 734 | 117 | 10.3 | stop | — |
+| 2 | ok | 1 | whole | 11.6 s | 822 | 160 | 15.1 | stop | judgement ×1, respectively ×1 |
+| 2 | ok | 2 | headline | 3.4 s | 717 | 43 | 15.3 | stop | — |
+| 2 | ok | 2 | overview | 10.5 s | 803 | 145 | 15.1 | stop | — |
+| 2 | ok | 1 | whereToStart whole | 9.3 s | 734 | 119 | 13.0 | stop | — |
+| 3 | ok | 1 | whole | 12.5 s | 822 | 159 | 13.8 | stop | respectively ×1 |
+| 3 | ok | 2 | overview | 12.7 s | 803 | 158 | 13.5 | stop | — |
+| 3 | ok | 1 | whereToStart whole | 9.1 s | 734 | 118 | 13.2 | stop | — |
+| 4 | ok | 1 | whole | 12.4 s | 822 | 159 | 14.1 | stop | respectively ×1 |
+| 4 | ok | 2 | overview | 10.5 s | 803 | 134 | 14.0 | stop | — |
+| 4 | ok | 1 | whereToStart whole | 8.4 s | 734 | 117 | 14.2 | stop | — |
+| 5 | ok | 1 | whole | 12.1 s | 822 | 160 | 14.6 | stop | respectively ×1 |
+| 5 | ok | 2 | overview | 10.3 s | 803 | 139 | 14.8 | stop | — |
+| 5 | ok | 1 | whereToStart whole | 8.6 s | 734 | 118 | 14.0 | stop | — |
+
+#### Run 1: ok (2 attempt(s), 2 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 39.7 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 822, eval_count 157, 12.4 tokens/s, done_reason stop, 13.7 s
+- `respectively` overview, "Both dimensions are complete, with scores of 2.67 and 2.80, respectively.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): The overall cybersecurity effectiveness score for Westmaas is 2.73 out of 4.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are complete, with scores of 2.67 and 2.80, respectively. A HIGH flag was raised for incomplete asset interdependency documentation. The lowest scores, at 2, are for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 803, eval_count 138, 11.5 tokens/s, done_reason stop, 13.2 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, with a score of 2.67 out of 4, is complete. Business Continuity, with a score of 2.80 out of 4, is also complete. There is a HIGH flag for incomplete or outdated asset interdependency documentation. The lowest effectiveness results are at score 2 and of equal priority, specifically Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 734, eval_count 117, 10.3 tokens/s, done_reason stop, 12.8 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-IH-04: The Mean Time to Respond is measured at 30 hours, which is higher than desired.
+- ACT-BC-03: The Operational Threshold Violation Rate is measured at 12.5%, indicating a need for improvement.
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated, posing a critical risk.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F3): The overall cybersecurity effectiveness score for Westmaas is 2.73 out of 4.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, with a score of 2.67 out of 4, is complete. Business Continuity, with a score of 2.80 out of 4, is also complete. There is a HIGH flag for incomplete or outdated asset interdependency documentation. The lowest effectiveness results are at score 2 and of equal priority, specifically Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Shorten response time** (ACT-IH-04; F5): The Mean Time to Respond is measured at 30 hours, which is higher than desired.
+- **Reduce operational threshold violations** (ACT-BC-03; F9): The Operational Threshold Violation Rate is measured at 12.5%, indicating a need for improvement.
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated, posing a critical risk.
+
+#### Run 2: ok (2 attempt(s), 3 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 34.8 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 822, eval_count 160, 15.1 tokens/s, done_reason stop, 11.6 s
+- `judgement` headline, "The overall score is 2.73 out of 4, reflecting moderate performance across both dimensions.": Do not describe a score as "moderate": describe it only by its number or its level label (for example Good or Developing).
+- `respectively` overview, "Both dimensions are complete, with scores of 2.67 and 2.80, respectively.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): The overall score is 2.73 out of 4, reflecting moderate performance across both dimensions.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered 8 effectiveness indicators in two dimensions: Incident Handling and Business Continuity. Both dimensions are complete, with scores of 2.67 and 2.80, respectively. A HIGH flag was raised for incomplete asset interdependency documentation. The lowest effectiveness results were at score 2 for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 717, eval_count 43, 15.3 tokens/s, done_reason stop, 3.4 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F3): The overall score is 2.73 out of 4, reflecting average performance across Incident Handling and Business Continuity.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 803, eval_count 145, 15.1 tokens/s, done_reason stop, 10.5 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling, with 3 indicators, scored 2.67 out of 4. Business Continuity, with 5 indicators, scored 2.80 out of 4. A HIGH flag was raised for incomplete or outdated asset interdependency documentation. The lowest effectiveness results were at score 2, with Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate each scoring 2 and being of equal priority.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 734, eval_count 119, 13.0 tokens/s, done_reason stop, 9.3 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-IH-04: The Mean Time to Respond is measured at 30 hours, which is higher than desired.
+- ACT-BC-03: The Operational Threshold Violation Rate is measured at 12.5%, indicating a need to reduce violations.
+- ACT-L0-03: The asset interdependency documentation is incomplete or outdated, posing a critical risk.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F3): The overall score is 2.73 out of 4, reflecting average performance across Incident Handling and Business Continuity.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling, with 3 indicators, scored 2.67 out of 4. Business Continuity, with 5 indicators, scored 2.80 out of 4. A HIGH flag was raised for incomplete or outdated asset interdependency documentation. The lowest effectiveness results were at score 2, with Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate each scoring 2 and being of equal priority.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Shorten response time** (ACT-IH-04; F5): The Mean Time to Respond is measured at 30 hours, which is higher than desired.
+- **Reduce operational threshold violations** (ACT-BC-03; F9): The Operational Threshold Violation Rate is measured at 12.5%, indicating a need to reduce violations.
+- **Document asset interdependencies** (ACT-L0-03; F13): The asset interdependency documentation is incomplete or outdated, posing a critical risk.
+
+#### Run 3: ok (2 attempt(s), 2 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 34.2 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 822, eval_count 159, 13.8 tokens/s, done_reason stop, 12.5 s
+- `respectively` overview, "Both dimensions are complete, with scores of 2.67 and 2.80, respectively.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): The overall cybersecurity assessment score for Westmaas is 2.73 out of 4.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are complete, with scores of 2.67 and 2.80, respectively. A HIGH flag was raised for incomplete asset interdependency documentation. The lowest effectiveness results are at score 2 for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 803, eval_count 158, 13.5 tokens/s, done_reason stop, 12.7 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity, each containing multiple effectiveness indicators. Incident Handling, with three indicators, received a score of 2.67 out of 4, which is considered complete. Business Continuity, assessed through five indicators, scored 2.80 out of 4, also indicating completeness. A HIGH flag was raised for Asset interdependency documentation, which is incomplete or outdated. Additionally, the lowest effectiveness results, at score 2 and of equal priority, were for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 734, eval_count 118, 13.2 tokens/s, done_reason stop, 9.1 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-IH-04: The Mean Time to Respond is measured at 30 hours, which is higher than desired.
+- ACT-BC-03: The Operational Threshold Violation Rate is measured at 12.5%, indicating a need for improvement.
+- ACT-L0-03: The asset interdependency documentation is incomplete or outdated, posing a critical risk.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F3): The overall cybersecurity assessment score for Westmaas is 2.73 out of 4.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity, each containing multiple effectiveness indicators. Incident Handling, with three indicators, received a score of 2.67 out of 4, which is considered complete. Business Continuity, assessed through five indicators, scored 2.80 out of 4, also indicating completeness. A HIGH flag was raised for Asset interdependency documentation, which is incomplete or outdated. Additionally, the lowest effectiveness results, at score 2 and of equal priority, were for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Shorten response time** (ACT-IH-04; F5): The Mean Time to Respond is measured at 30 hours, which is higher than desired.
+- **Reduce operational threshold violations** (ACT-BC-03; F9): The Operational Threshold Violation Rate is measured at 12.5%, indicating a need for improvement.
+- **Document asset interdependencies** (ACT-L0-03; F13): The asset interdependency documentation is incomplete or outdated, posing a critical risk.
+
+#### Run 4: ok (2 attempt(s), 2 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 31.3 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 822, eval_count 159, 14.1 tokens/s, done_reason stop, 12.4 s
+- `respectively` overview, "Both dimensions are complete, with scores of 2.67 and 2.80, respectively.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): The overall cybersecurity effectiveness score for Westmaas is 2.73 out of 4.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are complete, with scores of 2.67 and 2.80, respectively. A HIGH flag was raised for incomplete asset interdependency documentation. The lowest effectiveness results are at score 2 for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 803, eval_count 134, 14.0 tokens/s, done_reason stop, 10.5 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, consisting of 3 indicators, scored 2.67 out of 4. Business Continuity, with 5 indicators, scored 2.80 out of 4. A HIGH flag was raised for incomplete or outdated asset interdependency documentation. The lowest effectiveness results, both at score 2, were for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 734, eval_count 117, 14.2 tokens/s, done_reason stop, 8.4 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-IH-04: The Mean Time to Respond is measured at 30 hours, which is higher than desired.
+- ACT-BC-03: The Operational Threshold Violation Rate is measured at 12.5%, indicating a need for improvement.
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated, posing a critical risk.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F3): The overall cybersecurity effectiveness score for Westmaas is 2.73 out of 4.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, consisting of 3 indicators, scored 2.67 out of 4. Business Continuity, with 5 indicators, scored 2.80 out of 4. A HIGH flag was raised for incomplete or outdated asset interdependency documentation. The lowest effectiveness results, both at score 2, were for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Shorten response time** (ACT-IH-04; F5): The Mean Time to Respond is measured at 30 hours, which is higher than desired.
+- **Reduce operational threshold violations** (ACT-BC-03; F9): The Operational Threshold Violation Rate is measured at 12.5%, indicating a need for improvement.
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated, posing a critical risk.
+
+#### Run 5: ok (2 attempt(s), 2 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 31.0 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 822, eval_count 160, 14.6 tokens/s, done_reason stop, 12.1 s
+- `respectively` overview, "Both dimensions are complete, with scores of 2.67 and 2.80, respectively.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): The overall cybersecurity assessment score for Westmaas is 2.73 out of 4.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are complete, with scores of 2.67 and 2.80, respectively. A HIGH flag was raised for incomplete asset interdependency documentation. The lowest effectiveness results are 2, with Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate all scoring 2.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 803, eval_count 139, 14.8 tokens/s, done_reason stop, 10.3 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, with a score of 2.67 out of 4, is complete. Business Continuity, with a score of 2.80 out of 4, is also complete. There is a HIGH flag for incomplete or outdated asset interdependency documentation. The lowest effectiveness results, at score 2 and of equal priority, are for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 734, eval_count 118, 14.0 tokens/s, done_reason stop, 8.6 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-IH-04: The Mean Time to Respond is measured at 30 hours, which is higher than desired.
+- ACT-BC-03: The Operational Threshold Violation Rate is measured at 12.5%, indicating a need for reduction.
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated, posing a HIGH severity risk.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F3): The overall cybersecurity assessment score for Westmaas is 2.73 out of 4.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, with a score of 2.67 out of 4, is complete. Business Continuity, with a score of 2.80 out of 4, is also complete. There is a HIGH flag for incomplete or outdated asset interdependency documentation. The lowest effectiveness results, at score 2 and of equal priority, are for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Shorten response time** (ACT-IH-04; F5): The Mean Time to Respond is measured at 30 hours, which is higher than desired.
+- **Reduce operational threshold violations** (ACT-BC-03; F9): The Operational Threshold Violation Rate is measured at 12.5%, indicating a need for reduction.
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated, posing a HIGH severity risk.
+
+### Review
+
+Context: as the Westmaas baseline set above; 5 candidates, 3 picks, no
+CRITICAL flag.
+
+1. Invariant breaks the validator missed: Where to start, in every run:
+   "Asset interdependency documentation is incomplete or outdated, posing
+   a critical risk." (runs 1–4) calls a HIGH flag critical. Check 9 misses
+   it: the clause with "critical" names no item, and the per-sentence rule
+   skips sentences that name a flagged item, whatever that item's
+   severity. The same gap exists for the headline and overview. Also
+   accepted: "posing a HIGH severity risk" (run 5), a consequence (rule 9
+   of the Where to start prompt; `urgency` does not cover "risk").
+   Unvalidated judgements in reasons: "which is higher than desired"
+   (Mean Time to Respond, all runs), "indicating a need for improvement /
+   to reduce violations / for reduction" (all runs): no fact says this.
+   Headline/overview: "reflecting average performance" accepted (runs 3,
+   check 16 lists "moderate", not "average").
+2. Validator errors that look wrong: none.
+3. Paraphrased item names: none new.
+4. Prompt conformance: headlines one sentence; overviews 4–5 sentences;
+   `respectively` ("scores of 2.67 and 2.80, respectively") in 5 of 5 first
+   attempts, repaired every time. Where to start: picks identical in all 5
+   runs (ACT-IH-04, ACT-BC-03, ACT-L0-03: the HIGH flag and two score-2
+   results; not ACT-BC-05, also score 2, nor ACT-RM-02, the MEDIUM NOTE);
+   one sentence each.
+5. Items named without their fact cited: not applicable to Where to start.
+6. Band ranges: not narrated.
+
+Result: 5 of 5 ok; Where to start 5 of 5 ok on the first call, no
+validator error, but with the misses in point 1.
+
+## Run set 2026-10-01 13:14 UTC: Oudendijk_2026-03-01_assessment.json
+
+- Model: qwen2.5:7b · Ollama 0.35.0 · options `{"temperature":0.2,"num_ctx":4096,"num_predict":1024}`
+- Timeout 300.0 s per call · 60.0 s cooldown between runs · retries at temperature 0.5, repairing failing sections only
+- Scenario: scenarios/Oudendijk_2026-03-01_assessment.json (18 facts)
+- Where to start candidates (1): ACT-L0-03 Document asset interdependencies
+
+| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |
+|---|---|---|---|---|---|
+| before | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+| after | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+
+### Summary
+
+| Measure | Value |
+|---|---|
+| ok | 4 of 5 |
+| generated sections identical and valid | 5 of 5 |
+| attempts per run (calls) | 1 (1), 3 (5), 2 (3), 2 (3), 3 (4) |
+| Where to start ok | 5 of 5 |
+| Where to start attempts per run (calls) | 1 (1), 1 (1), 1 (1), 1 (1), 1 (1) |
+| Where to start picks per run | 1: ACT-L0-03; 2: ACT-L0-03; 3: ACT-L0-03; 4: ACT-L0-03; 5: ACT-L0-03 |
+| errors by rule (headline/overview) | severity ×7, levelLabel ×7, unscoredScore ×1 |
+| errors by rule (Where to start) | — |
+| max prompt_eval_count | 835 (warning above 3000) |
+| generation speed (tokens/s, eval_duration) | first 13.0, last 14.9, min 11.3, max 15.3 |
+
+### Generated sections
+
+Built from the facts by templates (no model); every run asserts it gets exactly this.
+
+The reference copy passes the validator.
+
+**measuredPerformance** (C3, F4, F7): Each effectiveness indicator is scored from 0 to 4, where 4 is best. In Incident Handling, Mean Time to Detect was 20 hours (score 3, Good). In Business Continuity, Network Operability Under Disruption was 90% (score 4, Excellent). For Mean Time to Detect, lower values are better.
+
+**gapsAndMissingEvidence** (F1, F2, F3, F5, F6, F8, F9, F10, F11): Six indicators are not yet assessed: Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate. This says nothing about how they perform, but without them Incident Handling and Business Continuity have no score, so there is no overall score either.
+
+**foundationsAndFlags** (F12, F13, F14): In place: Asset inventory maintained. Not yet assessed: Risk assessment per zone, Controlled IT/OT boundary separation, Zero uncontrolled multi-homed devices, BC plan documented for critical processes, Vulnerability Remediation Rate, Mean Time to Remediate and BC plan tested within defined period. This says nothing about whether they are in place.
+
+The following issues were flagged (listed by severity; this is not an order of action). High: asset interdependency documentation is incomplete or outdated.
+
+**priorities** (F5, F6, F8, F9, F10, F11, F15): No scored effectiveness indicator is below 3 (Good). Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate are not ranked because they have no score.
+
+**targets** (F4, F5, F6, F7, F8, F9, F10, F11): Each target is the value an indicator needs for its next score level, taken from the scoring bands.
+
+In Incident Handling, Mean Time to Detect, now 20 hours (score 3, Good), reaches score 4 (Excellent) at 6 hours or less.
+
+Already at the highest level (score 4, Excellent): Network Operability Under Disruption.
+
+Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate have no score, so they have no target.
+
+**recommendedActions** (F13): Each action comes from the dashboard's action catalogue and is matched to a result in this assessment. Actions are grouped by area in catalogue order; this is not an order of action.
+
+Foundational controls
+
+Document asset interdependencies
+Document which assets and services each critical process depends on.
+Steps: For each critical process, list the PLCs, HMIs, servers, network paths and IT services it needs. Include external dependencies such as vendor remote access. Keep it linked to the asset inventory.
+Why it matters: Without this, the impact of losing an asset is guesswork, both during incidents and when planning recovery.
+Who: OT engineering with plant operations
+NIS2 Article 21(2): (c) business continuity (supports)
+
+Indicators and controls that are not yet assessed trigger no action, so their absence here says nothing about them.
+
+### Runs
+
+| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | ok | 1 | whole | 11.1 s | 804 | 132 | 13.0 | stop | — |
+| 1 | ok | 1 | whereToStart whole | 4.0 s | 545 | 44 | 12.1 | stop | — |
+| 2 | failed | 1 | whole | 10.6 s | 804 | 144 | 14.0 | stop | severity ×2 |
+| 2 | failed | 2 | headline | 3.1 s | 711 | 31 | 12.7 | stop | severity ×1 |
+| 2 | failed | 2 | overview | 12.3 s | 826 | 144 | 12.7 | stop | levelLabel ×1 |
+| 2 | failed | 3 | headline | 3.2 s | 673 | 30 | 11.3 | stop | — |
+| 2 | failed | 3 | overview | 12.6 s | 817 | 145 | 12.5 | stop | unscoredScore ×1 |
+| 2 | ok | 1 | whereToStart whole | 3.7 s | 545 | 44 | 12.5 | stop | — |
+| 3 | ok | 1 | whole | 12.3 s | 804 | 162 | 14.4 | stop | severity ×1, levelLabel ×2 |
+| 3 | ok | 2 | headline | 4.2 s | 762 | 50 | 14.4 | stop | — |
+| 3 | ok | 2 | overview | 9.3 s | 835 | 121 | 14.7 | stop | — |
+| 3 | ok | 1 | whereToStart whole | 4.0 s | 545 | 44 | 11.4 | stop | — |
+| 4 | ok | 1 | whole | 11.7 s | 804 | 155 | 14.7 | stop | severity ×1, levelLabel ×2 |
+| 4 | ok | 2 | headline | 3.9 s | 762 | 46 | 14.6 | stop | — |
+| 4 | ok | 2 | overview | 11.4 s | 829 | 155 | 14.8 | stop | — |
+| 4 | ok | 1 | whereToStart whole | 3.2 s | 545 | 44 | 14.2 | stop | — |
+| 5 | ok | 1 | whole | 11.6 s | 804 | 161 | 15.3 | stop | severity ×1, levelLabel ×2 |
+| 5 | ok | 2 | headline | 2.8 s | 762 | 31 | 14.8 | stop | severity ×1 |
+| 5 | ok | 2 | overview | 8.1 s | 835 | 106 | 15.0 | stop | — |
+| 5 | ok | 3 | headline | 2.5 s | 673 | 30 | 14.6 | stop | — |
+| 5 | ok | 1 | whereToStart whole | 3.1 s | 545 | 44 | 14.9 | stop | — |
+
+#### Run 1: ok (1 attempt(s), 1 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 15.1 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 132, 13.0 tokens/s, done_reason stop, 11.1 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): No overall score due to incomplete Incident Handling and Business Continuity dimensions.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, with no scores available. Additionally, there is a HIGH severity flag for incomplete asset interdependency documentation. Only two indicators have scores, both rated good.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 545, eval_count 44, 12.1 tokens/s, done_reason stop, 4.0 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: The asset interdependency documentation is incomplete or outdated, which is a HIGH severity issue.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F3): No overall score due to incomplete Incident Handling and Business Continuity dimensions.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, with no scores available. Additionally, there is a HIGH severity flag for incomplete asset interdependency documentation. Only two indicators have scores, both rated good.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F13): The asset interdependency documentation is incomplete or outdated, which is a HIGH severity issue.
+
+#### Run 2: failed (3 attempt(s), 5 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 45.4 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 144, 14.0 tokens/s, done_reason stop, 10.6 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two indicators have scores, both of which are good.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `severity` overview, "Critical issues include incomplete asset interdependency documentation, and only two indicators have scores, both rated good.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F15): The assessment identifies critical gaps in asset interdependency documentation and notes that only two indicators have scores, both of which are good.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment evaluated 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, resulting in no overall score. Critical issues include incomplete asset interdependency documentation, and only two indicators have scores, both rated good.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 711, eval_count 31, 12.7 tokens/s, done_reason stop, 3.1 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13): The assessment identifies critical gaps in asset interdependency documentation.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 826, eval_count 144, 12.7 tokens/s, done_reason stop, 12.3 s
+- `levelLabel` overview, "Only two of the eight indicators have scores, both rated Good.": Do not write the level label "Good": describe a score only by its number.
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered Incident Handling and Business Continuity across 8 effectiveness indicators. Both dimensions are incomplete, as Mean Time to Respond and Mean Time to Contain have no score in Incident Handling, and Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate have no score in Business Continuity. Consequently, no overall score is available. Additionally, there is a HIGH flag for incomplete asset interdependency documentation. Only two of the eight indicators have scores, both rated Good. 
+
+</details>
+
+Attempt 3, repair of headline: prompt_eval_count 673, eval_count 30, 11.3 tokens/s, done_reason stop, 3.2 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of headline)</summary>
+
+**headline** (F13): High severity gaps exist in asset interdependency documentation.
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 817, eval_count 145, 12.5 tokens/s, done_reason stop, 12.6 s
+- `unscoredScore` overview, "The assessment covered Incident Handling and Business Continuity in two dimensions.": Business Continuity is incomplete and has no score; do not give it a score.
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered Incident Handling and Business Continuity in two dimensions. Incident Handling is incomplete, with no scores for Mean Time to Respond and Mean Time to Contain. Business Continuity is also incomplete, with no scores for Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate. Consequently, overall scores are not available. Additionally, there is a HIGH flag for incomplete asset interdependency documentation. Only two out of eight effectiveness indicators have scores, both at or above 3.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 545, eval_count 44, 12.5 tokens/s, done_reason stop, 3.7 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: The asset interdependency documentation is incomplete or outdated, which is a HIGH severity issue.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F13): The asset interdependency documentation is incomplete or outdated, which is a HIGH severity issue.
+
+#### Run 3: ok (2 attempt(s), 3 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 29.9 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 162, 14.4 tokens/s, done_reason stop, 12.3 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `levelLabel` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+- `levelLabel` overview, "Additionally, a HIGH severity flag was raised for incomplete asset interdependency documentation, and it was found that only two indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F15): The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment evaluated 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete due to missing scores, resulting in no overall score. Additionally, a HIGH severity flag was raised for incomplete asset interdependency documentation, and it was found that only two indicators are scored, both at good levels.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 762, eval_count 50, 14.4 tokens/s, done_reason stop, 4.2 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13, F15): The assessment identifies a HIGH severity gap in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 835, eval_count 121, 14.7 tokens/s, done_reason stop, 9.3 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13): The assessment covered two dimensions: Incident Handling with three indicators and Business Continuity with five indicators. Both dimensions are incomplete, as there are no scores for Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate. Consequently, no overall score is available. Additionally, a HIGH severity flag was raised for incomplete asset interdependency documentation.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 545, eval_count 44, 11.4 tokens/s, done_reason stop, 4.0 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: The asset interdependency documentation is incomplete or outdated, which is a HIGH severity issue.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F15): The assessment identifies a HIGH severity gap in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored.
+
+**overview** (C2, F1, F2, F3, F13): The assessment covered two dimensions: Incident Handling with three indicators and Business Continuity with five indicators. Both dimensions are incomplete, as there are no scores for Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate. Consequently, no overall score is available. Additionally, a HIGH severity flag was raised for incomplete asset interdependency documentation.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F13): The asset interdependency documentation is incomplete or outdated, which is a HIGH severity issue.
+
+#### Run 4: ok (2 attempt(s), 3 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 30.2 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 155, 14.7 tokens/s, done_reason stop, 11.7 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `levelLabel` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+- `levelLabel` overview, "Key flags include a HIGH severity issue with asset interdependency documentation, and only two indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F15): The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete due to missing scores, resulting in no overall score. Key flags include a HIGH severity issue with asset interdependency documentation, and only two indicators are scored, both at good levels.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 762, eval_count 46, 14.6 tokens/s, done_reason stop, 3.9 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13, F15): The assessment identifies a HIGH severity gap in asset interdependency documentation and notes that only two of eight effectiveness indicators are scored.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 829, eval_count 155, 14.8 tokens/s, done_reason stop, 11.4 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling with three indicators and Business Continuity with five indicators. Both dimensions are incomplete, as Mean Time to Respond and Mean Time to Contain in Incident Handling, and Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate in Business Continuity have no scores. As a result, no overall score is available. Additionally, there is a HIGH severity issue with incomplete or outdated asset interdependency documentation. Only two of the eight effectiveness indicators have scores, both at a score of 3.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 545, eval_count 44, 14.2 tokens/s, done_reason stop, 3.2 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: The asset interdependency documentation is incomplete or outdated, which is a HIGH severity issue.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F15): The assessment identifies a HIGH severity gap in asset interdependency documentation and notes that only two of eight effectiveness indicators are scored.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling with three indicators and Business Continuity with five indicators. Both dimensions are incomplete, as Mean Time to Respond and Mean Time to Contain in Incident Handling, and Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate in Business Continuity have no scores. As a result, no overall score is available. Additionally, there is a HIGH severity issue with incomplete or outdated asset interdependency documentation. Only two of the eight effectiveness indicators have scores, both at a score of 3.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F13): The asset interdependency documentation is incomplete or outdated, which is a HIGH severity issue.
+
+#### Run 5: ok (3 attempt(s), 4 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 28.1 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 161, 15.3 tokens/s, done_reason stop, 11.6 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `levelLabel` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+- `levelLabel` overview, "Additionally, a HIGH severity flag was raised for incomplete asset interdependency documentation, and it was found that only two indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F15): The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete due to missing scores, resulting in no overall score. Additionally, a HIGH severity flag was raised for incomplete asset interdependency documentation, and it was found that only two indicators are scored, both at good levels.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 762, eval_count 31, 14.8 tokens/s, done_reason stop, 2.8 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13): The assessment identifies critical gaps in asset interdependency documentation.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 835, eval_count 106, 15.0 tokens/s, done_reason stop, 8.1 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling with three indicators and Business Continuity with five indicators. Both dimensions are incomplete, resulting in no overall score. A HIGH severity flag was raised for incomplete asset interdependency documentation. Additionally, only two of the eight effectiveness indicators have scores, both at a level of 8 or higher.
+
+</details>
+
+Attempt 3, repair of headline: prompt_eval_count 673, eval_count 30, 14.6 tokens/s, done_reason stop, 2.5 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of headline)</summary>
+
+**headline** (F13): High severity gaps exist in asset interdependency documentation.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 545, eval_count 44, 14.9 tokens/s, done_reason stop, 3.1 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: The asset interdependency documentation is incomplete or outdated, which is a HIGH severity issue.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13): High severity gaps exist in asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling with three indicators and Business Continuity with five indicators. Both dimensions are incomplete, resulting in no overall score. A HIGH severity flag was raised for incomplete asset interdependency documentation. Additionally, only two of the eight effectiveness indicators have scores, both at a level of 8 or higher.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F13): The asset interdependency documentation is incomplete or outdated, which is a HIGH severity issue.
+
+### Review
+
+Context: as above; 1 candidate (ACT-L0-03), so the schema forces the
+pick and the model writes only the reason.
+
+1. Invariant breaks the validator missed: headline/overview: run 1
+   accepted "both rated good" (known: check 17 catches a lower-case label
+   only before "level"). Where to start: none.
+2. Validator errors that look wrong: one. Run 2, attempt 2: "The
+   assessment covered Incident Handling and Business Continuity in two
+   dimensions." failed `unscoredScore` ("Business Continuity … two" read as
+   a dimension score); "two dimensions" is a count, like the "five
+   effectiveness indicators" exception in check 5. Validator bug, to be
+   fixed with a failing test first (not done in this set).
+3. Paraphrased item names: none new.
+4. Prompt conformance: the known Oudendijk patterns again: "critical" for
+   the only (HIGH) flag (`severity`, 4 of 5 runs), level label "good"
+   (`levelLabel`, 3 of 5). Where to start: the same reason in all runs,
+   "The asset interdependency documentation is incomplete or outdated,
+   which is a HIGH severity issue."
+5. Items named without their fact cited: not applicable to Where to start.
+6. Band ranges: not applicable.
+
+Result: 4 of 5 ok (run 2 failed: `severity`, `levelLabel`, then the
+`unscoredScore` false positive); Where to start 5 of 5 ok, also in the
+failed run 2 (shown on its own, as agreed).
+
+## Run set 2026-10-01 13:46 UTC: Westmaas_2026-01-01_assessment.json
+
+- Model: qwen2.5:7b · Ollama 0.35.0 · options `{"temperature":0.2,"num_ctx":4096,"num_predict":1024}`
+- Timeout 300.0 s per call · 60.0 s cooldown between runs · retries at temperature 0.5, repairing failing sections only
+- Scenario: scenarios/Westmaas_2026-01-01_assessment.json (23 facts)
+- Where to start candidates (10): ACT-IH-04 Shorten response time; ACT-IH-06 Make incident handling measurable; ACT-BC-02 Improve zone availability; ACT-BC-03 Reduce operational threshold violations; ACT-BC-05 Meet recovery time objectives; ACT-BC-08 Define recovery point objectives; ACT-L0-03 Document asset interdependencies; ACT-L0-05 Remove or control multi-homed devices; ACT-L0-08 Test the BC plan; ACT-RM-02 Improve the remediation rate
+
+| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |
+|---|---|---|---|---|---|
+| before | (no model loaded) | | | | |
+| after | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+
+### Summary
+
+| Measure | Value |
+|---|---|
+| ok | 5 of 5 |
+| generated sections identical and valid | 5 of 5 |
+| attempts per run (calls) | 1 (1), 3 (3), 2 (2), 1 (1), 1 (1) |
+| Where to start ok | 5 of 5 |
+| Where to start attempts per run (calls) | 2 (4), 2 (4), 1 (1), 1 (1), 1 (1) |
+| Where to start picks per run | 1: ACT-L0-03, ACT-L0-05, ACT-L0-08; 2: ACT-L0-03, ACT-L0-05, ACT-L0-08; 3: ACT-L0-03, ACT-L0-05, ACT-L0-08; 4: ACT-L0-03, ACT-L0-05, ACT-L0-08; 5: ACT-L0-03, ACT-L0-05, ACT-L0-08 |
+| errors by rule (headline/overview) | missing ×2, flagCount ×1 |
+| errors by rule (Where to start) | leakedIds ×6 |
+| max prompt_eval_count | 1027 (warning above 3000) |
+| generation speed (tokens/s, eval_duration) | first 15.7, last 15.3, min 15.2, max 16.4 |
+
+### Generated sections
+
+Built from the facts by templates (no model); every run asserts it gets exactly this.
+
+The reference copy passes the validator.
+
+**measuredPerformance** (C3, F4, F5, F7, F8, F9, F10): Each effectiveness indicator is scored from 0 to 4, where 4 is best. In Incident Handling, Mean Time to Detect was 18 hours (score 3, Good) and Mean Time to Respond was 30 hours (score 2, Developing). In Business Continuity, Network Operability Under Disruption was 85% (score 3, Good), Zone Availability Rate was 40% (score 2, Developing), Operational Threshold Violation Rate was 12.5% (score 2, Developing) and RTO Achievement Rate was 50% (score 2, Developing). For Mean Time to Detect, Mean Time to Respond and Operational Threshold Violation Rate, lower values are better.
+
+**gapsAndMissingEvidence** (F1, F3, F6, F11): Mean Time to Contain is not measurable: evidence to compute the value is absent or unreliable, and no reason was recorded. This says nothing about how Mean Time to Contain performs, but without it Incident Handling has no score, so there is no overall score either.
+
+No recovery point objective has been established for RPO Achievement Rate, so it scores 0 as a programme gap; this is not a measured failure.
+
+**foundationsAndFlags** (F12, F13, F14, F15, F16, F17, F18, F19): In place: Asset inventory maintained, Risk assessment per zone, Controlled IT/OT boundary separation and BC plan documented for critical processes.
+
+The following issues were flagged (listed by severity; this is not an order of action). Critical: uncontrolled inter-zone multi-homed devices were identified. High: asset interdependency documentation is incomplete or outdated, and no BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+Process evidence is reported without a score. Vulnerability Remediation Rate is 60%, in the 50–69% band, which is below target — moderate programme improvement warranted (medium note). Mean Time to Remediate is 75 days, in the 31–90 days band, which is satisfactory — continue monitoring.
+
+Read together (advisory only; no scores change): the uncontrolled multi-homed devices and Zone Availability Rate (score 2, Developing) may be related, because a segmentation bypass can affect zone availability; review them together. Removing the multi-homed devices and establishing the evidence to measure Mean Time to Contain are both measurement-readiness actions; address them together.
+
+**priorities** (F6, F20): Ranked by score, where a lower score is more urgent: the lowest effectiveness result is RPO Achievement Rate, a programme gap at score 0. Next, at score 2 and of equal priority, are Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate and RTO Achievement Rate, listed in catalogue order. Mean Time to Contain is not ranked because it has no score.
+
+**targets** (F4, F5, F6, F7, F8, F9, F10, F11): Each target is the value an indicator needs for its next score level, taken from the scoring bands.
+
+In Incident Handling, Mean Time to Detect, now 18 hours (score 3, Good), reaches score 4 (Excellent) at 6 hours or less. Mean Time to Respond, now 30 hours (score 2, Developing), reaches score 3 (Good) at 24 hours or less.
+
+In Business Continuity, Network Operability Under Disruption, now 85% (score 3, Good), reaches score 4 (Excellent) at 90% or more. Zone Availability Rate, now 40% (score 2, Developing), reaches score 3 (Good) at 70% or more. Operational Threshold Violation Rate, now 12.5% (score 2, Developing), reaches score 3 (Good) at 5% or less. RTO Achievement Rate, now 50% (score 2, Developing), reaches score 3 (Good) at 75% or more.
+
+RPO Achievement Rate has no numeric target yet: no recovery point objective has been established. Define the objective first; the scoring bands apply once it exists.
+
+Mean Time to Contain has no score, so it has no target.
+
+**recommendedActions** (F5, F6, F8, F9, F10, F11, F13, F14, F15, F16): Each action comes from the dashboard's action catalogue and is matched to a result in this assessment. Actions are grouped by area in catalogue order; this is not an order of action.
+
+Incident Handling
+
+Shorten response time
+Reduce the time from detection to the start of a response.
+Steps: Set target response times per incident severity. Arrange on-call cover that includes someone with OT knowledge. Review recent incidents for hand-over delays between IT, security and operations.
+Why it matters: Delays between detection and response are often organisational, not technical, and can be fixed without new tooling.
+Who: Security team with plant operations
+NIS2 Article 21(2): (b) incident handling
+
+Make incident handling measurable
+Record detection, response and containment times for every incident.
+Steps: Add mandatory timestamp fields to incident tickets: incident start (if known), detection, response start, containment. Agree which clock is authoritative. Check the fields are filled in when a ticket is closed.
+Why it matters: The next assessment can only score these indicators if the times are recorded. This says nothing about current performance.
+Who: Security team
+NIS2 Article 21(2): (b) incident handling; (f) assessing the effectiveness of measures
+
+Business Continuity
+
+Improve zone availability
+Address the main causes of zone outages.
+Steps: Use the disruption log to find the most common causes of zones becoming unavailable. Fix the top causes first. Check whether uncontrolled connections between zones, such as multi-homed devices, contribute.
+Why it matters: Zone outages directly affect the processes running in them.
+Who: OT engineering
+NIS2 Article 21(2): (c) business continuity
+Standard: IEC 62443-3-3 FR 7 (resource availability)
+
+Reduce operational threshold violations
+Reduce how often process parameters leave their safe operating range during disruptions.
+Steps: Review each violation: which disruption caused it, and how long it lasted. Improve operator procedures for degraded operation. Check that alarms for these parameters work and reach operators in time.
+Why it matters: Threshold violations are where a cyber disruption turns into a process or safety impact.
+Who: Plant operations with process engineering
+NIS2 Article 21(2): (c) business continuity
+
+Meet recovery time objectives
+Make recovery of OT systems faster and more predictable.
+Steps: Analyse recoveries that exceeded their RTO. Keep tested recovery media and system images for HMIs, servers and engineering workstations. Write step-by-step rebuild procedures and practise them.
+Why it matters: Recoveries that take longer than agreed extend process downtime.
+Who: OT engineering
+NIS2 Article 21(2): (c) business continuity, disaster recovery
+Standard: IEC 62443-3-3 SR 7.4 (control system recovery and reconstitution)
+
+Define recovery point objectives
+Define recovery point objectives for critical processes.
+Steps: Agree with operations the maximum acceptable data loss per critical process. Align backup frequency for historians, SCADA/PLC configurations and engineering workstations with it. Verify with a restore test on a test system or spare hardware.
+Why it matters: Without an RPO, recovery cannot be measured, so the indicator stays at 0.
+Who: Plant operations with OT engineering
+NIS2 Article 21(2): (c) business continuity, backup management
+Standard: IEC 62443-3-3 SR 7.3 (control system backup)
+
+Foundational controls
+
+Document asset interdependencies
+Document which assets and services each critical process depends on.
+Steps: For each critical process, list the PLCs, HMIs, servers, network paths and IT services it needs. Include external dependencies such as vendor remote access. Keep it linked to the asset inventory.
+Why it matters: Without this, the impact of losing an asset is guesswork, both during incidents and when planning recovery.
+Who: OT engineering with plant operations
+NIS2 Article 21(2): (c) business continuity (supports)
+
+Remove or control multi-homed devices
+Remove or control hosts connected to more than one zone.
+Steps: List every host with interfaces in more than one zone. Remove the second interface, or route that traffic through a controlled conduit with a firewall. Re-scan to confirm none remain.
+Why it matters: A dual-homed host bypasses the zone boundary and can connect zones that should be separated.
+Who: OT engineering
+Standard: IEC 62443-3-3 SR 5.1 (network segmentation), SR 5.2 (zone boundary protection)
+
+Test the BC plan
+Test the BC plan within the defined period.
+Steps: Schedule a test: a tabletop exercise at minimum, ideally including a restore of at least one OT system to a test environment. Record the results and fix the gaps found.
+Why it matters: An untested plan often fails on details nobody noticed on paper.
+Who: Plant operations with OT engineering
+NIS2 Article 21(2): (c) business continuity; (f) assessing the effectiveness of measures
+
+Vulnerability management
+
+Improve the remediation rate
+Remediate more of the known vulnerabilities, prioritising by risk.
+Steps: Prioritise by exposure and process criticality, for example known-exploited vulnerabilities on reachable systems first. Use vendor-approved patches. Where patching is not possible, apply and document compensating controls.
+Why it matters: In OT, not every vulnerability can be patched, but every one needs a decision.
+Who: OT engineering with the security team
+NIS2 Article 21(2): (e) vulnerability handling
+Standard: IEC TR 62443-2-3 (patch management in the IACS environment)
+
+### Runs
+
+| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | ok | 1 | whole | 55.4 s | 875 | 179 | 15.7 | stop | — |
+| 1 | ok | 1 | whereToStart whole | 10.3 s | 1027 | 107 | 15.5 | stop | leakedIds ×3 |
+| 1 | ok | 2 | whereToStart ACT-L0-03 | 1.5 s | 639 | 16 | 15.6 | stop | — |
+| 1 | ok | 2 | whereToStart ACT-L0-05 | 1.6 s | 648 | 18 | 16.4 | stop | — |
+| 1 | ok | 2 | whereToStart ACT-L0-08 | 2.0 s | 650 | 25 | 16.2 | stop | — |
+| 2 | ok | 1 | whole | 12.4 s | 875 | 190 | 15.7 | stop | missing ×1 |
+| 2 | ok | 2 | overview | 10.7 s | 825 | 153 | 15.5 | stop | flagCount ×1 |
+| 2 | ok | 3 | overview | 10.3 s | 819 | 145 | 15.4 | stop | — |
+| 2 | ok | 1 | whereToStart whole | 7.2 s | 1027 | 107 | 15.2 | stop | leakedIds ×3 |
+| 2 | ok | 2 | whereToStart ACT-L0-03 | 1.5 s | 639 | 16 | 16.4 | stop | — |
+| 2 | ok | 2 | whereToStart ACT-L0-05 | 1.6 s | 648 | 18 | 16.0 | stop | — |
+| 2 | ok | 2 | whereToStart ACT-L0-08 | 1.6 s | 650 | 18 | 15.7 | stop | — |
+| 3 | ok | 1 | whole | 13.3 s | 875 | 188 | 15.6 | stop | missing ×1 |
+| 3 | ok | 2 | overview | 10.7 s | 835 | 150 | 15.6 | stop | — |
+| 3 | ok | 1 | whereToStart whole | 6.9 s | 1027 | 102 | 15.2 | stop | — |
+| 4 | ok | 1 | whole | 13.8 s | 875 | 196 | 15.7 | stop | — |
+| 4 | ok | 1 | whereToStart whole | 6.8 s | 1027 | 102 | 15.3 | stop | — |
+| 5 | ok | 1 | whole | 11.3 s | 875 | 172 | 15.7 | stop | — |
+| 5 | ok | 1 | whereToStart whole | 6.8 s | 1027 | 102 | 15.3 | stop | — |
+
+#### Run 1: ok (1 attempt(s), 1 call(s)); Where to start ok (2 attempt(s), 4 call(s)); 70.8 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 179, 15.7 tokens/s, done_reason stop, 55.4 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80. The overall score is unavailable. Critical issues include uncontrolled inter-zone multi-homed devices, and high severity issues are noted for incomplete asset interdependency documentation and untested BC plans.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 1027, eval_count 107, 15.5 tokens/s, done_reason stop, 10.3 s
+- `leakedIds` whereToStart ACT-L0-05, "Uncontrolled inter-zone multi-homed devices were identified (F13).": Fact ID "F13" appears in the text. Never write fact IDs.
+- `leakedIds` whereToStart ACT-L0-03, "Asset interdependency documentation is incomplete or outdated (F14).": Fact ID "F14" appears in the text. Never write fact IDs.
+- `leakedIds` whereToStart ACT-L0-08, "No BC plan test was performed during the assessment period (F15).": Fact ID "F15" appears in the text. Never write fact IDs.
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified (F13).
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated (F14).
+- ACT-L0-08: No BC plan test was performed during the assessment period (F15).
+
+</details>
+
+Attempt 2, repair of Where to start ACT-L0-03: prompt_eval_count 639, eval_count 16, 15.6 tokens/s, done_reason stop, 1.5 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of Where to start ACT-L0-03)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+
+</details>
+
+Attempt 2, repair of Where to start ACT-L0-05: prompt_eval_count 648, eval_count 18, 16.4 tokens/s, done_reason stop, 1.6 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of Where to start ACT-L0-05)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified.
+
+</details>
+
+Attempt 2, repair of Where to start ACT-L0-08: prompt_eval_count 650, eval_count 25, 16.2 tokens/s, done_reason stop, 2.0 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of Where to start ACT-L0-08)</summary>
+
+- ACT-L0-08: No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80. The overall score is unavailable. Critical issues include uncontrolled inter-zone multi-homed devices, and high severity issues are noted for incomplete asset interdependency documentation and untested BC plans.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F14): Asset interdependency documentation is incomplete or outdated.
+- **Remove or control multi-homed devices** (ACT-L0-05; F13): Uncontrolled inter-zone multi-homed devices were identified.
+- **Test the BC plan** (ACT-L0-08; F15): No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+#### Run 2: ok (3 attempt(s), 3 call(s)); Where to start ok (2 attempt(s), 4 call(s)); 45.3 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 190, 15.7 tokens/s, done_reason stop, 12.4 s
+- `missing` overview, "Incident Handling is incomplete due to a missing indicator, resulting in no dimension score.": Do not write "missing indicator": the indicator exists; say it has no score.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to a missing indicator, resulting in no dimension score. Business Continuity scored 1.80 out of 4. The overall score is not available. Critical and high severity flags were raised for uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and lack of BC plan testing.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 825, eval_count 153, 15.5 tokens/s, done_reason stop, 10.7 s
+- `flagCount` overview, "Additionally, there are two high-severity flags: incomplete or outdated asset interdependency documentation (HIGH) and no Business Continuity plan test performed during the assessment period (HIGH).": The cited facts contain 3 flags; do not write "two high-severity flags".
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F2, F3, F13, F14, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Business Continuity is complete with a score of 1.80 out of 4, including a programme gap of 0 for RPO Achievement Rate. Due to the incomplete Incident Handling dimension, an overall score is not available. Critical flags include uncontrolled inter-zone multi-homed devices (CRITICAL). Additionally, there are two high-severity flags: incomplete or outdated asset interdependency documentation (HIGH) and no Business Continuity plan test performed during the assessment period (HIGH).
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 819, eval_count 145, 15.4 tokens/s, done_reason stop, 10.3 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F2, F3, F13, F14, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Business Continuity was complete, scoring 1.80 out of 4, including a programme gap of 0 for RPO Achievement Rate. Incident Handling is incomplete, resulting in an unavailable overall score. Critical and high-severity flags include uncontrolled inter-zone multi-homed devices (CRITICAL) and incomplete or outdated asset interdependency documentation (HIGH), as well as no Business Continuity plan test performed during the assessment period (HIGH).
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 1027, eval_count 107, 15.2 tokens/s, done_reason stop, 7.2 s
+- `leakedIds` whereToStart ACT-L0-05, "Uncontrolled inter-zone multi-homed devices were identified (F13).": Fact ID "F13" appears in the text. Never write fact IDs.
+- `leakedIds` whereToStart ACT-L0-03, "Asset interdependency documentation is incomplete or outdated (F14).": Fact ID "F14" appears in the text. Never write fact IDs.
+- `leakedIds` whereToStart ACT-L0-08, "No BC plan test was performed during the assessment period (F15).": Fact ID "F15" appears in the text. Never write fact IDs.
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified (F13).
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated (F14).
+- ACT-L0-08: No BC plan test was performed during the assessment period (F15).
+
+</details>
+
+Attempt 2, repair of Where to start ACT-L0-03: prompt_eval_count 639, eval_count 16, 16.4 tokens/s, done_reason stop, 1.5 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of Where to start ACT-L0-03)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+
+</details>
+
+Attempt 2, repair of Where to start ACT-L0-05: prompt_eval_count 648, eval_count 18, 16.0 tokens/s, done_reason stop, 1.6 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of Where to start ACT-L0-05)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified.
+
+</details>
+
+Attempt 2, repair of Where to start ACT-L0-08: prompt_eval_count 650, eval_count 18, 15.7 tokens/s, done_reason stop, 1.6 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of Where to start ACT-L0-08)</summary>
+
+- ACT-L0-08: No BC plan test was performed during the assessment period.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F2, F3, F13, F14, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Business Continuity was complete, scoring 1.80 out of 4, including a programme gap of 0 for RPO Achievement Rate. Incident Handling is incomplete, resulting in an unavailable overall score. Critical and high-severity flags include uncontrolled inter-zone multi-homed devices (CRITICAL) and incomplete or outdated asset interdependency documentation (HIGH), as well as no Business Continuity plan test performed during the assessment period (HIGH).
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F14): Asset interdependency documentation is incomplete or outdated.
+- **Remove or control multi-homed devices** (ACT-L0-05; F13): Uncontrolled inter-zone multi-homed devices were identified.
+- **Test the BC plan** (ACT-L0-08; F15): No BC plan test was performed during the assessment period.
+
+#### Run 3: ok (2 attempt(s), 2 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 30.9 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 188, 15.6 tokens/s, done_reason stop, 13.3 s
+- `missing` overview, "Incident Handling is incomplete due to missing Mean Time to Contain, resulting in no overall score.": Do not call Mean Time to Contain missing: it exists and has no score. Say it could not be measured.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identified critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing Mean Time to Contain, resulting in no overall score. Business Continuity scored 1.80 out of 4. The assessment flagged CRITICAL issues with uncontrolled inter-zone multi-homed devices and HIGH severity issues with incomplete asset interdependency documentation and a missing BC plan test.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 835, eval_count 150, 15.6 tokens/s, done_reason stop, 10.7 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F2, F3, F13, F14, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Business Continuity was complete and scored 1.80 out of 4, including a programme gap of 0 for RPO Achievement Rate. Incident Handling was incomplete due to the unmeasurable Mean Time to Contain, resulting in no overall score. The assessment flagged three critical and high severity issues: CRITICAL uncontrolled inter-zone multi-homed devices, HIGH incomplete or outdated asset interdependency documentation, and HIGH no BC plan test performed during the assessment period.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 1027, eval_count 102, 15.2 tokens/s, done_reason stop, 6.9 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified.
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-L0-08: No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identified critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F2, F3, F13, F14, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Business Continuity was complete and scored 1.80 out of 4, including a programme gap of 0 for RPO Achievement Rate. Incident Handling was incomplete due to the unmeasurable Mean Time to Contain, resulting in no overall score. The assessment flagged three critical and high severity issues: CRITICAL uncontrolled inter-zone multi-homed devices, HIGH incomplete or outdated asset interdependency documentation, and HIGH no BC plan test performed during the assessment period.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F14): Asset interdependency documentation is incomplete or outdated.
+- **Remove or control multi-homed devices** (ACT-L0-05; F13): Uncontrolled inter-zone multi-homed devices were identified.
+- **Test the BC plan** (ACT-L0-08; F15): No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+#### Run 4: ok (1 attempt(s), 1 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 20.6 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 196, 15.7 tokens/s, done_reason stop, 13.8 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to the absence of a score for Mean Time to Contain. Business Continuity scored 1.80 out of 4. The overall score is not available due to the incomplete dimension. Key flags include CRITICAL uncontrolled inter-zone multi-homed devices, HIGH incomplete asset interdependency documentation, and HIGH no BC plan test performed.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 1027, eval_count 102, 15.3 tokens/s, done_reason stop, 6.8 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified.
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-L0-08: No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to the absence of a score for Mean Time to Contain. Business Continuity scored 1.80 out of 4. The overall score is not available due to the incomplete dimension. Key flags include CRITICAL uncontrolled inter-zone multi-homed devices, HIGH incomplete asset interdependency documentation, and HIGH no BC plan test performed.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F14): Asset interdependency documentation is incomplete or outdated.
+- **Remove or control multi-homed devices** (ACT-L0-05; F13): Uncontrolled inter-zone multi-homed devices were identified.
+- **Test the BC plan** (ACT-L0-08; F15): No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+#### Run 5: ok (1 attempt(s), 1 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 18.1 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 172, 15.7 tokens/s, done_reason stop, 11.3 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across 2 dimensions. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80. The overall score is unavailable. Critical and high severity flags were raised for uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and lack of BC plan testing.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 1027, eval_count 102, 15.3 tokens/s, done_reason stop, 6.8 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified.
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-L0-08: No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across 2 dimensions. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80. The overall score is unavailable. Critical and high severity flags were raised for uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and lack of BC plan testing.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F14): Asset interdependency documentation is incomplete or outdated.
+- **Remove or control multi-homed devices** (ACT-L0-05; F13): Uncontrolled inter-zone multi-homed devices were identified.
+- **Test the BC plan** (ACT-L0-08; F15): No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+### Review
+
+Context: second Where to start set, after the fixes from the first
+(check 9 for named non-CRITICAL flagged items, check 5 dimension counts,
+"risk" and unsupported judgements in reasons) and with the candidates
+tagged by their strongest trigger and listed strongest first.
+
+1. Invariant breaks the validator missed: none (headline/overview or
+   Where to start).
+2. Validator errors that look wrong: none.
+3. Paraphrased item names: none new.
+4. Prompt conformance: picks identical in all 5 runs: ACT-L0-03,
+   ACT-L0-05, ACT-L0-08 (the CRITICAL flag and both HIGH flags; the first
+   set picked two score-2 actions instead). Reasons are the facts' own
+   wording. New: fact IDs in reasons ("… were identified (F13).") in runs 1
+   and 2, all three reasons, caught (`leakedIds`) and repaired in one
+   attempt. Probably copied from the "(facts: F13)" in the candidate lines.
+5. Items named without their fact cited: not applicable to Where to start.
+6. Band ranges: not narrated.
+
+Result: 5 of 5 ok; Where to start 5 of 5 ok (3 on the first call).
+
+## Run set 2026-10-01 13:53 UTC: Westmaas_2026-06-01_assessment.json
+
+- Model: qwen2.5:7b · Ollama 0.35.0 · options `{"temperature":0.2,"num_ctx":4096,"num_predict":1024}`
+- Timeout 300.0 s per call · 60.0 s cooldown between runs · retries at temperature 0.5, repairing failing sections only
+- Scenario: scenarios/Westmaas_2026-06-01_assessment.json (19 facts)
+- Where to start candidates (5): ACT-IH-04 Shorten response time; ACT-BC-03 Reduce operational threshold violations; ACT-BC-05 Meet recovery time objectives; ACT-L0-03 Document asset interdependencies; ACT-RM-02 Improve the remediation rate
+
+| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |
+|---|---|---|---|---|---|
+| before | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+| after | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+
+### Summary
+
+| Measure | Value |
+|---|---|
+| ok | 3 of 5 |
+| generated sections identical and valid | 5 of 5 |
+| attempts per run (calls) | 3 (3), 3 (4), 3 (5), 2 (2), 3 (3) |
+| Where to start ok | 5 of 5 |
+| Where to start attempts per run (calls) | 1 (1), 1 (1), 1 (1), 1 (1), 1 (1) |
+| Where to start picks per run | 1: ACT-IH-04, ACT-L0-03, ACT-RM-02; 2: ACT-IH-04, ACT-BC-03, ACT-L0-03; 3: ACT-IH-04, ACT-L0-03, ACT-RM-02; 4: ACT-IH-04, ACT-BC-03, ACT-L0-03; 5: ACT-IH-04, ACT-L0-03, ACT-RM-02 |
+| errors by rule (headline/overview) | respectively ×6, severity ×4, attribution ×1, judgement ×2, numbers ×2, leakedIds ×3 |
+| errors by rule (Where to start) | — |
+| max prompt_eval_count | 930 (warning above 3000) |
+| generation speed (tokens/s, eval_duration) | first 15.4, last 14.8, min 14.8, max 15.7 |
+
+### Generated sections
+
+Built from the facts by templates (no model); every run asserts it gets exactly this.
+
+The reference copy passes the validator.
+
+**measuredPerformance** (C3, F4, F5, F6, F7, F8, F9, F10, F11): Each effectiveness indicator is scored from 0 to 4, where 4 is best. In Incident Handling, Mean Time to Detect was 18 hours (score 3, Good), Mean Time to Respond was 30 hours (score 2, Developing) and Mean Time to Contain was 20 hours (score 3, Good). In Business Continuity, Network Operability Under Disruption was 85% (score 3, Good), Zone Availability Rate was 82% (score 3, Good), Operational Threshold Violation Rate was 12.5% (score 2, Developing), RTO Achievement Rate was 50% (score 2, Developing) and RPO Achievement Rate was 100% (score 4, Excellent). For Mean Time to Detect, Mean Time to Respond, Mean Time to Contain and Operational Threshold Violation Rate, lower values are better.
+
+**gapsAndMissingEvidence** (F1, F2, F3): No evidence is missing and no programme gaps were found: every effectiveness indicator has a score.
+
+**foundationsAndFlags** (F12, F13, F14, F15): In place: Asset inventory maintained, Risk assessment per zone, Controlled IT/OT boundary separation, Zero uncontrolled multi-homed devices, BC plan documented for critical processes and BC plan tested within defined period.
+
+The following issues were flagged (listed by severity; this is not an order of action). High: asset interdependency documentation is incomplete or outdated.
+
+Process evidence is reported without a score. Vulnerability Remediation Rate is 60%, in the 50–69% band, which is below target — moderate programme improvement warranted (medium note). Mean Time to Remediate is 75 days, in the 31–90 days band, which is satisfactory — continue monitoring.
+
+**priorities** (F16): Ranked by score, where a lower score is more urgent: the lowest effectiveness results, at score 2 and of equal priority, are Mean Time to Respond, Operational Threshold Violation Rate and RTO Achievement Rate, listed in catalogue order.
+
+**targets** (F4, F5, F6, F7, F8, F9, F10, F11): Each target is the value an indicator needs for its next score level, taken from the scoring bands.
+
+In Incident Handling, Mean Time to Detect, now 18 hours (score 3, Good), reaches score 4 (Excellent) at 6 hours or less. Mean Time to Respond, now 30 hours (score 2, Developing), reaches score 3 (Good) at 24 hours or less. Mean Time to Contain, now 20 hours (score 3, Good), reaches score 4 (Excellent) at 6 hours or less.
+
+In Business Continuity, Network Operability Under Disruption, now 85% (score 3, Good), reaches score 4 (Excellent) at 90% or more. Zone Availability Rate, now 82% (score 3, Good), reaches score 4 (Excellent) at 90% or more. Operational Threshold Violation Rate, now 12.5% (score 2, Developing), reaches score 3 (Good) at 5% or less. RTO Achievement Rate, now 50% (score 2, Developing), reaches score 3 (Good) at 75% or more.
+
+Already at the highest level (score 4, Excellent): RPO Achievement Rate.
+
+**recommendedActions** (F5, F9, F10, F13, F14): Each action comes from the dashboard's action catalogue and is matched to a result in this assessment. Actions are grouped by area in catalogue order; this is not an order of action.
+
+Incident Handling
+
+Shorten response time
+Reduce the time from detection to the start of a response.
+Steps: Set target response times per incident severity. Arrange on-call cover that includes someone with OT knowledge. Review recent incidents for hand-over delays between IT, security and operations.
+Why it matters: Delays between detection and response are often organisational, not technical, and can be fixed without new tooling.
+Who: Security team with plant operations
+NIS2 Article 21(2): (b) incident handling
+
+Business Continuity
+
+Reduce operational threshold violations
+Reduce how often process parameters leave their safe operating range during disruptions.
+Steps: Review each violation: which disruption caused it, and how long it lasted. Improve operator procedures for degraded operation. Check that alarms for these parameters work and reach operators in time.
+Why it matters: Threshold violations are where a cyber disruption turns into a process or safety impact.
+Who: Plant operations with process engineering
+NIS2 Article 21(2): (c) business continuity
+
+Meet recovery time objectives
+Make recovery of OT systems faster and more predictable.
+Steps: Analyse recoveries that exceeded their RTO. Keep tested recovery media and system images for HMIs, servers and engineering workstations. Write step-by-step rebuild procedures and practise them.
+Why it matters: Recoveries that take longer than agreed extend process downtime.
+Who: OT engineering
+NIS2 Article 21(2): (c) business continuity, disaster recovery
+Standard: IEC 62443-3-3 SR 7.4 (control system recovery and reconstitution)
+
+Foundational controls
+
+Document asset interdependencies
+Document which assets and services each critical process depends on.
+Steps: For each critical process, list the PLCs, HMIs, servers, network paths and IT services it needs. Include external dependencies such as vendor remote access. Keep it linked to the asset inventory.
+Why it matters: Without this, the impact of losing an asset is guesswork, both during incidents and when planning recovery.
+Who: OT engineering with plant operations
+NIS2 Article 21(2): (c) business continuity (supports)
+
+Vulnerability management
+
+Improve the remediation rate
+Remediate more of the known vulnerabilities, prioritising by risk.
+Steps: Prioritise by exposure and process criticality, for example known-exploited vulnerabilities on reachable systems first. Use vendor-approved patches. Where patching is not possible, apply and document compensating controls.
+Why it matters: In OT, not every vulnerability can be patched, but every one needs a decision.
+Who: OT engineering with the security team
+NIS2 Article 21(2): (e) vulnerability handling
+Standard: IEC TR 62443-2-3 (patch management in the IACS environment)
+
+### Runs
+
+| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | failed | 1 | whole | 11.5 s | 822 | 163 | 15.4 | stop | respectively ×1, severity ×1 |
+| 1 | failed | 2 | overview | 10.3 s | 839 | 139 | 15.0 | stop | attribution ×1 |
+| 1 | failed | 3 | overview | 10.0 s | 817 | 149 | 15.5 | stop | respectively ×1 |
+| 1 | ok | 1 | whereToStart whole | 8.1 s | 775 | 108 | 15.0 | stop | — |
+| 2 | ok | 1 | whole | 13.0 s | 822 | 186 | 15.6 | stop | severity ×1, respectively ×1, judgement ×1 |
+| 2 | ok | 2 | headline | 2.8 s | 730 | 33 | 15.7 | stop | — |
+| 2 | ok | 2 | overview | 10.7 s | 930 | 145 | 15.3 | stop | numbers ×1 |
+| 2 | ok | 3 | overview | 9.5 s | 808 | 134 | 15.2 | stop | — |
+| 2 | ok | 1 | whereToStart whole | 7.0 s | 775 | 101 | 14.8 | stop | — |
+| 3 | ok | 1 | whole | 13.1 s | 822 | 186 | 15.6 | stop | severity ×1, respectively ×1, judgement ×1 |
+| 3 | ok | 2 | headline | 2.6 s | 730 | 31 | 15.7 | stop | severity ×1 |
+| 3 | ok | 2 | overview | 11.2 s | 906 | 153 | 15.4 | stop | numbers ×1 |
+| 3 | ok | 3 | headline | 2.8 s | 674 | 35 | 15.3 | stop | — |
+| 3 | ok | 3 | overview | 9.9 s | 809 | 134 | 14.9 | stop | — |
+| 3 | ok | 1 | whereToStart whole | 7.3 s | 775 | 108 | 15.1 | stop | — |
+| 4 | ok | 1 | whole | 11.3 s | 822 | 159 | 15.6 | stop | respectively ×1 |
+| 4 | ok | 2 | overview | 10.0 s | 803 | 141 | 15.4 | stop | — |
+| 4 | ok | 1 | whereToStart whole | 6.8 s | 775 | 101 | 15.3 | stop | — |
+| 5 | failed | 1 | whole | 11.4 s | 822 | 159 | 15.5 | stop | respectively ×1 |
+| 5 | failed | 2 | overview | 10.4 s | 803 | 147 | 15.5 | stop | leakedIds ×2 |
+| 5 | failed | 3 | overview | 7.4 s | 857 | 105 | 15.2 | stop | leakedIds ×1 |
+| 5 | ok | 1 | whereToStart whole | 7.4 s | 775 | 107 | 14.8 | stop | — |
+
+#### Run 1: failed (3 attempt(s), 3 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 40.0 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 822, eval_count 163, 15.4 tokens/s, done_reason stop, 11.5 s
+- `respectively` overview, "Both dimensions are complete, with scores of 2.67 and 2.80, respectively.": Give each item its own number or label; do not write "respectively".
+- `severity` overview, "A critical flag was raised regarding incomplete or outdated asset interdependency documentation.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): The overall cybersecurity assessment score for Westmaas is 2.73 out of 4.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are complete, with scores of 2.67 and 2.80, respectively. A critical flag was raised regarding incomplete or outdated asset interdependency documentation. Additionally, the Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate indicators scored 2 and are of equal priority.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 839, eval_count 139, 15.0 tokens/s, done_reason stop, 10.3 s
+- `attribution` overview, "The lowest effectiveness results are at score 2, with Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate each scoring 2 out of 4.": The number "4" is not in the fact about RTO Achievement Rate.
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling is complete with a score of 2.67 out of 4, while Business Continuity is also complete with a score of 2.80 out of 4. A HIGH flag was raised regarding incomplete or outdated asset interdependency documentation. The lowest effectiveness results are at score 2, with Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate each scoring 2 out of 4.
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 817, eval_count 149, 15.5 tokens/s, done_reason stop, 10.0 s
+- `respectively` overview, "The assessment covered Incident Handling and Business Continuity, each with 3 and 5 effectiveness indicators, respectively.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered Incident Handling and Business Continuity, each with 3 and 5 effectiveness indicators, respectively. Both dimensions are complete but scored below par. Incident Handling scored 2.67 out of 4, and Business Continuity scored 2.80 out of 4. There is a HIGH severity flag for incomplete or outdated asset interdependency documentation. Additionally, all 8 effectiveness indicators have scores, with the lowest being at 2, specifically for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 775, eval_count 108, 15.0 tokens/s, done_reason stop, 8.1 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-IH-04: Mean Time to Respond is measured at 30 hours.
+- ACT-RM-02: Vulnerability remediation rate is 60%, below the target of 50–69%.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Shorten response time** (ACT-IH-04; F5): Mean Time to Respond is measured at 30 hours.
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+- **Improve the remediation rate** (ACT-RM-02; F14): Vulnerability remediation rate is 60%, below the target of 50–69%.
+
+#### Run 2: ok (3 attempt(s), 4 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 43.0 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 822, eval_count 186, 15.6 tokens/s, done_reason stop, 13.0 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation and equal priority weaknesses in response times and recovery rates.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `respectively` overview, "Both dimensions are complete, with scores of 2.67 and 2.80, respectively, resulting in an overall score of 2.73.": Give each item its own number or label; do not write "respectively".
+- `judgement` overview, "Key findings include a HIGH severity issue with incomplete or outdated asset interdependency documentation, and equal priority weaknesses in Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate, all scoring 2.": Do not describe a score as "weaknesses": describe it only by its number or its level label (for example Good or Developing).
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F16): The assessment identifies critical gaps in asset interdependency documentation and equal priority weaknesses in response times and recovery rates.
+
+**overview** (C2, F1, F2, F3, F13, F16): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are complete, with scores of 2.67 and 2.80, respectively, resulting in an overall score of 2.73. Key findings include a HIGH severity issue with incomplete or outdated asset interdependency documentation, and equal priority weaknesses in Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate, all scoring 2.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 730, eval_count 33, 15.7 tokens/s, done_reason stop, 2.8 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13): The assessment identifies a HIGH severity gap in asset interdependency documentation.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 930, eval_count 145, 15.3 tokens/s, done_reason stop, 10.7 s
+- `numbers` overview, "The overall score is 2.73 out of 4, which is the mean of the two dimension scores.": The number "2.73" does not appear in any fact cited by this section.
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling with a score of 2.67 out of 4, and Business Continuity with a score of 2.80 out of 4. The overall score is 2.73 out of 4, which is the mean of the two dimension scores. There is a HIGH severity issue with incomplete or outdated asset interdependency documentation. Additionally, Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate, all scoring 2, are of equal priority.
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 808, eval_count 134, 15.2 tokens/s, done_reason stop, 9.5 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered incident handling and business continuity, with 8 effectiveness indicators across two dimensions. Incident Handling achieved a score of 2.67 out of 4, and Business Continuity scored 2.80 out of 4. There is a HIGH flag for incomplete or outdated asset interdependency documentation. Additionally, the Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate each scored 2, marking the lowest effectiveness results among the indicators.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 775, eval_count 101, 14.8 tokens/s, done_reason stop, 7.0 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-IH-04: Mean Time to Respond is measured at 30 hours.
+- ACT-BC-03: Operational Threshold Violation Rate is measured at 12.5%.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13): The assessment identifies a HIGH severity gap in asset interdependency documentation.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered incident handling and business continuity, with 8 effectiveness indicators across two dimensions. Incident Handling achieved a score of 2.67 out of 4, and Business Continuity scored 2.80 out of 4. There is a HIGH flag for incomplete or outdated asset interdependency documentation. Additionally, the Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate each scored 2, marking the lowest effectiveness results among the indicators.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Shorten response time** (ACT-IH-04; F5): Mean Time to Respond is measured at 30 hours.
+- **Reduce operational threshold violations** (ACT-BC-03; F9): Operational Threshold Violation Rate is measured at 12.5%.
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+
+#### Run 3: ok (3 attempt(s), 5 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 46.9 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 822, eval_count 186, 15.6 tokens/s, done_reason stop, 13.1 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation and equal priority issues with response times and recovery rates.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `respectively` overview, "Both dimensions are complete but scored below average, with overall scores of 2.67 and 2.80, respectively.": Give each item its own number or label; do not write "respectively".
+- `judgement` overview, "Both dimensions are complete but scored below average, with overall scores of 2.67 and 2.80, respectively.": Do not describe a score as "below average": describe it only by its number or its level label (for example Good or Developing).
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F16): The assessment identifies critical gaps in asset interdependency documentation and equal priority issues with response times and recovery rates.
+
+**overview** (C2, F1, F2, F3, F13, F16): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are complete but scored below average, with overall scores of 2.67 and 2.80, respectively. The overall score is 2.73. Key issues include a HIGH severity gap in asset interdependency documentation, and equal priority flags for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate, all scoring 2.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 730, eval_count 31, 15.7 tokens/s, done_reason stop, 2.6 s
+- `severity` headline, "The assessment identifies a critical gap in asset interdependency documentation.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13): The assessment identifies a critical gap in asset interdependency documentation.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 906, eval_count 153, 15.4 tokens/s, done_reason stop, 11.2 s
+- `numbers` overview, "The overall score is 2.73 out of 4, which is a secondary summary of the two dimension scores.": The number "2.73" does not appear in any fact cited by this section.
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling with a score of 2.67 out of 4, and Business Continuity with a score of 2.80 out of 4. The overall score is 2.73 out of 4, which is a secondary summary of the two dimension scores. There is a HIGH flag for incomplete or outdated asset interdependency documentation. The lowest effectiveness results are at score 2, with Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate all scoring 2 and being of equal priority.
+
+</details>
+
+Attempt 3, repair of headline: prompt_eval_count 674, eval_count 35, 15.3 tokens/s, done_reason stop, 2.8 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of headline)</summary>
+
+**headline** (F13): Asset interdependency documentation is incomplete or outdated, raising a high severity concern.
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 809, eval_count 134, 14.9 tokens/s, done_reason stop, 9.9 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Both dimensions are complete, with scores of 2.67 out of 4 for Incident Handling and 2.80 out of 4 for Business Continuity. A HIGH flag is present for incomplete or outdated asset interdependency documentation. Additionally, the lowest effectiveness results are at score 2, with Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate listed in catalogue order.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 775, eval_count 108, 15.1 tokens/s, done_reason stop, 7.3 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-IH-04: Mean Time to Respond is measured at 30 hours.
+- ACT-RM-02: Vulnerability Remediation Rate is 60%, below the target of 50–69%.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13): Asset interdependency documentation is incomplete or outdated, raising a high severity concern.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Both dimensions are complete, with scores of 2.67 out of 4 for Incident Handling and 2.80 out of 4 for Business Continuity. A HIGH flag is present for incomplete or outdated asset interdependency documentation. Additionally, the lowest effectiveness results are at score 2, with Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate listed in catalogue order.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Shorten response time** (ACT-IH-04; F5): Mean Time to Respond is measured at 30 hours.
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+- **Improve the remediation rate** (ACT-RM-02; F14): Vulnerability Remediation Rate is 60%, below the target of 50–69%.
+
+#### Run 4: ok (2 attempt(s), 2 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 28.1 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 822, eval_count 159, 15.6 tokens/s, done_reason stop, 11.3 s
+- `respectively` overview, "Both dimensions are complete, with scores of 2.67 and 2.80, respectively.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): The overall cybersecurity assessment score for Westmaas is 2.73 out of 4.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are complete, with scores of 2.67 and 2.80, respectively. A HIGH flag is raised for incomplete asset interdependency documentation. The lowest effectiveness results are at score 2 for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 803, eval_count 141, 15.4 tokens/s, done_reason stop, 10.0 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling, with 3 indicators, scored 2.67 out of 4. Business Continuity, with 5 indicators, scored 2.80 out of 4. A HIGH flag was raised for incomplete or outdated asset interdependency documentation. The lowest effectiveness results were at score 2 for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate, listed in catalogue order. 
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 775, eval_count 101, 15.3 tokens/s, done_reason stop, 6.8 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-IH-04: Mean Time to Respond is measured at 30 hours.
+- ACT-BC-03: Operational Threshold Violation Rate is measured at 12.5%.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F3): The overall cybersecurity assessment score for Westmaas is 2.73 out of 4.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling, with 3 indicators, scored 2.67 out of 4. Business Continuity, with 5 indicators, scored 2.80 out of 4. A HIGH flag was raised for incomplete or outdated asset interdependency documentation. The lowest effectiveness results were at score 2 for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate, listed in catalogue order. 
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Shorten response time** (ACT-IH-04; F5): Mean Time to Respond is measured at 30 hours.
+- **Reduce operational threshold violations** (ACT-BC-03; F9): Operational Threshold Violation Rate is measured at 12.5%.
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+
+#### Run 5: failed (3 attempt(s), 3 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 36.6 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 822, eval_count 159, 15.5 tokens/s, done_reason stop, 11.4 s
+- `respectively` overview, "Both dimensions are complete, with scores of 2.67 and 2.80, respectively.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): The overall cybersecurity assessment score for Westmaas is 2.73 out of 4.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are complete, with scores of 2.67 and 2.80, respectively. A HIGH flag was raised for incomplete asset interdependency documentation. The lowest effectiveness results were at score 2 for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 803, eval_count 147, 15.5 tokens/s, done_reason stop, 10.4 s
+- `leakedIds` overview, "There is a HIGH severity flag for incomplete or outdated asset interdependency documentation (F13).": Fact ID "F13" appears in the text. Never write fact IDs.
+- `leakedIds` overview, "The lowest effectiveness results are at score 2 and of equal priority, specifically Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate (F16).": Fact ID "F16" appears in the text. Never write fact IDs.
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, with a score of 2.67 out of 4, is complete. Business Continuity, with a score of 2.80 out of 4, is also complete. There is a HIGH severity flag for incomplete or outdated asset interdependency documentation (F13). The lowest effectiveness results are at score 2 and of equal priority, specifically Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate (F16).
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 857, eval_count 105, 15.2 tokens/s, done_reason stop, 7.4 s
+- `leakedIds` overview, "There is a HIGH severity flag for incomplete or outdated asset interdependency documentation (F13).": Fact ID "F13" appears in the text. Never write fact IDs.
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13): The assessment covered incident handling and business continuity, with 8 effectiveness indicators across two dimensions. Incident Handling was complete, scoring 2.67 out of 4. Business Continuity was also complete, scoring 2.80 out of 4. There is a HIGH severity flag for incomplete or outdated asset interdependency documentation (F13).
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 775, eval_count 107, 14.8 tokens/s, done_reason stop, 7.4 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-IH-04: Mean Time to Respond is measured at 30 hours.
+- ACT-RM-02: Vulnerability remediation rate is 60%, below the target of 50–69%.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Shorten response time** (ACT-IH-04; F5): Mean Time to Respond is measured at 30 hours.
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+- **Improve the remediation rate** (ACT-RM-02; F14): Vulnerability remediation rate is 60%, below the target of 50–69%.
+
+### Review
+
+Context: as the Westmaas baseline set above.
+
+1. Invariant breaks the validator missed: Where to start, runs 1, 3, 5:
+   "Vulnerability Remediation Rate is 60%, below the target of 50–69%."
+   reads the band the value falls in as a target it missed (review point
+   6). The fact says "below target (50–69%)". Not caught: no check reads
+   band ranges. Headline/overview: none.
+2. Validator errors that look wrong: none. All `severity` errors are the
+   clause rule ("critical gaps in asset interdependency documentation"),
+   which the old check 9 also reports; the new per-sentence rule did not
+   fire.
+3. Paraphrased item names: none new.
+4. Prompt conformance: picks: ACT-IH-04 and ACT-L0-03 in every run, then
+   ACT-RM-02 (MEDIUM NOTE, runs 1, 3, 5) or ACT-BC-03 (score 2, runs 2,
+   4). Reasons without judgements ("Mean Time to Respond is measured at 30
+   hours."). Headline/overview: failed runs 1 (`attribution`, "each
+   scoring 2 out of 4", the known context-number limitation) and 5 (fact
+   IDs in the overview); "respectively" in 4 of 5 first attempts.
+5. Items named without their fact cited: not applicable to Where to start.
+6. Band ranges: see point 1 (Where to start, 3 of 5 runs).
+
+Result: 3 of 5 ok (first June set: 5 of 5; the headline/overview prompt,
+facts and verdicts are unchanged, so this is sampling); Where to start 5 of
+5 ok on the first call, but with the band misreading in 3.
+
+## Run set 2026-10-01 13:59 UTC: Oudendijk_2026-03-01_assessment.json
+
+- Model: qwen2.5:7b · Ollama 0.35.0 · options `{"temperature":0.2,"num_ctx":4096,"num_predict":1024}`
+- Timeout 300.0 s per call · 60.0 s cooldown between runs · retries at temperature 0.5, repairing failing sections only
+- Scenario: scenarios/Oudendijk_2026-03-01_assessment.json (18 facts)
+- Where to start candidates (1): ACT-L0-03 Document asset interdependencies
+
+| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |
+|---|---|---|---|---|---|
+| before | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+| after | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+
+### Summary
+
+| Measure | Value |
+|---|---|
+| ok | 5 of 5 |
+| generated sections identical and valid | 5 of 5 |
+| attempts per run (calls) | 2 (2), 2 (3), 3 (4), 3 (5), 1 (1) |
+| Where to start ok | 5 of 5 |
+| Where to start attempts per run (calls) | 2 (2), 2 (2), 3 (3), 2 (2), 2 (2) |
+| Where to start picks per run | 1: ACT-L0-03; 2: ACT-L0-03; 3: ACT-L0-03; 4: ACT-L0-03; 5: ACT-L0-03 |
+| errors by rule (headline/overview) | flagCount ×1, severity ×7, levelLabel ×4, respectively ×1 |
+| errors by rule (Where to start) | urgency ×3, leakedIds ×3 |
+| max prompt_eval_count | 868 (warning above 3000) |
+| generation speed (tokens/s, eval_duration) | first 15.1, last 13.6, min 12.8, max 16.2 |
+
+### Generated sections
+
+Built from the facts by templates (no model); every run asserts it gets exactly this.
+
+The reference copy passes the validator.
+
+**measuredPerformance** (C3, F4, F7): Each effectiveness indicator is scored from 0 to 4, where 4 is best. In Incident Handling, Mean Time to Detect was 20 hours (score 3, Good). In Business Continuity, Network Operability Under Disruption was 90% (score 4, Excellent). For Mean Time to Detect, lower values are better.
+
+**gapsAndMissingEvidence** (F1, F2, F3, F5, F6, F8, F9, F10, F11): Six indicators are not yet assessed: Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate. This says nothing about how they perform, but without them Incident Handling and Business Continuity have no score, so there is no overall score either.
+
+**foundationsAndFlags** (F12, F13, F14): In place: Asset inventory maintained. Not yet assessed: Risk assessment per zone, Controlled IT/OT boundary separation, Zero uncontrolled multi-homed devices, BC plan documented for critical processes, Vulnerability Remediation Rate, Mean Time to Remediate and BC plan tested within defined period. This says nothing about whether they are in place.
+
+The following issues were flagged (listed by severity; this is not an order of action). High: asset interdependency documentation is incomplete or outdated.
+
+**priorities** (F5, F6, F8, F9, F10, F11, F15): No scored effectiveness indicator is below 3 (Good). Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate are not ranked because they have no score.
+
+**targets** (F4, F5, F6, F7, F8, F9, F10, F11): Each target is the value an indicator needs for its next score level, taken from the scoring bands.
+
+In Incident Handling, Mean Time to Detect, now 20 hours (score 3, Good), reaches score 4 (Excellent) at 6 hours or less.
+
+Already at the highest level (score 4, Excellent): Network Operability Under Disruption.
+
+Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate have no score, so they have no target.
+
+**recommendedActions** (F13): Each action comes from the dashboard's action catalogue and is matched to a result in this assessment. Actions are grouped by area in catalogue order; this is not an order of action.
+
+Foundational controls
+
+Document asset interdependencies
+Document which assets and services each critical process depends on.
+Steps: For each critical process, list the PLCs, HMIs, servers, network paths and IT services it needs. Include external dependencies such as vendor remote access. Keep it linked to the asset inventory.
+Why it matters: Without this, the impact of losing an asset is guesswork, both during incidents and when planning recovery.
+Who: OT engineering with plant operations
+NIS2 Article 21(2): (c) business continuity (supports)
+
+Indicators and controls that are not yet assessed trigger no action, so their absence here says nothing about them.
+
+### Runs
+
+| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | ok | 1 | whole | 9.9 s | 804 | 135 | 15.1 | stop | flagCount ×1 |
+| 1 | ok | 2 | overview | 8.4 s | 832 | 92 | 12.8 | stop | — |
+| 1 | ok | 1 | whereToStart whole | 3.6 s | 570 | 43 | 13.2 | stop | urgency ×1 |
+| 1 | ok | 2 | whereToStart ACT-L0-03 | 1.8 s | 643 | 16 | 14.2 | stop | — |
+| 2 | ok | 1 | whole | 10.4 s | 804 | 144 | 15.5 | stop | severity ×2 |
+| 2 | ok | 2 | headline | 2.6 s | 711 | 31 | 15.0 | stop | — |
+| 2 | ok | 2 | overview | 7.9 s | 826 | 107 | 15.3 | stop | — |
+| 2 | ok | 1 | whereToStart whole | 3.2 s | 570 | 43 | 14.9 | stop | urgency ×1 |
+| 2 | ok | 2 | whereToStart ACT-L0-03 | 1.5 s | 643 | 16 | 16.1 | stop | — |
+| 3 | ok | 1 | whole | 11.4 s | 804 | 162 | 15.6 | stop | severity ×1, levelLabel ×2 |
+| 3 | ok | 2 | headline | 2.8 s | 762 | 31 | 14.7 | stop | severity ×1 |
+| 3 | ok | 2 | overview | 8.9 s | 835 | 121 | 15.4 | stop | — |
+| 3 | ok | 3 | headline | 2.4 s | 673 | 30 | 15.3 | stop | — |
+| 3 | ok | 1 | whereToStart whole | 3.0 s | 570 | 41 | 15.1 | stop | leakedIds ×1 |
+| 3 | ok | 2 | whereToStart ACT-L0-03 | 1.8 s | 640 | 20 | 15.7 | stop | leakedIds ×1 |
+| 3 | ok | 3 | whereToStart ACT-L0-03 | 1.3 s | 639 | 16 | 16.2 | stop | — |
+| 4 | ok | 1 | whole | 10.4 s | 804 | 147 | 15.5 | stop | severity ×2, levelLabel ×2 |
+| 4 | ok | 2 | headline | 2.8 s | 762 | 31 | 14.8 | stop | severity ×1 |
+| 4 | ok | 2 | overview | 11.6 s | 868 | 162 | 15.4 | stop | respectively ×1 |
+| 4 | ok | 3 | headline | 2.5 s | 673 | 30 | 14.5 | stop | — |
+| 4 | ok | 3 | overview | 12.6 s | 826 | 157 | 13.4 | stop | — |
+| 4 | ok | 1 | whereToStart whole | 3.4 s | 570 | 43 | 13.9 | stop | urgency ×1 |
+| 4 | ok | 2 | whereToStart ACT-L0-03 | 1.7 s | 643 | 16 | 14.7 | stop | — |
+| 5 | ok | 1 | whole | 10.1 s | 804 | 126 | 14.1 | stop | — |
+| 5 | ok | 1 | whereToStart whole | 3.3 s | 570 | 41 | 13.4 | stop | leakedIds ×1 |
+| 5 | ok | 2 | whereToStart ACT-L0-03 | 1.7 s | 640 | 16 | 13.6 | stop | — |
+
+#### Run 1: ok (2 attempt(s), 2 call(s)); Where to start ok (2 attempt(s), 2 call(s)); 23.8 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 135, 15.1 tokens/s, done_reason stop, 9.9 s
+- `flagCount` overview, "Additionally, there are two HIGH flags: for incomplete asset interdependency documentation and for having only two scored indicators, both of which are good.": The cited facts contain 1 HIGH flag; do not write "two HIGH flags".
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): No overall score due to incomplete Incident Handling and Business Continuity dimensions.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, with no scores available. Additionally, there are two HIGH flags: for incomplete asset interdependency documentation and for having only two scored indicators, both of which are good.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 832, eval_count 92, 12.8 tokens/s, done_reason stop, 8.4 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13): The assessment covered two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, as the necessary effectiveness indicators are missing. There are no scores available for either dimension or the overall assessment. Additionally, there is a HIGH flag for incomplete or outdated asset interdependency documentation.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 570, eval_count 43, 13.2 tokens/s, done_reason stop, 3.6 s
+- `urgency` whereToStart ACT-L0-03, "The asset interdependency documentation is incomplete or outdated, which poses a high risk.": Do not write "risk": describe the finding, not its risk, urgency or rank.
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: The asset interdependency documentation is incomplete or outdated, which poses a high risk.
+
+</details>
+
+Attempt 2, repair of Where to start ACT-L0-03: prompt_eval_count 643, eval_count 16, 14.2 tokens/s, done_reason stop, 1.8 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of Where to start ACT-L0-03)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F3): No overall score due to incomplete Incident Handling and Business Continuity dimensions.
+
+**overview** (C2, F1, F2, F3, F13): The assessment covered two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, as the necessary effectiveness indicators are missing. There are no scores available for either dimension or the overall assessment. Additionally, there is a HIGH flag for incomplete or outdated asset interdependency documentation.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+
+#### Run 2: ok (2 attempt(s), 3 call(s)); Where to start ok (2 attempt(s), 2 call(s)); 25.5 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 144, 15.5 tokens/s, done_reason stop, 10.4 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two indicators have scores, both of which are good.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `severity` overview, "Critical issues include incomplete asset interdependency documentation, and only two indicators have scores, both rated good.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F15): The assessment identifies critical gaps in asset interdependency documentation and notes that only two indicators have scores, both of which are good.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, resulting in no overall score. Critical issues include incomplete asset interdependency documentation, and only two indicators have scores, both rated good.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 711, eval_count 31, 15.0 tokens/s, done_reason stop, 2.6 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13): The assessment identifies significant gaps in asset interdependency documentation.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 826, eval_count 107, 15.3 tokens/s, done_reason stop, 7.9 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling with three effectiveness indicators and Business Continuity with five effectiveness indicators. Both dimensions are incomplete, resulting in no overall score. The flags include a HIGH severity issue with incomplete or outdated asset interdependency documentation. Additionally, only two out of eight effectiveness indicators have scores, both rated as good.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 570, eval_count 43, 14.9 tokens/s, done_reason stop, 3.2 s
+- `urgency` whereToStart ACT-L0-03, "The asset interdependency documentation is incomplete or outdated, which poses a high risk.": Do not write "risk": describe the finding, not its risk, urgency or rank.
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: The asset interdependency documentation is incomplete or outdated, which poses a high risk.
+
+</details>
+
+Attempt 2, repair of Where to start ACT-L0-03: prompt_eval_count 643, eval_count 16, 16.1 tokens/s, done_reason stop, 1.5 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of Where to start ACT-L0-03)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13): The assessment identifies significant gaps in asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling with three effectiveness indicators and Business Continuity with five effectiveness indicators. Both dimensions are incomplete, resulting in no overall score. The flags include a HIGH severity issue with incomplete or outdated asset interdependency documentation. Additionally, only two out of eight effectiveness indicators have scores, both rated as good.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+
+#### Run 3: ok (3 attempt(s), 4 call(s)); Where to start ok (3 attempt(s), 3 call(s)); 31.6 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 162, 15.6 tokens/s, done_reason stop, 11.4 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `levelLabel` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+- `levelLabel` overview, "Additionally, a HIGH severity flag was raised for incomplete asset interdependency documentation, and it was observed that only two indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F15): The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete due to missing scores, resulting in no overall score. Additionally, a HIGH severity flag was raised for incomplete asset interdependency documentation, and it was observed that only two indicators are scored, both at good levels.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 762, eval_count 31, 14.7 tokens/s, done_reason stop, 2.8 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13): The assessment identifies critical gaps in asset interdependency documentation.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 835, eval_count 121, 15.4 tokens/s, done_reason stop, 8.9 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13): The assessment covered two dimensions: Incident Handling with 3 indicators and Business Continuity with 5 indicators. Both dimensions are incomplete, as Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate have no scores. Consequently, no overall score is available. Additionally, a HIGH severity flag was raised for incomplete asset interdependency documentation.
+
+</details>
+
+Attempt 3, repair of headline: prompt_eval_count 673, eval_count 30, 15.3 tokens/s, done_reason stop, 2.4 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of headline)</summary>
+
+**headline** (F13): High severity gaps exist in asset interdependency documentation.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 570, eval_count 41, 15.1 tokens/s, done_reason stop, 3.0 s
+- `leakedIds` whereToStart ACT-L0-03, "The asset interdependency documentation is incomplete or outdated (F13).": Fact ID "F13" appears in the text. Never write fact IDs.
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: The asset interdependency documentation is incomplete or outdated (F13).
+
+</details>
+
+Attempt 2, repair of Where to start ACT-L0-03: prompt_eval_count 640, eval_count 20, 15.7 tokens/s, done_reason stop, 1.8 s
+- `leakedIds` whereToStart ACT-L0-03, "Asset interdependency documentation is incomplete or outdated (F13).": Fact ID "F13" appears in the text. Never write fact IDs.
+
+<details><summary>Attempt 2 reply (repair of Where to start ACT-L0-03)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated (F13).
+
+</details>
+
+Attempt 3, repair of Where to start ACT-L0-03: prompt_eval_count 639, eval_count 16, 16.2 tokens/s, done_reason stop, 1.3 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of Where to start ACT-L0-03)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13): High severity gaps exist in asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13): The assessment covered two dimensions: Incident Handling with 3 indicators and Business Continuity with 5 indicators. Both dimensions are incomplete, as Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate have no scores. Consequently, no overall score is available. Additionally, a HIGH severity flag was raised for incomplete asset interdependency documentation.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+
+#### Run 4: ok (3 attempt(s), 5 call(s)); Where to start ok (2 attempt(s), 2 call(s)); 45.0 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 147, 15.5 tokens/s, done_reason stop, 10.4 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `levelLabel` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+- `severity` overview, "Critical issues include incomplete asset interdependency documentation, and only two indicators are scored, both at good levels.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `levelLabel` overview, "Critical issues include incomplete asset interdependency documentation, and only two indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F15): The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, resulting in no overall score. Critical issues include incomplete asset interdependency documentation, and only two indicators are scored, both at good levels.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 762, eval_count 31, 14.8 tokens/s, done_reason stop, 2.8 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13): The assessment identifies critical gaps in asset interdependency documentation.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 868, eval_count 162, 15.4 tokens/s, done_reason stop, 11.6 s
+- `respectively` overview, "The assessment covered two dimensions: Incident Handling and Business Continuity, each with three and five effectiveness indicators, respectively.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling and Business Continuity, each with three and five effectiveness indicators, respectively. Both dimensions are incomplete, as Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate have no scores. Consequently, neither the Incident Handling nor the Business Continuity score is available. Additionally, the assessment flagged asset interdependency documentation as incomplete or outdated, which is a HIGH severity issue. Only two out of eight effectiveness indicators have scores, both at a score of 3 or above.
+
+</details>
+
+Attempt 3, repair of headline: prompt_eval_count 673, eval_count 30, 14.5 tokens/s, done_reason stop, 2.5 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of headline)</summary>
+
+**headline** (F13): High severity gaps exist in asset interdependency documentation.
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 826, eval_count 157, 13.4 tokens/s, done_reason stop, 12.6 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, with three effectiveness indicators, is incomplete due to missing Mean Time to Respond and Mean Time to Contain scores. Business Continuity, with five effectiveness indicators, is also incomplete because Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate have no scores. Consequently, no overall score is available. Additionally, there is a HIGH flag for incomplete asset interdependency documentation. Only two of the eight effectiveness indicators have scores, and neither is below 3 (Good).
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 570, eval_count 43, 13.9 tokens/s, done_reason stop, 3.4 s
+- `urgency` whereToStart ACT-L0-03, "The asset interdependency documentation is incomplete or outdated, which poses a high risk.": Do not write "risk": describe the finding, not its risk, urgency or rank.
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: The asset interdependency documentation is incomplete or outdated, which poses a high risk.
+
+</details>
+
+Attempt 2, repair of Where to start ACT-L0-03: prompt_eval_count 643, eval_count 16, 14.7 tokens/s, done_reason stop, 1.7 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of Where to start ACT-L0-03)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13): High severity gaps exist in asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, with three effectiveness indicators, is incomplete due to missing Mean Time to Respond and Mean Time to Contain scores. Business Continuity, with five effectiveness indicators, is also incomplete because Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate have no scores. Consequently, no overall score is available. Additionally, there is a HIGH flag for incomplete asset interdependency documentation. Only two of the eight effectiveness indicators have scores, and neither is below 3 (Good).
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+
+#### Run 5: ok (1 attempt(s), 1 call(s)); Where to start ok (2 attempt(s), 2 call(s)); 15.1 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 126, 14.1 tokens/s, done_reason stop, 10.1 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): No overall score due to incomplete Incident Handling and Business Continuity dimensions.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across 2 dimensions. Both dimensions are incomplete, resulting in no overall score. Specific flags include a HIGH severity for incomplete asset interdependency documentation, and only 2 indicators with scores, both rated good.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 570, eval_count 41, 13.4 tokens/s, done_reason stop, 3.3 s
+- `leakedIds` whereToStart ACT-L0-03, "The asset interdependency documentation is incomplete or outdated (F13).": Fact ID "F13" appears in the text. Never write fact IDs.
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: The asset interdependency documentation is incomplete or outdated (F13).
+
+</details>
+
+Attempt 2, repair of Where to start ACT-L0-03: prompt_eval_count 640, eval_count 16, 13.6 tokens/s, done_reason stop, 1.7 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of Where to start ACT-L0-03)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F3): No overall score due to incomplete Incident Handling and Business Continuity dimensions.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across 2 dimensions. Both dimensions are incomplete, resulting in no overall score. Specific flags include a HIGH severity for incomplete asset interdependency documentation, and only 2 indicators with scores, both rated good.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+
+### Review
+
+Context: as above; 1 candidate.
+
+1. Invariant breaks the validator missed: none.
+2. Validator errors that look wrong: none.
+3. Paraphrased item names: none new.
+4. Prompt conformance: Where to start needed a second call in 4 of 5 runs
+   (a third in run 3): "which poses a high risk" (runs 1, 2, 4; caught by
+   the new `urgency` word "risk") and "(F13)" (runs 3, 5; `leakedIds`).
+   Every repair gave the fact's own sentence. Headline/overview: the known
+   `severity` ("critical" for the HIGH flag, clause rule) and `levelLabel`
+   patterns.
+5. Items named without their fact cited: not applicable to Where to start.
+6. Band ranges: not applicable.
+
+Result: 5 of 5 ok; Where to start 5 of 5 ok.
+
+## Run set 2026-10-01 16:30 UTC: Westmaas_2026-01-01_assessment.json
+
+- Model: qwen2.5:7b · Ollama 0.35.0 · options `{"temperature":0.2,"num_ctx":4096,"num_predict":1024}`
+- Timeout 300.0 s per call · 60.0 s cooldown between runs · retries at temperature 0.5, repairing failing sections only
+- Scenario: scenarios/Westmaas_2026-01-01_assessment.json (23 facts)
+- Where to start candidates (10): ACT-IH-04 Shorten response time; ACT-IH-06 Make incident handling measurable; ACT-BC-02 Improve zone availability; ACT-BC-03 Reduce operational threshold violations; ACT-BC-05 Meet recovery time objectives; ACT-BC-08 Define recovery point objectives; ACT-L0-03 Document asset interdependencies; ACT-L0-05 Remove or control multi-homed devices; ACT-L0-08 Test the BC plan; ACT-RM-02 Improve the remediation rate
+
+| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |
+|---|---|---|---|---|---|
+| before | (no model loaded) | | | | |
+| after | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+
+### Summary
+
+| Measure | Value |
+|---|---|
+| ok | 5 of 5 |
+| generated sections identical and valid | 5 of 5 |
+| attempts per run (calls) | 2 (2), 1 (1), 1 (1), 1 (1), 1 (1) |
+| Where to start ok | 5 of 5 |
+| Where to start attempts per run (calls) | 1 (1), 1 (1), 1 (1), 1 (1), 1 (1) |
+| Where to start picks per run | 1: ACT-L0-03, ACT-L0-05, ACT-L0-08; 2: ACT-L0-03, ACT-L0-05, ACT-L0-08; 3: ACT-L0-03, ACT-L0-05, ACT-L0-08; 4: ACT-L0-03, ACT-L0-05, ACT-L0-08; 5: ACT-L0-03, ACT-L0-05, ACT-L0-08 |
+| errors by rule (headline/overview) | missing ×1 |
+| errors by rule (Where to start) | — |
+| max prompt_eval_count | 937 (warning above 3000) |
+| generation speed (tokens/s, eval_duration) | first 15.3, last 15.1, min 14.6, max 15.3 |
+
+### Generated sections
+
+Built from the facts by templates (no model); every run asserts it gets exactly this.
+
+The reference copy passes the validator.
+
+**measuredPerformance** (C3, F4, F5, F7, F8, F9, F10): Each effectiveness indicator is scored from 0 to 4, where 4 is best. In Incident Handling, Mean Time to Detect was 18 hours (score 3, Good) and Mean Time to Respond was 30 hours (score 2, Developing). In Business Continuity, Network Operability Under Disruption was 85% (score 3, Good), Zone Availability Rate was 40% (score 2, Developing), Operational Threshold Violation Rate was 12.5% (score 2, Developing) and RTO Achievement Rate was 50% (score 2, Developing). For Mean Time to Detect, Mean Time to Respond and Operational Threshold Violation Rate, lower values are better.
+
+**gapsAndMissingEvidence** (F1, F3, F6, F11): Mean Time to Contain is not measurable: evidence to compute the value is absent or unreliable, and no reason was recorded. This says nothing about how Mean Time to Contain performs, but without it Incident Handling has no score, so there is no overall score either.
+
+No recovery point objective has been established for RPO Achievement Rate, so it scores 0 as a programme gap; this is not a measured failure.
+
+**foundationsAndFlags** (F12, F13, F14, F15, F16, F17, F18, F19): In place: Asset inventory maintained, Risk assessment per zone, Controlled IT/OT boundary separation and BC plan documented for critical processes.
+
+The following issues were flagged (listed by severity; this is not an order of action). Critical: uncontrolled inter-zone multi-homed devices were identified. High: asset interdependency documentation is incomplete or outdated, and no BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+Process evidence is reported without a score. Vulnerability Remediation Rate is 60%, in the 50–69% band, which is below target — moderate programme improvement warranted (medium note). Mean Time to Remediate is 75 days, in the 31–90 days band, which is satisfactory — continue monitoring.
+
+Read together (advisory only; no scores change): the uncontrolled multi-homed devices and Zone Availability Rate (score 2, Developing) may be related, because a segmentation bypass can affect zone availability; review them together. Removing the multi-homed devices and establishing the evidence to measure Mean Time to Contain are both measurement-readiness actions; address them together.
+
+**priorities** (F6, F20): Ranked by score, where a lower score is more urgent: the lowest effectiveness result is RPO Achievement Rate, a programme gap at score 0. Next, at score 2 and of equal priority, are Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate and RTO Achievement Rate, listed in catalogue order. Mean Time to Contain is not ranked because it has no score.
+
+**targets** (F4, F5, F6, F7, F8, F9, F10, F11): Each target is the value an indicator needs for its next score level, taken from the scoring bands.
+
+In Incident Handling, Mean Time to Detect, now 18 hours (score 3, Good), reaches score 4 (Excellent) at 6 hours or less. Mean Time to Respond, now 30 hours (score 2, Developing), reaches score 3 (Good) at 24 hours or less.
+
+In Business Continuity, Network Operability Under Disruption, now 85% (score 3, Good), reaches score 4 (Excellent) at 90% or more. Zone Availability Rate, now 40% (score 2, Developing), reaches score 3 (Good) at 70% or more. Operational Threshold Violation Rate, now 12.5% (score 2, Developing), reaches score 3 (Good) at 5% or less. RTO Achievement Rate, now 50% (score 2, Developing), reaches score 3 (Good) at 75% or more.
+
+RPO Achievement Rate has no numeric target yet: no recovery point objective has been established. Define the objective first; the scoring bands apply once it exists.
+
+Mean Time to Contain has no score, so it has no target.
+
+**recommendedActions** (F5, F6, F8, F9, F10, F11, F13, F14, F15, F16): Each action comes from the dashboard's action catalogue and is matched to a result in this assessment. Actions are grouped by area in catalogue order; this is not an order of action.
+
+Incident Handling
+
+Shorten response time
+Reduce the time from detection to the start of a response.
+Steps: Set target response times per incident severity. Arrange on-call cover that includes someone with OT knowledge. Review recent incidents for hand-over delays between IT, security and operations.
+Why it matters: Delays between detection and response are often organisational, not technical, and can be fixed without new tooling.
+Who: Security team with plant operations
+NIS2 Article 21(2): (b) incident handling
+
+Make incident handling measurable
+Record detection, response and containment times for every incident.
+Steps: Add mandatory timestamp fields to incident tickets: incident start (if known), detection, response start, containment. Agree which clock is authoritative. Check the fields are filled in when a ticket is closed.
+Why it matters: The next assessment can only score these indicators if the times are recorded. This says nothing about current performance.
+Who: Security team
+NIS2 Article 21(2): (b) incident handling; (f) assessing the effectiveness of measures
+
+Business Continuity
+
+Improve zone availability
+Address the main causes of zone outages.
+Steps: Use the disruption log to find the most common causes of zones becoming unavailable. Fix the top causes first. Check whether uncontrolled connections between zones, such as multi-homed devices, contribute.
+Why it matters: Zone outages directly affect the processes running in them.
+Who: OT engineering
+NIS2 Article 21(2): (c) business continuity
+Standard: IEC 62443-3-3 FR 7 (resource availability)
+
+Reduce operational threshold violations
+Reduce how often process parameters leave their safe operating range during disruptions.
+Steps: Review each violation: which disruption caused it, and how long it lasted. Improve operator procedures for degraded operation. Check that alarms for these parameters work and reach operators in time.
+Why it matters: Threshold violations are where a cyber disruption turns into a process or safety impact.
+Who: Plant operations with process engineering
+NIS2 Article 21(2): (c) business continuity
+
+Meet recovery time objectives
+Make recovery of OT systems faster and more predictable.
+Steps: Analyse recoveries that exceeded their RTO. Keep tested recovery media and system images for HMIs, servers and engineering workstations. Write step-by-step rebuild procedures and practise them.
+Why it matters: Recoveries that take longer than agreed extend process downtime.
+Who: OT engineering
+NIS2 Article 21(2): (c) business continuity, disaster recovery
+Standard: IEC 62443-3-3 SR 7.4 (control system recovery and reconstitution)
+
+Define recovery point objectives
+Define recovery point objectives for critical processes.
+Steps: Agree with operations the maximum acceptable data loss per critical process. Align backup frequency for historians, SCADA/PLC configurations and engineering workstations with it. Verify with a restore test on a test system or spare hardware.
+Why it matters: Without an RPO, recovery cannot be measured, so the indicator stays at 0.
+Who: Plant operations with OT engineering
+NIS2 Article 21(2): (c) business continuity, backup management
+Standard: IEC 62443-3-3 SR 7.3 (control system backup)
+
+Foundational controls
+
+Document asset interdependencies
+Document which assets and services each critical process depends on.
+Steps: For each critical process, list the PLCs, HMIs, servers, network paths and IT services it needs. Include external dependencies such as vendor remote access. Keep it linked to the asset inventory.
+Why it matters: Without this, the impact of losing an asset is guesswork, both during incidents and when planning recovery.
+Who: OT engineering with plant operations
+NIS2 Article 21(2): (c) business continuity (supports)
+
+Remove or control multi-homed devices
+Remove or control hosts connected to more than one zone.
+Steps: List every host with interfaces in more than one zone. Remove the second interface, or route that traffic through a controlled conduit with a firewall. Re-scan to confirm none remain.
+Why it matters: A dual-homed host bypasses the zone boundary and can connect zones that should be separated.
+Who: OT engineering
+Standard: IEC 62443-3-3 SR 5.1 (network segmentation), SR 5.2 (zone boundary protection)
+
+Test the BC plan
+Test the BC plan within the defined period.
+Steps: Schedule a test: a tabletop exercise at minimum, ideally including a restore of at least one OT system to a test environment. Record the results and fix the gaps found.
+Why it matters: An untested plan often fails on details nobody noticed on paper.
+Who: Plant operations with OT engineering
+NIS2 Article 21(2): (c) business continuity; (f) assessing the effectiveness of measures
+
+Vulnerability management
+
+Improve the remediation rate
+Remediate more of the known vulnerabilities, prioritising by risk.
+Steps: Prioritise by exposure and process criticality, for example known-exploited vulnerabilities on reachable systems first. Use vendor-approved patches. Where patching is not possible, apply and document compensating controls.
+Why it matters: In OT, not every vulnerability can be patched, but every one needs a decision.
+Who: OT engineering with the security team
+NIS2 Article 21(2): (e) vulnerability handling
+Standard: IEC TR 62443-2-3 (patch management in the IACS environment)
+
+### Runs
+
+| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | ok | 1 | whole | 56.6 s | 875 | 178 | 15.3 | stop | missing ×1 |
+| 1 | ok | 2 | overview | 11.0 s | 825 | 153 | 15.2 | stop | — |
+| 1 | ok | 1 | whereToStart whole | 10.1 s | 937 | 100 | 14.6 | stop | — |
+| 2 | ok | 1 | whole | 13.0 s | 875 | 178 | 15.3 | stop | — |
+| 2 | ok | 1 | whereToStart whole | 6.8 s | 937 | 100 | 15.0 | stop | — |
+| 3 | ok | 1 | whole | 11.5 s | 875 | 170 | 15.3 | stop | — |
+| 3 | ok | 1 | whereToStart whole | 6.8 s | 937 | 100 | 15.1 | stop | — |
+| 4 | ok | 1 | whole | 11.8 s | 875 | 177 | 15.3 | stop | — |
+| 4 | ok | 1 | whereToStart whole | 6.8 s | 937 | 100 | 15.1 | stop | — |
+| 5 | ok | 1 | whole | 12.3 s | 875 | 183 | 15.3 | stop | — |
+| 5 | ok | 1 | whereToStart whole | 6.8 s | 937 | 100 | 15.1 | stop | — |
+
+#### Run 1: ok (2 attempt(s), 2 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 77.6 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 178, 15.3 tokens/s, done_reason stop, 56.6 s
+- `missing` overview, "Incident Handling is incomplete due to a missing indicator, resulting in no overall score.": Do not write "missing indicator": the indicator exists; say it has no score.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to a missing indicator, resulting in no overall score. Business Continuity scored 1.80 out of 4. The assessment flagged critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 825, eval_count 153, 15.2 tokens/s, done_reason stop, 11.0 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Business Continuity is complete and scored 1.80 out of 4, including a programme gap score of 0 for RPO Achievement Rate. Incident Handling is incomplete, as Mean Time to Contain has no score, leading to no overall score. CRITICAL and HIGH flags were identified: Uncontrolled inter-zone multi-homed devices were found, and Asset interdependency documentation is incomplete or outdated. Additionally, no BC plan test was performed during the assessment period.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 937, eval_count 100, 14.6 tokens/s, done_reason stop, 10.1 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified.
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-L0-08: No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Business Continuity is complete and scored 1.80 out of 4, including a programme gap score of 0 for RPO Achievement Rate. Incident Handling is incomplete, as Mean Time to Contain has no score, leading to no overall score. CRITICAL and HIGH flags were identified: Uncontrolled inter-zone multi-homed devices were found, and Asset interdependency documentation is incomplete or outdated. Additionally, no BC plan test was performed during the assessment period.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F14): Asset interdependency documentation is incomplete or outdated.
+- **Remove or control multi-homed devices** (ACT-L0-05; F13): Uncontrolled inter-zone multi-homed devices were identified.
+- **Test the BC plan** (ACT-L0-08; F15): No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+#### Run 2: ok (1 attempt(s), 1 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 19.8 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 178, 15.3 tokens/s, done_reason stop, 13.0 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across 2 dimensions. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80 out of 4. The overall score is not available. Critical and high severity flags were raised for uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and lack of BC plan testing.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 937, eval_count 100, 15.0 tokens/s, done_reason stop, 6.8 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified.
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-L0-08: No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across 2 dimensions. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80 out of 4. The overall score is not available. Critical and high severity flags were raised for uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and lack of BC plan testing.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F14): Asset interdependency documentation is incomplete or outdated.
+- **Remove or control multi-homed devices** (ACT-L0-05; F13): Uncontrolled inter-zone multi-homed devices were identified.
+- **Test the BC plan** (ACT-L0-08; F15): No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+#### Run 3: ok (1 attempt(s), 1 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 18.2 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 170, 15.3 tokens/s, done_reason stop, 11.5 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80. The overall score is not available. Key flags include CRITICAL uncontrolled inter-zone multi-homed devices and HIGH severity for incomplete asset interdependency documentation and untested BC plans.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 937, eval_count 100, 15.1 tokens/s, done_reason stop, 6.8 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified.
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-L0-08: No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80. The overall score is not available. Key flags include CRITICAL uncontrolled inter-zone multi-homed devices and HIGH severity for incomplete asset interdependency documentation and untested BC plans.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F14): Asset interdependency documentation is incomplete or outdated.
+- **Remove or control multi-homed devices** (ACT-L0-05; F13): Uncontrolled inter-zone multi-homed devices were identified.
+- **Test the BC plan** (ACT-L0-08; F15): No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+#### Run 4: ok (1 attempt(s), 1 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 18.5 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 177, 15.3 tokens/s, done_reason stop, 11.8 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identified critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across 2 dimensions. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80 out of 4. The overall score is unavailable. Critical and high severity flags were raised for uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and lack of BC plan testing.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 937, eval_count 100, 15.1 tokens/s, done_reason stop, 6.8 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified.
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-L0-08: No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identified critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across 2 dimensions. Incident Handling is incomplete due to missing data, while Business Continuity scored 1.80 out of 4. The overall score is unavailable. Critical and high severity flags were raised for uncontrolled inter-zone multi-homed devices, incomplete asset interdependency documentation, and lack of BC plan testing.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F14): Asset interdependency documentation is incomplete or outdated.
+- **Remove or control multi-homed devices** (ACT-L0-05; F13): Uncontrolled inter-zone multi-homed devices were identified.
+- **Test the BC plan** (ACT-L0-08; F15): No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+#### Run 5: ok (1 attempt(s), 1 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 19.1 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 875, eval_count 183, 15.3 tokens/s, done_reason stop, 12.3 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data, resulting in no overall score. Business Continuity scored 1.80 out of 4. Flags include CRITICAL issues with uncontrolled inter-zone multi-homed devices and HIGH severity issues with incomplete asset interdependency documentation and a missing BC plan test.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 937, eval_count 100, 15.1 tokens/s, done_reason stop, 6.8 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-05: Uncontrolled inter-zone multi-homed devices were identified.
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-L0-08: No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F14, F15): The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13, F14, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Incident Handling is incomplete due to missing data, resulting in no overall score. Business Continuity scored 1.80 out of 4. Flags include CRITICAL issues with uncontrolled inter-zone multi-homed devices and HIGH severity issues with incomplete asset interdependency documentation and a missing BC plan test.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F14): Asset interdependency documentation is incomplete or outdated.
+- **Remove or control multi-homed devices** (ACT-L0-05; F13): Uncontrolled inter-zone multi-homed devices were identified.
+- **Test the BC plan** (ACT-L0-08; F15): No BC plan test was performed during the assessment period — a scheduled action was not completed.
+
+### Review
+
+Context: third Where to start set, the process facts now in the band form ("60%, in the 50–69% band, which
+is below target"), and each Where to start candidate followed by its own
+facts, indented, without fact IDs. The headline/overview inputs are
+unchanged (no CRITICAL or HIGH process fact in these scenarios).
+
+1. Invariant breaks the validator missed: none.
+2. Validator errors that look wrong: none.
+3. Paraphrased item names: none new.
+4. Prompt conformance: Where to start: the same picks as the second set in
+   all 5 runs (ACT-L0-03, ACT-L0-05, ACT-L0-08), every reason the fact's
+   own sentence, all on the first call: no fact IDs (second set: 2 runs
+   with "(F13)").
+5. Items named without their fact cited: not applicable to Where to start.
+6. Band ranges: not narrated.
+
+Result: 5 of 5 ok; Where to start 5 of 5 ok on the first call.
+
+## Run set 2026-10-01 16:38 UTC: Westmaas_2026-06-01_assessment.json
+
+- Model: qwen2.5:7b · Ollama 0.35.0 · options `{"temperature":0.2,"num_ctx":4096,"num_predict":1024}`
+- Timeout 300.0 s per call · 60.0 s cooldown between runs · retries at temperature 0.5, repairing failing sections only
+- Scenario: scenarios/Westmaas_2026-06-01_assessment.json (19 facts)
+- Where to start candidates (5): ACT-IH-04 Shorten response time; ACT-BC-03 Reduce operational threshold violations; ACT-BC-05 Meet recovery time objectives; ACT-L0-03 Document asset interdependencies; ACT-RM-02 Improve the remediation rate
+
+| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |
+|---|---|---|---|---|---|
+| before | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+| after | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+
+### Summary
+
+| Measure | Value |
+|---|---|
+| ok | 3 of 5 |
+| generated sections identical and valid | 5 of 5 |
+| attempts per run (calls) | 3 (4), 3 (3), 3 (4), 3 (4), 3 (5) |
+| Where to start ok | 5 of 5 |
+| Where to start attempts per run (calls) | 1 (1), 1 (1), 1 (1), 1 (1), 1 (1) |
+| Where to start picks per run | 1: ACT-IH-04, ACT-L0-03, ACT-RM-02; 2: ACT-IH-04, ACT-L0-03, ACT-RM-02; 3: ACT-IH-04, ACT-L0-03, ACT-RM-02; 4: ACT-IH-04, ACT-L0-03, ACT-RM-02; 5: ACT-IH-04, ACT-L0-03, ACT-RM-02 |
+| errors by rule (headline/overview) | judgement ×7, flagCount ×2, respectively ×5, numbers ×2, severity ×1, leakedIds ×2, levelLabel ×1, shape ×1 |
+| errors by rule (Where to start) | — |
+| max prompt_eval_count | 906 (warning above 3000) |
+| generation speed (tokens/s, eval_duration) | first 14.7, last 13.6, min 13.6, max 15.4 |
+
+### Generated sections
+
+Built from the facts by templates (no model); every run asserts it gets exactly this.
+
+The reference copy passes the validator.
+
+**measuredPerformance** (C3, F4, F5, F6, F7, F8, F9, F10, F11): Each effectiveness indicator is scored from 0 to 4, where 4 is best. In Incident Handling, Mean Time to Detect was 18 hours (score 3, Good), Mean Time to Respond was 30 hours (score 2, Developing) and Mean Time to Contain was 20 hours (score 3, Good). In Business Continuity, Network Operability Under Disruption was 85% (score 3, Good), Zone Availability Rate was 82% (score 3, Good), Operational Threshold Violation Rate was 12.5% (score 2, Developing), RTO Achievement Rate was 50% (score 2, Developing) and RPO Achievement Rate was 100% (score 4, Excellent). For Mean Time to Detect, Mean Time to Respond, Mean Time to Contain and Operational Threshold Violation Rate, lower values are better.
+
+**gapsAndMissingEvidence** (F1, F2, F3): No evidence is missing and no programme gaps were found: every effectiveness indicator has a score.
+
+**foundationsAndFlags** (F12, F13, F14, F15): In place: Asset inventory maintained, Risk assessment per zone, Controlled IT/OT boundary separation, Zero uncontrolled multi-homed devices, BC plan documented for critical processes and BC plan tested within defined period.
+
+The following issues were flagged (listed by severity; this is not an order of action). High: asset interdependency documentation is incomplete or outdated.
+
+Process evidence is reported without a score. Vulnerability Remediation Rate is 60%, in the 50–69% band, which is below target — moderate programme improvement warranted (medium note). Mean Time to Remediate is 75 days, in the 31–90 days band, which is satisfactory — continue monitoring.
+
+**priorities** (F16): Ranked by score, where a lower score is more urgent: the lowest effectiveness results, at score 2 and of equal priority, are Mean Time to Respond, Operational Threshold Violation Rate and RTO Achievement Rate, listed in catalogue order.
+
+**targets** (F4, F5, F6, F7, F8, F9, F10, F11): Each target is the value an indicator needs for its next score level, taken from the scoring bands.
+
+In Incident Handling, Mean Time to Detect, now 18 hours (score 3, Good), reaches score 4 (Excellent) at 6 hours or less. Mean Time to Respond, now 30 hours (score 2, Developing), reaches score 3 (Good) at 24 hours or less. Mean Time to Contain, now 20 hours (score 3, Good), reaches score 4 (Excellent) at 6 hours or less.
+
+In Business Continuity, Network Operability Under Disruption, now 85% (score 3, Good), reaches score 4 (Excellent) at 90% or more. Zone Availability Rate, now 82% (score 3, Good), reaches score 4 (Excellent) at 90% or more. Operational Threshold Violation Rate, now 12.5% (score 2, Developing), reaches score 3 (Good) at 5% or less. RTO Achievement Rate, now 50% (score 2, Developing), reaches score 3 (Good) at 75% or more.
+
+Already at the highest level (score 4, Excellent): RPO Achievement Rate.
+
+**recommendedActions** (F5, F9, F10, F13, F14): Each action comes from the dashboard's action catalogue and is matched to a result in this assessment. Actions are grouped by area in catalogue order; this is not an order of action.
+
+Incident Handling
+
+Shorten response time
+Reduce the time from detection to the start of a response.
+Steps: Set target response times per incident severity. Arrange on-call cover that includes someone with OT knowledge. Review recent incidents for hand-over delays between IT, security and operations.
+Why it matters: Delays between detection and response are often organisational, not technical, and can be fixed without new tooling.
+Who: Security team with plant operations
+NIS2 Article 21(2): (b) incident handling
+
+Business Continuity
+
+Reduce operational threshold violations
+Reduce how often process parameters leave their safe operating range during disruptions.
+Steps: Review each violation: which disruption caused it, and how long it lasted. Improve operator procedures for degraded operation. Check that alarms for these parameters work and reach operators in time.
+Why it matters: Threshold violations are where a cyber disruption turns into a process or safety impact.
+Who: Plant operations with process engineering
+NIS2 Article 21(2): (c) business continuity
+
+Meet recovery time objectives
+Make recovery of OT systems faster and more predictable.
+Steps: Analyse recoveries that exceeded their RTO. Keep tested recovery media and system images for HMIs, servers and engineering workstations. Write step-by-step rebuild procedures and practise them.
+Why it matters: Recoveries that take longer than agreed extend process downtime.
+Who: OT engineering
+NIS2 Article 21(2): (c) business continuity, disaster recovery
+Standard: IEC 62443-3-3 SR 7.4 (control system recovery and reconstitution)
+
+Foundational controls
+
+Document asset interdependencies
+Document which assets and services each critical process depends on.
+Steps: For each critical process, list the PLCs, HMIs, servers, network paths and IT services it needs. Include external dependencies such as vendor remote access. Keep it linked to the asset inventory.
+Why it matters: Without this, the impact of losing an asset is guesswork, both during incidents and when planning recovery.
+Who: OT engineering with plant operations
+NIS2 Article 21(2): (c) business continuity (supports)
+
+Vulnerability management
+
+Improve the remediation rate
+Remediate more of the known vulnerabilities, prioritising by risk.
+Steps: Prioritise by exposure and process criticality, for example known-exploited vulnerabilities on reachable systems first. Use vendor-approved patches. Where patching is not possible, apply and document compensating controls.
+Why it matters: In OT, not every vulnerability can be patched, but every one needs a decision.
+Who: OT engineering with the security team
+NIS2 Article 21(2): (e) vulnerability handling
+Standard: IEC TR 62443-2-3 (patch management in the IACS environment)
+
+### Runs
+
+| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | failed | 1 | whole | 13.4 s | 822 | 184 | 14.7 | stop | judgement ×2, flagCount ×1 |
+| 1 | failed | 2 | headline | 3.5 s | 725 | 43 | 15.0 | stop | — |
+| 1 | failed | 2 | overview | 9.7 s | 906 | 126 | 15.0 | stop | respectively ×1 |
+| 1 | failed | 3 | overview | 9.2 s | 794 | 131 | 14.9 | stop | judgement ×2 |
+| 1 | ok | 1 | whereToStart whole | 9.2 s | 726 | 124 | 15.0 | stop | — |
+| 2 | ok | 1 | whole | 12.4 s | 822 | 172 | 15.3 | stop | respectively ×1 |
+| 2 | ok | 2 | overview | 12.0 s | 844 | 165 | 15.1 | stop | numbers ×1 |
+| 2 | ok | 3 | overview | 9.7 s | 806 | 133 | 14.8 | stop | — |
+| 2 | ok | 1 | whereToStart whole | 8.4 s | 726 | 124 | 15.1 | stop | — |
+| 3 | ok | 1 | whole | 12.3 s | 822 | 168 | 15.2 | stop | severity ×1, respectively ×1 |
+| 3 | ok | 2 | headline | 2.8 s | 730 | 32 | 15.4 | stop | — |
+| 3 | ok | 2 | overview | 13.3 s | 856 | 183 | 15.0 | stop | numbers ×1 |
+| 3 | ok | 3 | overview | 11.2 s | 806 | 154 | 14.7 | stop | — |
+| 3 | ok | 1 | whereToStart whole | 8.7 s | 726 | 124 | 14.5 | stop | — |
+| 4 | ok | 1 | whole | 12.4 s | 822 | 170 | 15.1 | stop | judgement ×1, respectively ×1 |
+| 4 | ok | 2 | headline | 3.5 s | 725 | 43 | 15.2 | stop | — |
+| 4 | ok | 2 | overview | 10.7 s | 803 | 146 | 14.9 | stop | leakedIds ×2 |
+| 4 | ok | 3 | overview | 10.1 s | 855 | 139 | 14.5 | stop | — |
+| 4 | ok | 1 | whereToStart whole | 9.1 s | 726 | 124 | 13.9 | stop | — |
+| 5 | failed | 1 | whole | 13.6 s | 822 | 184 | 14.9 | stop | judgement ×2, respectively ×1 |
+| 5 | failed | 2 | headline | 3.4 s | 717 | 43 | 15.2 | stop | levelLabel ×1 |
+| 5 | failed | 2 | overview | 12.5 s | 887 | 168 | 14.7 | stop | shape ×1 |
+| 5 | failed | 3 | headline | 3.4 s | 712 | 42 | 14.8 | stop | — |
+| 5 | failed | 3 | overview | 12.6 s | 819 | 167 | 14.4 | stop | flagCount ×1 |
+| 5 | ok | 1 | whereToStart whole | 9.3 s | 726 | 124 | 13.6 | stop | — |
+
+#### Run 1: failed (3 attempt(s), 4 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 45.1 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 822, eval_count 184, 14.7 tokens/s, done_reason stop, 13.4 s
+- `judgement` headline, "The overall score for Westmaas' OT cybersecurity assessment is 2.73 out of 4, reflecting moderate performance across both dimensions.": Do not describe a score as "moderate": describe it only by its number or its level label (for example Good or Developing).
+- `judgement` overview, "The overall score of 2.73 indicates moderate performance.": Do not describe a score as "moderate": describe it only by its number or its level label (for example Good or Developing).
+- `flagCount` overview, "There are two HIGH flags: asset interdependency documentation is incomplete or outdated, and the Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate are all at score 2.": The cited facts contain 1 HIGH flag; do not write "two HIGH flags".
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): The overall score for Westmaas' OT cybersecurity assessment is 2.73 out of 4, reflecting moderate performance across both dimensions.
+
+**overview** (C2, F1, F2, F3, F13, F16): The assessment covered 8 effectiveness indicators in two dimensions: Incident Handling and Business Continuity. Incident Handling scored 2.67, while Business Continuity scored 2.80. The overall score of 2.73 indicates moderate performance. There are two HIGH flags: asset interdependency documentation is incomplete or outdated, and the Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate are all at score 2.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 725, eval_count 43, 15.0 tokens/s, done_reason stop, 3.5 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F3): The overall score of 2.73 out of 4 indicates developing performance in both Incident Handling and Business Continuity.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 906, eval_count 126, 15.0 tokens/s, done_reason stop, 9.7 s
+- `respectively` overview, "The assessment covered Incident Handling and Business Continuity, each with three and five effectiveness indicators respectively.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13): The assessment covered Incident Handling and Business Continuity, each with three and five effectiveness indicators respectively. Incident Handling had a score of 2.67 out of 4, and Business Continuity scored 2.80 out of 4. The overall score was 2.73 out of 4, which is the mean of the two dimension scores. There is one HIGH flag: Asset interdependency documentation is incomplete or outdated.
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 794, eval_count 131, 14.9 tokens/s, done_reason stop, 9.2 s
+- `judgement` overview, "For Incident Handling, the score is 2.67 out of 4, indicating a moderate level of effectiveness.": Do not describe a score as "moderate": describe it only by its number or its level label (for example Good or Developing).
+- `judgement` overview, "For Business Continuity, the score is 2.80 out of 4, also at a moderate level.": Do not describe a score as "moderate": describe it only by its number or its level label (for example Good or Developing).
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13): The assessment covered Incident Handling and Business Continuity. For Incident Handling, the score is 2.67 out of 4, indicating a moderate level of effectiveness. For Business Continuity, the score is 2.80 out of 4, also at a moderate level. The overall score is 2.73 out of 4, the average of the two dimension scores. There is one HIGH flag: Asset interdependency documentation is incomplete or outdated.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 726, eval_count 124, 15.0 tokens/s, done_reason stop, 9.2 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-RM-02: Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted.
+- ACT-IH-04: Mean Time to Respond: measured at 30 hours (lower is better); score 2.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Shorten response time** (ACT-IH-04; F5): Mean Time to Respond: measured at 30 hours (lower is better); score 2.
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+- **Improve the remediation rate** (ACT-RM-02; F14): Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted.
+
+#### Run 2: ok (3 attempt(s), 3 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 42.5 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 822, eval_count 172, 15.3 tokens/s, done_reason stop, 12.4 s
+- `respectively` overview, "Both dimensions are complete, with scores of 2.67 and 2.80, respectively.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): The overall cybersecurity assessment score for Westmaas is 2.73 out of 4.
+
+**overview** (C2, F1, F2, F3, F13, F16): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are complete, with scores of 2.67 and 2.80, respectively. The overall score is 2.73. A HIGH flag was raised for incomplete asset interdependency documentation. The lowest effectiveness results are at score 2 for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 844, eval_count 165, 15.1 tokens/s, done_reason stop, 12.0 s
+- `numbers` overview, "The overall score is 2.73 out of 4, the average of the two dimension scores.": The number "2.73" does not appear in any fact cited by this section.
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, which includes 3 effectiveness indicators, achieved a score of 2.67 out of 4. Business Continuity, with 5 effectiveness indicators, scored 2.80 out of 4. The overall score is 2.73 out of 4, the average of the two dimension scores. There is a HIGH flag for incomplete or outdated asset interdependency documentation. Additionally, the lowest effectiveness results are at score 2 for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate, all of equal priority.
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 806, eval_count 133, 14.8 tokens/s, done_reason stop, 9.7 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, with a score of 2.67 out of 4, and Business Continuity, with a score of 2.80 out of 4, were both deemed complete. A HIGH flag was raised for incomplete or outdated asset interdependency documentation. Additionally, two effectiveness indicators, Mean Time to Respond and Operational Threshold Violation Rate, both scored 2 and are of equal priority.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 726, eval_count 124, 15.1 tokens/s, done_reason stop, 8.4 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-RM-02: Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted.
+- ACT-IH-04: Mean Time to Respond: measured at 30 hours (lower is better); score 2.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F3): The overall cybersecurity assessment score for Westmaas is 2.73 out of 4.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, with a score of 2.67 out of 4, and Business Continuity, with a score of 2.80 out of 4, were both deemed complete. A HIGH flag was raised for incomplete or outdated asset interdependency documentation. Additionally, two effectiveness indicators, Mean Time to Respond and Operational Threshold Violation Rate, both scored 2 and are of equal priority.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Shorten response time** (ACT-IH-04; F5): Mean Time to Respond: measured at 30 hours (lower is better); score 2.
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+- **Improve the remediation rate** (ACT-RM-02; F14): Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted.
+
+#### Run 3: ok (3 attempt(s), 4 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 48.2 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 822, eval_count 168, 15.2 tokens/s, done_reason stop, 12.3 s
+- `severity` headline, "The assessment identified critical gaps in asset interdependency documentation and equal priority issues with response times and recovery rates.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `respectively` overview, "Both dimensions are complete, with scores of 2.67 and 2.80, respectively, resulting in an overall score of 2.73.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F16): The assessment identified critical gaps in asset interdependency documentation and equal priority issues with response times and recovery rates.
+
+**overview** (C2, F1, F2, F3, F13, F16): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are complete, with scores of 2.67 and 2.80, respectively, resulting in an overall score of 2.73. Key flags include a HIGH severity issue with incomplete asset interdependency documentation and equal priority issues related to response times and recovery rates.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 730, eval_count 32, 15.4 tokens/s, done_reason stop, 2.8 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13): The assessment identified a high severity gap in asset interdependency documentation.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 856, eval_count 183, 15.0 tokens/s, done_reason stop, 13.3 s
+- `numbers` overview, "The overall score is 2.73 out of 4, the mean of the two dimension scores.": The number "2.73" does not appear in any fact cited by this section.
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity, each with multiple effectiveness indicators. Incident Handling, which includes three indicators, has a score of 2.67 out of 4, marked as complete. Business Continuity, with five indicators, has a score of 2.80 out of 4, also marked as complete. The overall score is 2.73 out of 4, the mean of the two dimension scores. There is a HIGH flag for Asset interdependency documentation being incomplete or outdated. Additionally, the Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate, all of equal priority and scoring 2, are noted as the lowest effectiveness results.
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 806, eval_count 154, 14.7 tokens/s, done_reason stop, 11.2 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered Incident Handling and Business Continuity, with 8 effectiveness indicators in total. Incident Handling, consisting of 3 indicators, scored 2.67 out of 4, which is complete. Business Continuity, with 5 indicators, scored 2.80 out of 4, also complete. A HIGH flag was raised for incomplete or outdated asset interdependency documentation. Additionally, the lowest effectiveness results were at score 2 and of equal priority, listed in catalogue order: Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 726, eval_count 124, 14.5 tokens/s, done_reason stop, 8.7 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-RM-02: Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted.
+- ACT-IH-04: Mean Time to Respond: measured at 30 hours (lower is better); score 2.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13): The assessment identified a high severity gap in asset interdependency documentation.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered Incident Handling and Business Continuity, with 8 effectiveness indicators in total. Incident Handling, consisting of 3 indicators, scored 2.67 out of 4, which is complete. Business Continuity, with 5 indicators, scored 2.80 out of 4, also complete. A HIGH flag was raised for incomplete or outdated asset interdependency documentation. Additionally, the lowest effectiveness results were at score 2 and of equal priority, listed in catalogue order: Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Shorten response time** (ACT-IH-04; F5): Mean Time to Respond: measured at 30 hours (lower is better); score 2.
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+- **Improve the remediation rate** (ACT-RM-02; F14): Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted.
+
+#### Run 4: ok (3 attempt(s), 4 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 45.8 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 822, eval_count 170, 15.1 tokens/s, done_reason stop, 12.4 s
+- `judgement` headline, "The overall score for Westmaas' OT cybersecurity assessment is 2.73 out of 4, reflecting moderate performance across both dimensions.": Do not describe a score as "moderate": describe it only by its number or its level label (for example Good or Developing).
+- `respectively` overview, "Both dimensions are complete, with scores of 2.67 and 2.80, respectively.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): The overall score for Westmaas' OT cybersecurity assessment is 2.73 out of 4, reflecting moderate performance across both dimensions.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered 8 effectiveness indicators in two dimensions: Incident Handling and Business Continuity. Both dimensions are complete, with scores of 2.67 and 2.80, respectively. A HIGH flag was raised for incomplete asset interdependency documentation. Additionally, the lowest effectiveness results are at score 2 for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 725, eval_count 43, 15.2 tokens/s, done_reason stop, 3.5 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F3): The overall score of 2.73 out of 4 indicates developing performance in both Incident Handling and Business Continuity.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 803, eval_count 146, 14.9 tokens/s, done_reason stop, 10.7 s
+- `leakedIds` overview, "There is a HIGH severity flag for incomplete or outdated asset interdependency documentation (F13).": Fact ID "F13" appears in the text. Never write fact IDs.
+- `leakedIds` overview, "The lowest effectiveness results, both at score 2, are for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate (F16).": Fact ID "F16" appears in the text. Never write fact IDs.
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, with a score of 2.67 out of 4, is complete. Business Continuity, with a score of 2.80 out of 4, is also complete. There is a HIGH severity flag for incomplete or outdated asset interdependency documentation (F13). The lowest effectiveness results, both at score 2, are for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate (F16). 
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 855, eval_count 139, 14.5 tokens/s, done_reason stop, 10.1 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity, each with complete processes but scoring below the target. Incident Handling scored 2.67 out of 4, and Business Continuity scored 2.80 out of 4. There is a HIGH severity flag for incomplete or outdated asset interdependency documentation. The lowest effectiveness results, both at score 2, are for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 726, eval_count 124, 13.9 tokens/s, done_reason stop, 9.1 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-RM-02: Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted.
+- ACT-IH-04: Mean Time to Respond: measured at 30 hours (lower is better); score 2.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F3): The overall score of 2.73 out of 4 indicates developing performance in both Incident Handling and Business Continuity.
+
+**overview** (C2, F1, F2, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity, each with complete processes but scoring below the target. Incident Handling scored 2.67 out of 4, and Business Continuity scored 2.80 out of 4. There is a HIGH severity flag for incomplete or outdated asset interdependency documentation. The lowest effectiveness results, both at score 2, are for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Shorten response time** (ACT-IH-04; F5): Mean Time to Respond: measured at 30 hours (lower is better); score 2.
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+- **Improve the remediation rate** (ACT-RM-02; F14): Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted.
+
+#### Run 5: failed (3 attempt(s), 5 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 54.8 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 822, eval_count 184, 14.9 tokens/s, done_reason stop, 13.6 s
+- `judgement` headline, "The overall score is 2.73 out of 4, reflecting moderate performance across both dimensions.": Do not describe a score as "moderate": describe it only by its number or its level label (for example Good or Developing).
+- `respectively` overview, "Both dimensions are complete, with scores of 2.67 and 2.80, respectively.": Give each item its own number or label; do not write "respectively".
+- `judgement` overview, "The overall score of 2.73 indicates moderate performance.": Do not describe a score as "moderate": describe it only by its number or its level label (for example Good or Developing).
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): The overall score is 2.73 out of 4, reflecting moderate performance across both dimensions.
+
+**overview** (C2, F1, F2, F3, F13, F16): The assessment covered 8 effectiveness indicators in two dimensions: Incident Handling and Business Continuity. Both dimensions are complete, with scores of 2.67 and 2.80, respectively. The overall score of 2.73 indicates moderate performance. Notable flags include a HIGH severity issue with incomplete or outdated asset interdependency documentation. Additionally, the lowest effectiveness results are at score 2 for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 717, eval_count 43, 15.2 tokens/s, done_reason stop, 3.4 s
+- `levelLabel` headline, "The overall score is 2.73 out of 4, indicating Developing performance across Incident Handling and Business Continuity.": Do not write the level label "Developing": describe a score only by its number.
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F3): The overall score is 2.73 out of 4, indicating Developing performance across Incident Handling and Business Continuity.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 887, eval_count 168, 14.7 tokens/s, done_reason stop, 12.5 s
+- `shape` overview: The text contains "{" or "}". Write plain sentences only, without JSON.
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling, with a score of 2.67 out of 4, and Business Continuity, with a score of 2.80 out of 4, were both complete. The overall score of 2.73 out of 4 was calculated as the mean of the two dimension scores. A HIGH flag was raised for incomplete or outdated asset interdependency documentation. The lowest effectiveness results, at score 2, were for Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate, listed in catalogue order. }
+
+</details>
+
+Attempt 3, repair of headline: prompt_eval_count 712, eval_count 42, 14.8 tokens/s, done_reason stop, 3.4 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of headline)</summary>
+
+**headline** (F3): The overall score is 2.73 out of 4, indicating performance in Incident Handling and Business Continuity.
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 819, eval_count 167, 14.4 tokens/s, done_reason stop, 12.6 s
+- `flagCount` overview, "There are two flags: Asset interdependency documentation is incomplete or outdated, marked as HIGH.": The cited facts contain 1 flag; do not write "two flags".
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F16): The assessment covered two dimensions: Incident Handling and Business Continuity. Incident Handling had a score of 2.67 out of 4, which is HIGH. Business Continuity scored 2.80 out of 4, also HIGH. The overall score, calculated as the mean of the two dimensions, is 2.73 out of 4. There are two flags: Asset interdependency documentation is incomplete or outdated, marked as HIGH. The lowest effectiveness results are at score 2, with Mean Time to Respond, Operational Threshold Violation Rate, and RTO Achievement Rate all being of equal priority.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 726, eval_count 124, 13.6 tokens/s, done_reason stop, 9.3 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+- ACT-RM-02: Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted.
+- ACT-IH-04: Mean Time to Respond: measured at 30 hours (lower is better); score 2.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Shorten response time** (ACT-IH-04; F5): Mean Time to Respond: measured at 30 hours (lower is better); score 2.
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+- **Improve the remediation rate** (ACT-RM-02; F14): Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted.
+
+### Review
+
+Context: as above.
+
+1. Invariant breaks the validator missed: none.
+2. Validator errors that look wrong: none.
+3. Paraphrased item names: none new.
+4. Prompt conformance: Where to start: ACT-IH-04, ACT-L0-03, ACT-RM-02 in
+   all 5 runs, all on the first call, reasons copied from the facts. The
+   remediation reason now reads "Vulnerability Remediation Rate: 60%, in
+   the 50–69% band, which is below target — moderate programme improvement
+   warranted." (second set: "below the target of 50–69%" in 3 of 5).
+   Headline/overview failed runs 1 and 5: "moderate performance"
+   (`judgement`, 4 of 5 runs), "two HIGH flags" (`flagCount`), braces,
+   `respectively` in 4 of 5 first attempts; all known patterns, all rules
+   that predate Step 9.
+5. Items named without their fact cited: not applicable to Where to start.
+6. Band ranges: presented as the band the value falls in, in every run.
+
+Result: 3 of 5 ok (earlier June sets: 5, 3 of 5; the model's input and
+the verdicts are unchanged); Where to start 5 of 5 ok on the first call.
+
+## Run set 2026-10-01 16:45 UTC: Oudendijk_2026-03-01_assessment.json
+
+- Model: qwen2.5:7b · Ollama 0.35.0 · options `{"temperature":0.2,"num_ctx":4096,"num_predict":1024}`
+- Timeout 300.0 s per call · 60.0 s cooldown between runs · retries at temperature 0.5, repairing failing sections only
+- Scenario: scenarios/Oudendijk_2026-03-01_assessment.json (18 facts)
+- Where to start candidates (1): ACT-L0-03 Document asset interdependencies
+
+| `/api/ps` | Model | Size | In VRAM | CPU/GPU | Context |
+|---|---|---|---|---|---|
+| before | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+| after | qwen2.5:7b | 5.12 GB | 4.33 GB | 16%/84% | 4096 |
+
+### Summary
+
+| Measure | Value |
+|---|---|
+| ok | 3 of 5 |
+| generated sections identical and valid | 5 of 5 |
+| attempts per run (calls) | 3 (4), 3 (3), 1 (1), 2 (3), 3 (5) |
+| Where to start ok | 5 of 5 |
+| Where to start attempts per run (calls) | 1 (1), 1 (1), 1 (1), 1 (1), 1 (1) |
+| Where to start picks per run | 1: ACT-L0-03; 2: ACT-L0-03; 3: ACT-L0-03; 4: ACT-L0-03; 5: ACT-L0-03 |
+| errors by rule (headline/overview) | severity ×6, levelLabel ×6, missing ×4, unscoredScore ×2, respectively ×1 |
+| errors by rule (Where to start) | — |
+| max prompt_eval_count | 869 (warning above 3000) |
+| generation speed (tokens/s, eval_duration) | first 10.3, last 13.8, min 9.7, max 15.1 |
+
+### Generated sections
+
+Built from the facts by templates (no model); every run asserts it gets exactly this.
+
+The reference copy passes the validator.
+
+**measuredPerformance** (C3, F4, F7): Each effectiveness indicator is scored from 0 to 4, where 4 is best. In Incident Handling, Mean Time to Detect was 20 hours (score 3, Good). In Business Continuity, Network Operability Under Disruption was 90% (score 4, Excellent). For Mean Time to Detect, lower values are better.
+
+**gapsAndMissingEvidence** (F1, F2, F3, F5, F6, F8, F9, F10, F11): Six indicators are not yet assessed: Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate. This says nothing about how they perform, but without them Incident Handling and Business Continuity have no score, so there is no overall score either.
+
+**foundationsAndFlags** (F12, F13, F14): In place: Asset inventory maintained. Not yet assessed: Risk assessment per zone, Controlled IT/OT boundary separation, Zero uncontrolled multi-homed devices, BC plan documented for critical processes, Vulnerability Remediation Rate, Mean Time to Remediate and BC plan tested within defined period. This says nothing about whether they are in place.
+
+The following issues were flagged (listed by severity; this is not an order of action). High: asset interdependency documentation is incomplete or outdated.
+
+**priorities** (F5, F6, F8, F9, F10, F11, F15): No scored effectiveness indicator is below 3 (Good). Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate are not ranked because they have no score.
+
+**targets** (F4, F5, F6, F7, F8, F9, F10, F11): Each target is the value an indicator needs for its next score level, taken from the scoring bands.
+
+In Incident Handling, Mean Time to Detect, now 20 hours (score 3, Good), reaches score 4 (Excellent) at 6 hours or less.
+
+Already at the highest level (score 4, Excellent): Network Operability Under Disruption.
+
+Mean Time to Respond, Mean Time to Contain, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate and RPO Achievement Rate have no score, so they have no target.
+
+**recommendedActions** (F13): Each action comes from the dashboard's action catalogue and is matched to a result in this assessment. Actions are grouped by area in catalogue order; this is not an order of action.
+
+Foundational controls
+
+Document asset interdependencies
+Document which assets and services each critical process depends on.
+Steps: For each critical process, list the PLCs, HMIs, servers, network paths and IT services it needs. Include external dependencies such as vendor remote access. Keep it linked to the asset inventory.
+Why it matters: Without this, the impact of losing an asset is guesswork, both during incidents and when planning recovery.
+Who: OT engineering with plant operations
+NIS2 Article 21(2): (c) business continuity (supports)
+
+Indicators and controls that are not yet assessed trigger no action, so their absence here says nothing about them.
+
+### Runs
+
+| Run | Status | Attempt | Call | Time | prompt_eval_count | eval_count | tokens/s | done_reason | Errors |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | ok | 1 | whole | 16.4 s | 804 | 158 | 10.3 | stop | severity ×1, levelLabel ×2 |
+| 1 | ok | 2 | headline | 4.3 s | 762 | 32 | 9.7 | stop | severity ×1 |
+| 1 | ok | 2 | overview | 10.3 s | 831 | 85 | 10.2 | stop | — |
+| 1 | ok | 3 | headline | 4.3 s | 673 | 33 | 9.8 | stop | — |
+| 1 | ok | 1 | whereToStart whole | 4.0 s | 553 | 36 | 9.9 | stop | — |
+| 2 | failed | 1 | whole | 10.2 s | 804 | 134 | 14.8 | stop | missing ×1, unscoredScore ×1 |
+| 2 | failed | 2 | overview | 8.8 s | 866 | 112 | 14.6 | stop | missing ×1, unscoredScore ×1 |
+| 2 | failed | 3 | overview | 7.4 s | 869 | 102 | 14.4 | stop | missing ×1 |
+| 2 | ok | 1 | whereToStart whole | 2.7 s | 553 | 36 | 14.3 | stop | — |
+| 3 | ok | 1 | whole | 10.0 s | 804 | 132 | 14.8 | stop | — |
+| 3 | ok | 1 | whereToStart whole | 2.6 s | 553 | 36 | 14.6 | stop | — |
+| 4 | ok | 1 | whole | 10.8 s | 804 | 155 | 14.9 | stop | severity ×1, levelLabel ×2 |
+| 4 | ok | 2 | headline | 3.9 s | 762 | 48 | 15.0 | stop | — |
+| 4 | ok | 2 | overview | 6.7 s | 831 | 82 | 14.7 | stop | — |
+| 4 | ok | 1 | whereToStart whole | 2.7 s | 553 | 36 | 14.3 | stop | — |
+| 5 | failed | 1 | whole | 10.9 s | 804 | 148 | 15.1 | stop | severity ×2, levelLabel ×2 |
+| 5 | failed | 2 | headline | 2.9 s | 762 | 31 | 14.2 | stop | severity ×1 |
+| 5 | failed | 2 | overview | 11.2 s | 868 | 149 | 14.8 | stop | respectively ×1 |
+| 5 | failed | 3 | headline | 2.8 s | 673 | 33 | 14.3 | stop | — |
+| 5 | failed | 3 | overview | 11.7 s | 822 | 152 | 14.1 | stop | missing ×1 |
+| 5 | ok | 1 | whereToStart whole | 2.8 s | 553 | 36 | 13.8 | stop | — |
+
+#### Run 1: ok (3 attempt(s), 4 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 39.3 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 158, 10.3 tokens/s, done_reason stop, 16.4 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `levelLabel` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+- `levelLabel` overview, "Additionally, a HIGH flag was raised for incomplete asset interdependency documentation, and only two indicators are currently scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F15): The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete due to missing scores, resulting in no overall score. Additionally, a HIGH flag was raised for incomplete asset interdependency documentation, and only two indicators are currently scored, both at good levels.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 762, eval_count 32, 9.7 tokens/s, done_reason stop, 4.3 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13): The assessment identifies critical gaps in asset interdependency documentation.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 831, eval_count 85, 10.2 tokens/s, done_reason stop, 10.3 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13): The assessment covered two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, as they lack the required effectiveness indicators, resulting in no available scores. Additionally, a HIGH flag was raised for incomplete or outdated asset interdependency documentation.
+
+</details>
+
+Attempt 3, repair of headline: prompt_eval_count 673, eval_count 33, 9.8 tokens/s, done_reason stop, 4.3 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of headline)</summary>
+
+**headline** (F13): High severity is found in incomplete or outdated asset interdependency documentation.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 553, eval_count 36, 9.9 tokens/s, done_reason stop, 4.0 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13): High severity is found in incomplete or outdated asset interdependency documentation.
+
+**overview** (C2, F1, F2, F3, F13): The assessment covered two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, as they lack the required effectiveness indicators, resulting in no available scores. Additionally, a HIGH flag was raised for incomplete or outdated asset interdependency documentation.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+
+#### Run 2: failed (3 attempt(s), 3 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 29.1 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 134, 14.8 tokens/s, done_reason stop, 10.2 s
+- `missing` overview, "Both dimensions are incomplete, with no scores available due to missing indicators.": Do not write "missing indicator": the indicator exists; say it has no score.
+- `unscoredScore` overview, "Notable flags include a HIGH severity for incomplete asset interdependency documentation, and only 2 out of 8 indicators have scores, both rated good.": Asset interdependency documentation is not scored; do not give it a score.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): No overall score due to incomplete Incident Handling and Business Continuity dimensions.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across 2 dimensions. Both dimensions are incomplete, with no scores available due to missing indicators. Notable flags include a HIGH severity for incomplete asset interdependency documentation, and only 2 out of 8 indicators have scores, both rated good.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 866, eval_count 112, 14.6 tokens/s, done_reason stop, 8.8 s
+- `missing` overview, "Both dimensions are incomplete, with no scores available due to missing indicators.": Do not write "missing indicator": the indicator exists; say it has no score.
+- `unscoredScore` overview, "Notable flags include a HIGH severity for incomplete or outdated asset interdependency documentation, and only 2 out of 8 effectiveness indicators have scores, both rated good.": Asset interdependency documentation is not scored; do not give it a score.
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, with no scores available due to missing indicators. The Overall score is not available for the same reason. Notable flags include a HIGH severity for incomplete or outdated asset interdependency documentation, and only 2 out of 8 effectiveness indicators have scores, both rated good.
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 869, eval_count 102, 14.4 tokens/s, done_reason stop, 7.4 s
+- `missing` overview, "Both dimensions are incomplete, with no scores available due to missing indicators.": Do not write "missing indicator": the indicator exists; say it has no score.
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, with no scores available due to missing indicators. Additionally, only 2 out of 8 effectiveness indicators have scores, both rated good. Notable flags include a HIGH severity for incomplete or outdated asset interdependency documentation.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 553, eval_count 36, 14.3 tokens/s, done_reason stop, 2.7 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+
+#### Run 3: ok (1 attempt(s), 1 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 12.6 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 132, 14.8 tokens/s, done_reason stop, 10.0 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F3): No overall score due to incomplete Incident Handling and Business Continuity dimensions.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, resulting in no overall score. Additionally, a HIGH flag was raised for incomplete asset interdependency documentation. Only two indicators have scores, both rated good.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 553, eval_count 36, 14.6 tokens/s, done_reason stop, 2.6 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F3): No overall score due to incomplete Incident Handling and Business Continuity dimensions.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, resulting in no overall score. Additionally, a HIGH flag was raised for incomplete asset interdependency documentation. Only two indicators have scores, both rated good.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+
+#### Run 4: ok (2 attempt(s), 3 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 24.0 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 155, 14.9 tokens/s, done_reason stop, 10.8 s
+- `severity` headline, "The assessment highlights critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `levelLabel` headline, "The assessment highlights critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+- `levelLabel` overview, "Additionally, there is a HIGH severity flag for incomplete asset interdependency documentation, and only two indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F15): The assessment highlights critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across 2 dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, resulting in no overall score. Additionally, there is a HIGH severity flag for incomplete asset interdependency documentation, and only two indicators are scored, both at good levels.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 762, eval_count 48, 15.0 tokens/s, done_reason stop, 3.9 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13, F15): The assessment highlights a HIGH severity gap in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 831, eval_count 82, 14.7 tokens/s, done_reason stop, 6.7 s
+- no validator errors
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13): The assessment covered two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, with no scores available for Incident Handling and Business Continuity. Additionally, there is a HIGH severity flag for incomplete asset interdependency documentation.
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 553, eval_count 36, 14.3 tokens/s, done_reason stop, 2.7 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+
+</details>
+
+<details><summary>Final model parts (accepted)</summary>
+
+**headline** (F13, F15): The assessment highlights a HIGH severity gap in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored.
+
+**overview** (C2, F1, F2, F3, F13): The assessment covered two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, with no scores available for Incident Handling and Business Continuity. Additionally, there is a HIGH severity flag for incomplete asset interdependency documentation.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+
+#### Run 5: failed (3 attempt(s), 5 call(s)); Where to start ok (1 attempt(s), 1 call(s)); 42.2 s
+
+Generated sections: identical to the reference copy, pass the validator.
+
+Attempt 1, whole narrative: prompt_eval_count 804, eval_count 148, 15.1 tokens/s, done_reason stop, 10.9 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `levelLabel` headline, "The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+- `severity` overview, "Critical issues include incomplete asset interdependency documentation, and only two indicators are scored, both at good levels.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+- `levelLabel` overview, "Critical issues include incomplete asset interdependency documentation, and only two indicators are scored, both at good levels.": Do not write the level label "good": describe a score only by its number.
+
+<details><summary>Attempt 1 reply (whole narrative)</summary>
+
+**headline** (F13, F15): The assessment identifies critical gaps in asset interdependency documentation and notes that only two out of eight effectiveness indicators are scored, both at good levels.
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered 8 effectiveness indicators across two dimensions: Incident Handling and Business Continuity. Both dimensions are incomplete, resulting in no overall score. Critical issues include incomplete asset interdependency documentation, and only two indicators are scored, both at good levels.
+
+</details>
+
+Attempt 2, repair of headline: prompt_eval_count 762, eval_count 31, 14.2 tokens/s, done_reason stop, 2.9 s
+- `severity` headline, "The assessment identifies critical gaps in asset interdependency documentation.": Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.
+
+<details><summary>Attempt 2 reply (repair of headline)</summary>
+
+**headline** (F13): The assessment identifies critical gaps in asset interdependency documentation.
+
+</details>
+
+Attempt 2, repair of overview: prompt_eval_count 868, eval_count 149, 14.8 tokens/s, done_reason stop, 11.2 s
+- `respectively` overview, "The assessment covered Incident Handling and Business Continuity, with 3 and 5 indicators respectively.": Give each item its own number or label; do not write "respectively".
+
+<details><summary>Attempt 2 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered Incident Handling and Business Continuity, with 3 and 5 indicators respectively. Both dimensions are incomplete, as Mean Time to Respond and Mean Time to Contain in Incident Handling, and Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate in Business Continuity, have no scores. Consequently, no overall score is available. Additionally, there is a HIGH flag for incomplete asset interdependency documentation. Only two out of eight effectiveness indicators have scores, both at or above 3.
+
+</details>
+
+Attempt 3, repair of headline: prompt_eval_count 673, eval_count 33, 14.3 tokens/s, done_reason stop, 2.8 s
+- no validator errors
+
+<details><summary>Attempt 3 reply (repair of headline)</summary>
+
+**headline** (F13): High severity issues exist with incomplete or outdated asset interdependency documentation.
+
+</details>
+
+Attempt 3, repair of overview: prompt_eval_count 822, eval_count 152, 14.1 tokens/s, done_reason stop, 11.7 s
+- `missing` overview, "Incident Handling is incomplete due to missing Mean Time to Respond and Mean Time to Contain indicators, resulting in no score.": Do not call Mean Time to Respond missing: it exists and has no score. Say it is not yet assessed.
+
+<details><summary>Attempt 3 reply (repair of overview)</summary>
+
+**overview** (C2, F1, F2, F3, F13, F15): The assessment covered Incident Handling and Business Continuity. Incident Handling is incomplete due to missing Mean Time to Respond and Mean Time to Contain indicators, resulting in no score. Business Continuity is also incomplete, lacking Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate, and RPO Achievement Rate indicators, leading to no score. Consequently, the overall score is not available. Additionally, a HIGH flag was raised for incomplete asset interdependency documentation. Only two out of eight effectiveness indicators have scores, both at or above 3 (Good).
+
+</details>
+
+Attempt 1, Where to start picks: prompt_eval_count 553, eval_count 36, 13.8 tokens/s, done_reason stop, 2.8 s
+- no validator errors
+
+<details><summary>Attempt 1 reply (Where to start picks)</summary>
+
+- ACT-L0-03: Asset interdependency documentation is incomplete or outdated.
+
+</details>
+
+Where to start (accepted, catalogue order):
+
+- **Document asset interdependencies** (ACT-L0-03; F13): Asset interdependency documentation is incomplete or outdated.
+
+### Review
+
+Context: as above; 1 candidate.
+
+1. Invariant breaks the validator missed: headline/overview: "both rated
+   good" (known: a lower-case label is caught only before "level").
+2. Validator errors that look wrong: one. Run 2: "…asset interdependency
+   documentation, and only 2 out of 8 indicators have scores" failed
+   `unscoredScore`: the clause inherits the foundational item across
+   "and", and "2 out of 8" reads as a score (the inherited-subject
+   limitation listed in the spec, Step 3). Run 2 failed on a correct
+   `missing` ("missing indicators") in all three attempts as well.
+3. Paraphrased item names: none new.
+4. Prompt conformance: Where to start: the fact's own sentence in all 5
+   runs, on the first call ("which poses a high risk" and "(F13)" no
+   longer appear). Headline/overview: the known `severity` (clause rule)
+   and `levelLabel` patterns.
+5. Items named without their fact cited: not applicable to Where to start.
+6. Band ranges: not applicable.
+
+Result: 3 of 5 ok (earlier Oudendijk sets: 5, 5, 5, 1, 4, 3, 4, 5 of 5);
+Where to start 5 of 5 ok on the first call.
+

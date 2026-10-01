@@ -103,8 +103,8 @@ describe('parts, closing and footer', () => {
   it('ok: every part with its label, the model footer, and the closing lines', async () => {
     const result = await S.ok();
     const doc = build(result);
-    expect(doc.parts.map(p => p.title)).toEqual(['headline', 'overview', ...GENERATED_KEYS].map(k => SECTION_TITLES[k]));
-    expect(doc.parts.map(p => p.label)).toEqual([W.label.ai, W.label.ai, ...GENERATED_KEYS.map(() => W.label.generated)]);
+    expect(doc.parts.map(p => p.title)).toEqual(['headline', 'overview', 'whereToStart', ...GENERATED_KEYS].map(k => SECTION_TITLES[k]));
+    expect(doc.parts.map(p => p.label)).toEqual([W.label.ai, W.label.ai, W.label.ai, ...GENERATED_KEYS.map(() => W.label.generated)]);
     expect(doc.parts[0].text).toBe(S.VALID.headline.text);
     expect(doc.footerModel).toBe(W.pdf.model(DEFAULT_MODEL));
     expect(doc.closing).toEqual(provenanceLines(reportParts(result), DEFAULT_MODEL, [W.pdf.scoresTitle]));
@@ -132,9 +132,9 @@ describe('parts, closing and footer', () => {
     ['timeout', () => S.unavailable('timeout', 'No response.')],
     ['provider_error', () => S.unavailable('provider_error', 'HTTP 500.')],
     ['cancelled', () => S.unavailable('cancelled', 'Generation was cancelled.')],
-  ])('%s: only the four generated sections, no model footer, no draft or status text', async (_, make) => {
+  ])('%s: only the generated sections, no model footer, no draft or status text', async (_, make) => {
     const result = await make();
-    const doc = build(result, { edits: { headline: S.MARKER, overview: S.MARKER } });
+    const doc = build(result, { edits: { headline: S.MARKER, overview: S.MARKER, whereToStart: S.MARKER } });
     expect(doc.parts.map(p => p.title)).toEqual(GENERATED_KEYS.map(k => SECTION_TITLES[k]));
     expect(doc.footerModel).toBeNull();
     const all = JSON.stringify(doc);
@@ -150,12 +150,46 @@ describe('parts, closing and footer', () => {
     const editedText = 'Edited.\nSteps: not a label here.';
     const edited = actions(build(result, { edits: { recommendedActions: editedText } }));
     expect(edited).toEqual({ key: 'recommendedActions', title: 'Recommended actions', label: W.label.edited, text: editedText });
-    expect(build(result).parts.filter(p => 'blocks' in p).map(p => p.key)).toEqual(['recommendedActions']);
+    expect(build(result).parts.filter(p => 'blocks' in p).map(p => p.key)).toEqual(['whereToStart', 'recommendedActions']);
   });
 
   it('no internal ID anywhere', async () => {
     for (const result of [await S.ok(), await S.failed()]) {
       expect(JSON.stringify(build(result))).not.toMatch(ID_PATTERN);
     }
+  });
+});
+
+describe('Where to start (Step 9)', () => {
+  it('ok: after the overview, AI-drafted, titles bold through its blocks; plain text once edited', async () => {
+    const result = await S.ok();
+    const part = doc => doc.parts.find(p => p.key === 'whereToStart');
+    expect(part(build(result))).toEqual({
+      key: 'whereToStart', title: 'Where to start', label: W.label.ai,
+      text: result.whereToStart.part.text, blocks: result.whereToStart.part.blocks,
+    });
+    expect(result.whereToStart.part.blocks.filter(b => b.kind === 'action').map(b => b.title))
+      .toEqual(result.whereToStart.picks.map(p => p.title));
+    expect(part(build(result, { edits: { whereToStart: 'Mine.' } }))).toEqual({
+      key: 'whereToStart', title: 'Where to start', label: W.label.edited, text: 'Mine.',
+    });
+  });
+
+  it('the headline/overview failed but Where to start passed: printed, with the model footer', async () => {
+    const doc = build(await S.failedWithPicks(), { edits: { headline: S.MARKER, overview: S.MARKER } });
+    expect(doc.parts.map(p => p.key)).toEqual(['whereToStart', ...GENERATED_KEYS]);
+    expect(doc.footerModel).toBe(W.pdf.model(DEFAULT_MODEL));
+    expect(doc.closing[0]).toBe(W.footer.ai(DEFAULT_MODEL, ['Where to start']));
+    expect(JSON.stringify(doc)).not.toContain(S.MARKER);
+  });
+
+  it.each([
+    ['failed', () => S.picksFailed()],
+    ['unavailable', () => S.picksUnavailable('timeout', 'No response.')],
+  ])('its own status %s: not printed, nor its status text', async (_, make) => {
+    const doc = build(await make(), { edits: { whereToStart: S.MARKER } });
+    expect(doc.parts.map(p => p.key)).toEqual(['headline', 'overview', ...GENERATED_KEYS]);
+    const all = JSON.stringify(doc);
+    for (const text of [S.MARKER, 'No response.', 'Where to start']) expect(all).not.toContain(text);
   });
 });

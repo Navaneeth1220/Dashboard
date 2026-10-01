@@ -29,19 +29,27 @@
  * scores, 17 level labels in the model parts (numbers only), 18 a headline
  * of more than one sentence. Rule 8 also ties a complete dimension's score to
  * its own fact.
+ *
+ * validatePicks(draft, facts, actions) (Step 9) checks the Where to start
+ * picks: the set (matched actions only, each once, min(3, n) of them, every
+ * CRITICAL action), and each reason as a part citing its trigger facts, with
+ * the same per-section checks plus pickSubject, reasonSentences and urgency.
  */
 
 import { INDICATORS, ALL_INDICATOR_IDS, SCORE_LEVEL_LABELS, STATE } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS, LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
 import { displayName, DIMENSION_NAMES } from '../data/displayNames.js';
-import { SECTION_KEYS, MODEL_PARTS, TARGETS_KEY, CATALOGUE_KEYS } from './schema.js';
-import { quotedUserText, stripTargetSentence } from './facts.js';
+import { SECTION_KEYS, MODEL_PARTS, TARGETS_KEY, CATALOGUE_KEYS, WHERE_TO_START_KEY, pickCount } from './schema.js';
+import { quotedUserText, stripTargetSentence, triggerFacts } from './facts.js';
+import { ACTION_CATALOGUE } from '../data/actionCatalogue.js';
 
 export const VALIDATOR_RULES = [
   'shape', 'factIds', 'numbers', 'leakedIds',
   'noScoreWording', 'unscoredScore', 'programmeGap', 'causal', 'attribution', 'severity', 'respectively',
   'dimensionCount', 'headlineFacts', 'relation', 'flagCount', 'missing', 'judgement', 'levelLabel',
   'headlineSentences',
+  // Where to start (Step 9)
+  'pickSet', 'criticalPick', 'pickSubject', 'reasonSentences', 'urgency',
 ];
 
 /** Fact kinds that set the scene rather than state a finding (C1–C3). */
@@ -158,6 +166,8 @@ function normalize(text) {
 // ---------------------------------------------------------------------------
 
 const FACT_ID = /\b[CF]\d+\b/g;
+// Catalogue entry IDs (Step 9), before INTERNAL_ID: "ACT-BC-08" contains "BC-08".
+const ACTION_ID = /\bACT-[A-Z0-9]+-\d+\b/g;
 const INTERNAL_ID = /\b(?:IH|BC|RM)-\d+\b|\bL0-[\w-]*\w/g;
 const RAW_ENUM = /\b\w*_\w*\b/g;
 
@@ -171,10 +181,12 @@ const SCORE_CLAIM = new RegExp(
   `|\\b${NUM}\\s*(?:out of|/)\\s*\\d`,
   'i'
 );
-// A number followed by "(effectiveness) indicator(s)" is a count, not a score
-// ("Business Continuity has five effectiveness indicators").
+// A number followed by "(effectiveness) indicator(s)" or "dimension(s)" is a
+// count, not a score ("Business Continuity has five effectiveness
+// indicators", "… Business Continuity in two dimensions"; check 11 holds the
+// dimension count to C2).
 const DIMENSION_VALUE = Object.fromEntries(DIMENSION_IDS.map(id => [
-  id, new RegExp(`${escapeRegExp(DIMENSION_NAMES[id])}\\W+(?:\\w+\\W+){0,2}?${NUM}\\b(?!\\s+(?:effectiveness\\s+)?indicators?\\b)`, 'i'),
+  id, new RegExp(`${escapeRegExp(DIMENSION_NAMES[id])}\\W+(?:\\w+\\W+){0,2}?${NUM}\\b(?!\\s+(?:(?:effectiveness\\s+)?indicators?|dimensions?)\\b)`, 'i'),
 ]));
 
 const FAIL_WORD = /\b(?:fail\w*|missed|poor)\b/gi;
@@ -221,7 +233,7 @@ const PERFORM_WORD = /\bperform(?:s|ing|ance)?\b/i;
 const LEVEL_WORDS = Object.values(SCORE_LEVEL_LABELS);
 const LEVEL_CAPITALISED = new RegExp(`\\b(${LEVEL_WORDS.join('|')})\\b`, 'g');
 const LEVEL_LOWER = new RegExp(`\\b(${LEVEL_WORDS.map(w => w.toLowerCase()).join('|')})\\s+levels?\\b`, 'g');
-const LEVEL_CHECKED_PARTS = new Set(MODEL_PARTS);
+const LEVEL_CHECKED_PARTS = new Set([...MODEL_PARTS, WHERE_TO_START_KEY]);
 
 // Check 8, complete dimensions: the number of a score claim ("score of 5",
 // "5 out of 4") and the score in a dim_complete fact.
@@ -406,13 +418,15 @@ function removeExemptQuotes(text, cited) {
 
 /** Masked text with fact IDs, internal IDs and raw enums blanked (their digits are not numbers). */
 function stripLeakTokens(masked) {
-  return masked.replace(FACT_ID, ' ').replace(INTERNAL_ID, ' ').replace(RAW_ENUM, ' ');
+  return masked.replace(ACTION_ID, ' ').replace(FACT_ID, ' ').replace(INTERNAL_ID, ' ').replace(RAW_ENUM, ' ');
 }
 
 /** Leaked tokens in masked text → { details, cleaned } (cleaned has them blanked). */
-function checkLeaks(masked) {
+function checkLeaks(text) {
   const details = [];
 
+  if (text.match(ACTION_ID)) details.push('An action ID appears in the text. Never write action IDs.');
+  const masked = text.replace(ACTION_ID, ' ');
   for (const m of masked.matchAll(FACT_ID)) details.push(`Fact ID "${m[0]}" appears in the text. Never write fact IDs.`);
   for (const m of masked.matchAll(INTERNAL_ID)) {
     const name = displayName(m[0]);
@@ -642,12 +656,18 @@ function checkSection(section, part, ctx) {
 
     // Check 9, per sentence: "critical" naming no flagged item, while no
     // cited flag is CRITICAL (June re-run: "equal priority critical issues
-    // with response times and recovery rates").
+    // with response times and recovery rates"); or naming flagged items of
+    // which none is CRITICAL (first Where to start manual check: "Asset
+    // interdependency documentation is incomplete or outdated, posing a
+    // critical risk").
     const critical = maskedSentence.match(CRITICAL_WORD);
-    if (!respectively && !severityReported && !verbatim && critical && !isNegated(maskedSentence, critical.index)
-        && !sentenceNames.some(id => ctx.categories.flaggedItems.has(id))
-        && !cited.some(f => flagSeverity(f) === 'CRITICAL')) {
-      add('severity', 'None of the cited flags is CRITICAL; do not write "critical".', sentence);
+    if (!respectively && !severityReported && !verbatim && critical && !isNegated(maskedSentence, critical.index)) {
+      const flagged = sentenceNames.filter(id => ctx.categories.flaggedItems.has(id));
+      if (flagged.length === 0 && !cited.some(f => flagSeverity(f) === 'CRITICAL')) {
+        add('severity', 'None of the cited flags is CRITICAL; do not write "critical".', sentence);
+      } else if (flagged.length > 0 && !flagged.some(id => ctx.categories.criticalItems.has(id))) {
+        add('severity', `${nameOf(flagged[0])} is not marked CRITICAL in its fact; do not call it critical.`, sentence);
+      }
     }
 
     // Check 16: a judgement word in a sentence about a scored result. Level
@@ -690,16 +710,32 @@ function checkSection(section, part, ctx) {
  */
 const ALL_PARTS = ['headline', ...SECTION_KEYS];
 
-export function validateNarrative(narrative, facts, { parts: partNames = ALL_PARTS } = {}) {
-  const factList = Array.isArray(facts) ? facts : [];
+/** What every part's checks look facts up in; categories always come from all facts. */
+function buildContext(factList) {
   const contextFacts = factList.filter(f => f.kind === 'context');
   const dimensionMatch = contextFacts.map(f => f.text.match(C2_DIMENSIONS)).find(Boolean);
-  const ctx = {
+  return {
     byId: new Map(factList.map(f => [f.id, f])),
     contextFacts,
     dimensionCount: dimensionMatch ? Number(dimensionMatch[1]) : null,
     categories: categorize(factList),
   };
+}
+
+/** Errors without exact duplicates, in order. */
+function unique(errors) {
+  const seen = new Set();
+  return errors.filter(error => {
+    const key = JSON.stringify(error);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export function validateNarrative(narrative, facts, { parts: partNames = ALL_PARTS } = {}) {
+  const factList = Array.isArray(facts) ? facts : [];
+  const ctx = buildContext(factList);
 
   if (narrative === null || typeof narrative !== 'object' || Array.isArray(narrative)) {
     const detail = 'The narrative is not an object with a headline and sections.';
@@ -711,17 +747,144 @@ export function validateNarrative(narrative, facts, { parts: partNames = ALL_PAR
     .filter(key => !CATALOGUE_KEYS.includes(key))
     .map(key => [key, key === 'headline' ? narrative.headline : sections[key]]);
 
-  const seen = new Set();
+  const errors = unique(parts.flatMap(([section, part]) => checkSection(section, part, ctx)));
+  return { ok: errors.length === 0, errors };
+}
+
+// ---------------------------------------------------------------------------
+// Where to start (Step 9)
+// ---------------------------------------------------------------------------
+
+const URGENCY = /\b(?:urgent(?:ly)?|urgency|immediate(?:ly)?|(?:top|highest|first) priority|most important|risks?)\b/i;
+// Evaluations no fact makes (first manual check, June: "higher than desired",
+// "a need for improvement"). Reasons only; check 16 is unchanged.
+const UNSUPPORTED_JUDGEMENT = /\bthan (?:desired|expected|acceptable)\b|\bneeds? (?:(?:for|to) )?(?:improv|reduc)\w*/i;
+
+const catalogueTitle = id => ACTION_CATALOGUE.find(entry => entry.id === id)?.title ?? null;
+
+const isFact = f => f !== null && typeof f === 'object' && typeof f.id === 'string' && typeof f.kind === 'string'
+  && typeof f.text === 'string' && Array.isArray(f.refs);
+
+/** Matched actions as matchActions returns them; anything else is left out. */
+function usableActions(actions) {
+  return (Array.isArray(actions) ? actions : [])
+    .filter(a => a !== null && typeof a === 'object' && typeof a.id === 'string' && Array.isArray(a.triggers))
+    .map(a => ({ id: a.id, triggers: a.triggers.filter(t => typeof t === 'string') }));
+}
+
+/**
+ * The set: every pick an object with an action ID (shape), only matched
+ * actions, each once, pickCount(n) of them (pickSet), and the CRITICAL
+ * actions picked (criticalPick). → { errors, picked: [[pick, action]] }, the
+ * picks whose reasons are checked (matched, first occurrence).
+ */
+function checkPickSet(picks, actions, factList, title) {
   const errors = [];
-  for (const [section, part] of parts) {
-    for (const error of checkSection(section, part, ctx)) {
-      const key = JSON.stringify(error);
-      if (!seen.has(key)) {
-        seen.add(key);
-        errors.push(error);
-      }
+  const add = (rule, detail) => errors.push({ rule, detail });
+  const byId = new Map(actions.map(a => [a.id, a]));
+  const picked = [];
+  picks.forEach((pick, i) => {
+    if (pick === null || typeof pick !== 'object' || typeof pick.actionId !== 'string' || pick.actionId.trim() === '') {
+      add('shape', `Pick ${i + 1} has no action ID.`);
+      return;
     }
+    const action = byId.get(pick.actionId);
+    if (!action) {
+      const known = catalogueTitle(pick.actionId);
+      add('pickSet', known
+        ? `"${known}" was not matched for this assessment; pick only actions from the list.`
+        : 'An action that is not in the list was picked; pick only actions from the list.');
+    } else if (picked.some(([, a]) => a === action)) {
+      add('pickSet', `"${title(action.id)}" is picked more than once; pick each action at most once.`);
+    } else {
+      picked.push([pick, action]);
+    }
+  });
+
+  const count = pickCount(actions.length);
+  if (picks.length !== count) {
+    add('pickSet', `Pick exactly ${count} action${count === 1 ? '' : 's'}; ${picks.length} ${picks.length === 1 ? 'was' : 'were'} picked.`);
   }
 
+  const isCritical = a => triggerFacts(factList, a.triggers).some(f => flagSeverity(f) === 'CRITICAL');
+  const critical = actions.filter(isCritical);
+  if (critical.length <= count) {
+    for (const a of critical.filter(c => !picked.some(([, p]) => p === c))) {
+      add('criticalPick', `"${title(a.id)}" addresses a CRITICAL flag and must be among the picks.`);
+    }
+  } else {
+    for (const [, a] of picked.filter(([, p]) => !isCritical(p))) {
+      add('criticalPick', 'More actions address a CRITICAL flag than can be picked, so pick only those; ' +
+        `"${title(a.id)}" does not address one.`);
+    }
+  }
+  return { errors, picked };
+}
+
+/**
+ * One reason: the per-section checks against its trigger facts, then one
+ * sentence (reasonSentences), about its own items (pickSubject), and no
+ * risk, urgency or rank (urgency), and no evaluation no fact makes
+ * (judgement). → [{ rule, detail, sentence }]
+ */
+function checkReason(reason, action, own, ctx, title) {
+  if (typeof reason !== 'string' || reason.trim() === '') {
+    return [{ rule: 'shape', detail: `"${title(action.id)}" has no reason.`, sentence: null }];
+  }
+  const errors = checkSection(WHERE_TO_START_KEY, { factIds: own.map(f => f.id), text: reason }, ctx)
+    .map(({ rule, detail, sentence }) => ({ rule, detail, sentence }));
+  const add = (rule, detail) => errors.push({ rule, detail, sentence: reason });
+  const text = removeExemptQuotes(reason.replace(/\s+/g, ' ').trim(), own);
+
+  if (splitSentences(text).length !== 1) add('reasonSentences', 'Write the reason as exactly one sentence.');
+
+  // Its own items, and any item its trigger facts name (a recorded root
+  // cause); dimension names are allowed. A reason copied from its trigger
+  // facts names its item as the fact does ("BC plan is incomplete or
+  // outdated.": bare "BC plan" is no alias).
+  const named = [...new Set(namesIn(text))].filter(id => !DIMENSION_IDS.includes(id));
+  const allowed = new Set([...action.triggers, ...own.flatMap(f => namesIn(f.text))]);
+  const verbatim = own.some(f => normalize(stripTargetSentence(f.text)).includes(normalize(text)));
+  if (!verbatim && !named.some(id => action.triggers.includes(id))) {
+    add('pickSubject', `Name what the reason is about: ${[...new Set(action.triggers.map(nameOf))].join(' or ')}.`);
+  }
+  for (const id of named.filter(n => !allowed.has(n))) {
+    add('pickSubject', `${nameOf(id)} is not in the facts of "${title(action.id)}"; write the reason from that action's own facts only.`);
+  }
+
+  const urgency = maskNames(text).match(URGENCY);
+  if (urgency) add('urgency', `Do not write "${urgency[0].toLowerCase()}": describe the finding, not its risk, urgency or rank.`);
+
+  const unsupported = maskNames(text).match(UNSUPPORTED_JUDGEMENT);
+  if (unsupported) {
+    add('judgement', `Do not write "${unsupported[0].toLowerCase()}": no fact says this; state the finding as its fact does.`);
+  }
+  return errors;
+}
+
+/**
+ * validatePicks(draft, facts, actions) → { ok, errors: [{ section, pick, sentence, rule, detail }] }
+ *
+ * draft: the model's { picks: [{ actionId, reason }] }; actions: the matched
+ * actions (matchActions). pick is the action ID of a per-pick error and null
+ * for a set-level one. Pure, never throws.
+ */
+export function validatePicks(draft, facts, actions) {
+  const factList = (Array.isArray(facts) ? facts : []).filter(isFact);
+  const matched = usableActions(actions);
+  const title = id => catalogueTitle(id) ?? 'this action';
+  const at = (pick, list) => list.map(e => ({ section: WHERE_TO_START_KEY, pick, sentence: e.sentence ?? null, rule: e.rule, detail: e.detail }));
+
+  if (draft === null || typeof draft !== 'object' || Array.isArray(draft) || !Array.isArray(draft.picks)) {
+    return { ok: false, errors: at(null, [{ rule: 'shape', detail: 'The reply has no list of picks.' }]) };
+  }
+
+  const ctx = buildContext(factList);
+  const { errors: setErrors, picked } = checkPickSet(draft.picks, matched, factList, title);
+  const errors = unique([
+    ...at(null, setErrors),
+    ...picked.flatMap(([pick, action]) =>
+      at(action.id, checkReason(pick.reason, action, triggerFacts(factList, action.triggers), ctx, title))),
+  ]);
   return { ok: errors.length === 0, errors };
 }

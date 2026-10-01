@@ -10,7 +10,7 @@ import * as fc from 'fast-check';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
 import followUpJson from '../../scenarios/Westmaas_2026-06-01_assessment.json?raw';
 import sparseJson from '../../scenarios/Oudendijk_2026-03-01_assessment.json?raw';
-import { buildGeneratedSections } from './templates.js';
+import { buildGeneratedSections, buildWhereToStartPart } from './templates.js';
 import { buildAssessmentFacts, stripAssessorNote } from './facts.js';
 import { validateNarrative } from './validator.js';
 import { GENERATED_KEYS, FACT_SECTION_KEYS } from './schema.js';
@@ -18,7 +18,7 @@ import { matchAssessmentActions } from '../engine/actions.js';
 import { loadScenario, assessmentArb } from './testSupport.js';
 import { INDICATORS, ALL_INDICATOR_IDS, SCORE_ZERO_STATES, STATE } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS } from '../data/layer0Definitions.js';
-import { PROGRAMME_GAP_WORDING, ACTION_WORDING } from '../data/reportWording.js';
+import { PROGRAMME_GAP_WORDING, ACTION_WORDING, WHERE_TO_START_WORDING } from '../data/reportWording.js';
 import { ACTION_CATALOGUE, NIS2_ARTICLE } from '../data/actionCatalogue.js';
 import { displayName } from '../data/displayNames.js';
 
@@ -688,5 +688,55 @@ describe('gapsAndMissingEvidence groups', () => {
         expect(mentions, f.data.name).toBe(again ? 2 : 1);
       }
     }), { numRuns: 200 });
+  });
+});
+
+// ─── Step 9: Where to start ───────────────────────────────────────────────────
+
+describe('buildWhereToStartPart (Step 9)', () => {
+  const picks = [
+    { actionId: 'ACT-BC-08', title: 'Define recovery point objectives', reason: 'Reason one.', factIds: ['F11'] },
+    { actionId: 'ACT-L0-05', title: 'Remove or control multi-homed devices', reason: 'Reason two.', factIds: ['F13'] },
+    { actionId: 'ACT-L0-08', title: 'Test the BC plan', reason: 'Reason three.', factIds: ['F15'] },
+  ];
+  const facts = buildAssessmentFacts(BASELINE);
+
+  it('the lead-in, then each pick\'s title and reason; blocks for the PDF; the picks\' facts in fact order', () => {
+    const part = buildWhereToStartPart([picks[1], picks[0], picks[2]].sort((a, b) => a.actionId.localeCompare(b.actionId)), facts);
+    expect(WHERE_TO_START_WORDING.leadIn).toBe(
+      'Actions to start with, chosen by the AI draft from the recommended actions; they are not ranked. ' +
+      'Every matched action is listed under Recommended actions.');
+    expect(part.text).toBe([
+      WHERE_TO_START_WORDING.leadIn,
+      '',
+      'Define recovery point objectives',
+      'Reason one.',
+      '',
+      'Remove or control multi-homed devices',
+      'Reason two.',
+      '',
+      'Test the BC plan',
+      'Reason three.',
+    ].join('\n'));
+    expect(part.blocks).toEqual([
+      { kind: 'text', text: WHERE_TO_START_WORDING.leadIn },
+      { kind: 'action', title: 'Define recovery point objectives', lines: [{ label: null, text: 'Reason one.' }] },
+      { kind: 'action', title: 'Remove or control multi-homed devices', lines: [{ label: null, text: 'Reason two.' }] },
+      { kind: 'action', title: 'Test the BC plan', lines: [{ label: null, text: 'Reason three.' }] },
+    ]);
+    expect(part.factIds).toEqual(['F11', 'F13', 'F15']);
+  });
+
+  it('a pick citing several facts, and facts shared by picks, appear once in fact order', () => {
+    const part = buildWhereToStartPart([
+      { actionId: 'ACT-X', title: 'A', reason: 'R.', factIds: ['F15', 'F5'] },
+      { actionId: 'ACT-Y', title: 'B', reason: 'S.', factIds: ['F5'] },
+    ], facts);
+    expect(part.factIds).toEqual(['F5', 'F15']);
+  });
+
+  it('Recommended actions still cites the trigger facts of every match (unchanged)', () => {
+    const { generated } = sectionsOf(BASELINE);
+    expect(generated.recommendedActions.factIds).toEqual(['F5', 'F6', 'F8', 'F9', 'F10', 'F11', 'F13', 'F14', 'F15', 'F16']);
   });
 });

@@ -29,7 +29,9 @@ import {
   TARGET_WORDING,
   ACTION_WORDING,
   NO_SCORE_GROUP,
+  WHERE_TO_START_WORDING,
 } from '../data/reportWording.js';
+import { triggerFacts } from './facts.js';
 import { ACTION_CATALOGUE, ACTION_AREAS, NIS2_ARTICLE } from '../data/actionCatalogue.js';
 
 const PROGRAMME_GAP = 'programme gap';
@@ -416,8 +418,6 @@ function targets(facts) {
 // ---------------------------------------------------------------------------
 
 /** The fact that states an indicator's or item's own result. */
-const OWN_FACT_KINDS = new Set(['scored', 'gap_zero', 'no_score', 'l0_flag', 'process']);
-
 /**
  * One action as a block: its title and lines, verbatim from the catalogue;
  * label null for the action sentence, empty references left out.
@@ -468,8 +468,7 @@ function recommendedActions(facts, actions) {
     }),
     ...(notAssessed ? [{ kind: 'text', text: notAssessed }] : []),
   ];
-  const cited = facts.filter(f => OWN_FACT_KINDS.has(f.kind) && f.refs.some(id => triggers.has(id)));
-  return withBlocks(cited, blocks, matched.map(e => e.id));
+  return withBlocks(triggerFacts(facts, triggers), blocks, matched.map(e => e.id));
 }
 
 // ---------------------------------------------------------------------------
@@ -487,4 +486,26 @@ export function buildGeneratedSections(facts, actions) {
     targets: targets(facts),
     recommendedActions: recommendedActions(facts, actions),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Where to start (Step 9)
+// ---------------------------------------------------------------------------
+
+/**
+ * buildWhereToStartPart(picks, facts) → { factIds, text, blocks }
+ *
+ * picks: the validated picks, [{ actionId, title, reason, factIds }], in
+ * catalogue order. The lead-in, then each pick's catalogue title and the
+ * model's reason; `blocks` let the PDF format the titles as in Recommended
+ * actions, and `text` is derived from them. factIds: the picks' trigger
+ * facts, once each, in fact order.
+ */
+export function buildWhereToStartPart(picks, facts) {
+  const blocks = [
+    { kind: 'text', text: WHERE_TO_START_WORDING.leadIn },
+    ...picks.map(p => ({ kind: 'action', title: p.title, lines: [{ label: null, text: p.reason }] })),
+  ];
+  const cited = new Set(picks.flatMap(p => p.factIds));
+  return { factIds: facts.filter(f => cited.has(f.id)).map(f => f.id), text: textOfBlocks(blocks), blocks };
 }
