@@ -33,7 +33,9 @@ downloadable as a PDF (see
   demonstration and evaluation (thesis Chapter 6): baseline and follow-up
   assessment files; plus `Oudendijk_2026-03-01_assessment.json`, a
   synthetic, mostly unassessed assessment used to test the assessment report
-- `/docs` — the assessment report specification (`ai-report-spec.md`),
+- `/docs` — the measurement system's rules and invariants
+  (`system-invariants.md`), the assessment report specification
+  (`ai-report-spec.md`),
   the log of its manual checks against the model
   (`ai-report-manual-check.md`) and the action catalogue behind the
   recommended actions (`action-catalogue.md`)
@@ -125,6 +127,16 @@ Generates the report five times for a scenario (default: the Westmaas
 baseline) against the running Ollama and appends the results (every
 draft, every validator error, timings) to `docs/ai-report-manual-check.md`
 for review.
+
+## How this was built
+
+The measurement system and the dashboard were designed by the author. The
+implementation was written with an AI coding assistant under a spec-first,
+test-first process: every change was specified first (for the assessment
+report, in `docs/ai-report-spec.md`), its tests were written before the
+code, and the change was reviewed before it was merged. The measurement
+system's invariants (`docs/system-invariants.md`) are enforced by the
+automated test suite (`npm test`), including property-based tests.
 
 ## Note on the data
 

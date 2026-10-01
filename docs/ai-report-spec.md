@@ -18,8 +18,9 @@ The engines decide everything; the model only narrates.
 
 The model never sees raw inputs. It receives a list of pre-worded,
 pre-rounded facts built from engine output, and may only rephrase and connect
-them. A validator checks the output before it is shown. All invariants in
-`CLAUDE.md` apply to generated text exactly as they apply to the UI.
+them. A validator checks the output before it is shown. All invariants of
+the measurement system (`docs/system-invariants.md`) apply to generated text
+exactly as they apply to the UI.
 
 The report is a hybrid (decided after three manual checks, where the model's
 errors were mostly in sections that restate facts): measuredPerformance,
@@ -2003,8 +2004,8 @@ footer names the model whenever it is printed.
 
 - All steps merged on `feature/ai-reports`, full suite green.
 - Westmaas baseline generates a validated narrative in most attempts.
-- No invariant in `CLAUDE.md` can be broken by generated text without the
-  validator catching it.
+- No invariant of the measurement system (`docs/system-invariants.md`) can
+  be broken by generated text without the validator catching it.
 
 ---
 
