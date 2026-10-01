@@ -181,10 +181,12 @@ const SCORE_CLAIM = new RegExp(
   `|\\b${NUM}\\s*(?:out of|/)\\s*\\d`,
   'i'
 );
-// A number followed by "(effectiveness) indicator(s)" is a count, not a score
-// ("Business Continuity has five effectiveness indicators").
+// A number followed by "(effectiveness) indicator(s)" or "dimension(s)" is a
+// count, not a score ("Business Continuity has five effectiveness
+// indicators", "… Business Continuity in two dimensions"; check 11 holds the
+// dimension count to C2).
 const DIMENSION_VALUE = Object.fromEntries(DIMENSION_IDS.map(id => [
-  id, new RegExp(`${escapeRegExp(DIMENSION_NAMES[id])}\\W+(?:\\w+\\W+){0,2}?${NUM}\\b(?!\\s+(?:effectiveness\\s+)?indicators?\\b)`, 'i'),
+  id, new RegExp(`${escapeRegExp(DIMENSION_NAMES[id])}\\W+(?:\\w+\\W+){0,2}?${NUM}\\b(?!\\s+(?:(?:effectiveness\\s+)?indicators?|dimensions?)\\b)`, 'i'),
 ]));
 
 const FAIL_WORD = /\b(?:fail\w*|missed|poor)\b/gi;
@@ -654,12 +656,18 @@ function checkSection(section, part, ctx) {
 
     // Check 9, per sentence: "critical" naming no flagged item, while no
     // cited flag is CRITICAL (June re-run: "equal priority critical issues
-    // with response times and recovery rates").
+    // with response times and recovery rates"); or naming flagged items of
+    // which none is CRITICAL (first Where to start manual check: "Asset
+    // interdependency documentation is incomplete or outdated, posing a
+    // critical risk").
     const critical = maskedSentence.match(CRITICAL_WORD);
-    if (!respectively && !severityReported && !verbatim && critical && !isNegated(maskedSentence, critical.index)
-        && !sentenceNames.some(id => ctx.categories.flaggedItems.has(id))
-        && !cited.some(f => flagSeverity(f) === 'CRITICAL')) {
-      add('severity', 'None of the cited flags is CRITICAL; do not write "critical".', sentence);
+    if (!respectively && !severityReported && !verbatim && critical && !isNegated(maskedSentence, critical.index)) {
+      const flagged = sentenceNames.filter(id => ctx.categories.flaggedItems.has(id));
+      if (flagged.length === 0 && !cited.some(f => flagSeverity(f) === 'CRITICAL')) {
+        add('severity', 'None of the cited flags is CRITICAL; do not write "critical".', sentence);
+      } else if (flagged.length > 0 && !flagged.some(id => ctx.categories.criticalItems.has(id))) {
+        add('severity', `${nameOf(flagged[0])} is not marked CRITICAL in its fact; do not call it critical.`, sentence);
+      }
     }
 
     // Check 16: a judgement word in a sentence about a scored result. Level
@@ -747,7 +755,10 @@ export function validateNarrative(narrative, facts, { parts: partNames = ALL_PAR
 // Where to start (Step 9)
 // ---------------------------------------------------------------------------
 
-const URGENCY = /\b(?:urgent(?:ly)?|urgency|immediate(?:ly)?|(?:top|highest|first) priority|most important)\b/i;
+const URGENCY = /\b(?:urgent(?:ly)?|urgency|immediate(?:ly)?|(?:top|highest|first) priority|most important|risks?)\b/i;
+// Evaluations no fact makes (first manual check, June: "higher than desired",
+// "a need for improvement"). Reasons only; check 16 is unchanged.
+const UNSUPPORTED_JUDGEMENT = /\bthan (?:desired|expected|acceptable)\b|\bneeds? (?:(?:for|to) )?(?:improv|reduc)\w*/i;
 
 const catalogueTitle = id => ACTION_CATALOGUE.find(entry => entry.id === id)?.title ?? null;
 
@@ -813,7 +824,8 @@ function checkPickSet(picks, actions, factList, title) {
 /**
  * One reason: the per-section checks against its trigger facts, then one
  * sentence (reasonSentences), about its own items (pickSubject), and no
- * urgency or rank (urgency). → [{ rule, detail, sentence }]
+ * risk, urgency or rank (urgency), and no evaluation no fact makes
+ * (judgement). → [{ rule, detail, sentence }]
  */
 function checkReason(reason, action, own, ctx, title) {
   if (typeof reason !== 'string' || reason.trim() === '') {
@@ -840,8 +852,13 @@ function checkReason(reason, action, own, ctx, title) {
     add('pickSubject', `${nameOf(id)} is not in the facts of "${title(action.id)}"; write the reason from that action's own facts only.`);
   }
 
-  const urgency = text.match(URGENCY);
-  if (urgency) add('urgency', `Do not write "${urgency[0].toLowerCase()}": describe the finding, not its urgency or rank.`);
+  const urgency = maskNames(text).match(URGENCY);
+  if (urgency) add('urgency', `Do not write "${urgency[0].toLowerCase()}": describe the finding, not its risk, urgency or rank.`);
+
+  const unsupported = maskNames(text).match(UNSUPPORTED_JUDGEMENT);
+  if (unsupported) {
+    add('judgement', `Do not write "${unsupported[0].toLowerCase()}": no fact says this; state the finding as its fact does.`);
+  }
   return errors;
 }
 

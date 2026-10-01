@@ -1838,7 +1838,8 @@ Per pick (each matched action picked once), the reason is checked as a part
   in a not-measurable fact is allowed). Dimension names are allowed.
 - `urgency`: "urgent", "urgently", "urgency", "immediate", "immediately",
   "top priority", "highest priority", "first priority", "most important",
-  "risk", "risks" ("Do not write "…": describe the finding, not its risk,
+  "risk", "risks", after masking item names ("Risk assessment per zone" is
+  an item; the property test found it) ("Do not write "…": describe the finding, not its risk,
   urgency or rank."). Prompt rule 14 of the headline/overview has never
   been validated; this part invites exactly these words. "risk" was added
   after the first manual check (June: "posing a critical risk", "posing a

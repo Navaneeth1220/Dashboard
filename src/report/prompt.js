@@ -13,6 +13,7 @@
  */
 
 import { ACTION_CATALOGUE } from '../data/actionCatalogue.js';
+import { L0_SEVERITY } from '../data/layer0Definitions.js';
 import { stripTargetSentence, triggerFacts } from './facts.js';
 import { MAX_PICKS, pickCount } from './schema.js';
 
@@ -105,8 +106,9 @@ based on. The facts are complete and correct.
 
 Pick the number of actions the message asks for. For each pick, write one
 sentence stating the finding in that action's facts which the action
-addresses. Prefer actions that address the most severe flags and the
-lowest results in the facts.
+addresses. Each action is tagged with the strongest finding in its facts,
+and the actions are listed from the strongest down. Prefer actions that
+address the most severe flags and the lowest results in the facts.
 
 Rules:
 1. Pick only actions from the list, by their ID, each at most once.
@@ -141,8 +143,39 @@ function factLines(facts) {
   return facts.map(f => `${f.id}: ${stripTargetSentence(f.text)}`);
 }
 
+const FLAG_TAGS = {
+  [L0_SEVERITY.CRITICAL]:    { tag: '[CRITICAL flag]', rank: 1 },
+  [L0_SEVERITY.HIGH]:        { tag: '[HIGH flag]', rank: 2 },
+  [L0_SEVERITY.MEDIUM_NOTE]: { tag: '[MEDIUM NOTE]', rank: 3 },
+};
+
+/** One trigger fact's tag, from its data (the engine's severity, gap, score), never its text. */
+function tagOfFact(f) {
+  if ((f.kind === 'l0_flag' || f.kind === 'process') && FLAG_TAGS[f.data?.severity]) return FLAG_TAGS[f.data.severity];
+  if (f.kind === 'gap_zero') return { tag: '[programme gap, score 0]', rank: 4 };
+  if (f.kind === 'scored') return { tag: `[score ${f.data.score}]`, rank: 5 + f.data.score };
+  if (f.kind === 'no_score') return { tag: '[not measurable]', rank: 10 };
+  return null;
+}
+
+/**
+ * candidateTag(facts, action) → { tag, rank }: the strongest finding among
+ * the action's trigger facts (lower rank is stronger). Steers the picks in
+ * the message only; the validator does not check the choice.
+ */
+export function candidateTag(facts, action) {
+  const tags = triggerFacts(facts, action.triggers).map(tagOfFact).filter(Boolean);
+  return tags.reduce((best, t) => (t.rank < best.rank ? t : best), { tag: null, rank: 11 });
+}
+
 function actionLine(facts, action) {
-  return `${action.id}: ${titleOf(action.id)} (facts: ${triggerFacts(facts, action.triggers).map(f => f.id).join(', ')})`;
+  const { tag } = candidateTag(facts, action);
+  return `${action.id}${tag ? ` ${tag}` : ''}: ${titleOf(action.id)} (facts: ${triggerFacts(facts, action.triggers).map(f => f.id).join(', ')})`;
+}
+
+/** The candidates from the strongest finding down; ties keep catalogue order (sort is stable). */
+function bySeverity(facts, actions) {
+  return actions.map(a => [a, candidateTag(facts, a).rank]).sort((x, y) => x[1] - y[1]).map(([a]) => a);
 }
 
 function countLine(n) {
@@ -154,8 +187,8 @@ function countLine(n) {
 /**
  * buildWhereToStartMessage(facts, actions) → string
  * The trigger facts of all matched actions (in fact order), the candidates
- * with their catalogue titles and fact IDs (catalogue order), and how many
- * to pick. No "Why it matters" text and no advisory facts.
+ * with their tag, catalogue title and fact IDs (strongest tag first), and
+ * how many to pick. No "Why it matters" text and no advisory facts.
  */
 export function buildWhereToStartMessage(facts, actions) {
   return [
@@ -163,7 +196,7 @@ export function buildWhereToStartMessage(facts, actions) {
     ...factLines(triggerFacts(facts, actions.flatMap(a => a.triggers))),
     '',
     'Actions:',
-    ...actions.map(a => actionLine(facts, a)),
+    ...bySeverity(facts, actions).map(a => actionLine(facts, a)),
     '',
     countLine(actions.length),
   ].join('\n');
