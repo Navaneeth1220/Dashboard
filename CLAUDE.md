@@ -95,15 +95,18 @@ decides the matches from engine output. The section is catalogue text
 text have their own tests. `result.actions` carries the matched IDs. In the
 PDF the section is formatted from its structured `blocks` (unless edited).
 
-Where to start (spec Step 9, step C) is on `feature/report-where-to-start`,
-awaiting approval before merging: a second AI-drafted part after the
-overview, with its own call, prompt, schema and loop
-(`WHERE_TO_START_PROMPT`, `buildPicksSchema`, `validatePicks`). The model
-picks min(3, n) of `result.actions` by ID (schema enum) and writes one
-reason each, checked against that action's trigger facts (`triggerFacts`);
-a CRITICAL flag's action must be picked. It runs whatever the
-headline/overview gave and fails or goes unavailable on its own
-(`result.whereToStart`); Recommended actions stays complete.
+Where to start (spec Step 9, step C) is merged into `main` (tag `v1.5`): a
+second AI-drafted part after the overview, with its own call, prompt,
+schema and loop (`WHERE_TO_START_PROMPT`, `buildPicksSchema`,
+`validatePicks`). The model picks min(3, n) of `result.actions` by ID
+(schema enum) and writes one reason each, checked against that action's
+trigger facts (`triggerFacts`); a CRITICAL flag's action must be picked.
+Candidates are tagged with their strongest trigger (`candidateTag`) and
+listed strongest first, each followed by its own facts; picks are shown in
+catalogue order. It runs whatever the headline/overview gave and fails or
+goes unavailable on its own (`result.whereToStart`); Recommended actions
+stays complete. Process facts use the band form ("60%, in the 50–69% band,
+which is below target").
 
 Also open: the "Cleanup backlog" section at the end of `docs/ai-report-spec.md`
 (`SCORE_LEVEL` duplicate in `Layer0ItemCard`, "poor" vs "Developing" in the

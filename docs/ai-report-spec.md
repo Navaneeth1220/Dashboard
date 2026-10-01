@@ -2,7 +2,7 @@
 
 Status: implemented (Steps 0–5), merged into `main` as `v1.1`; Steps 6–7
 merged as `v1.2` and `v1.3`; Step 8 as `v1.4`; Step 9 (Where to
-start) on `feature/report-where-to-start`. Shown in the
+start) as `v1.5`. Shown in the
 UI as the "Assessment report". Changes follow the same order as the steps:
 spec first, tests first, replay the logged drafts, then the manual check.
 
