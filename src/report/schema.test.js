@@ -8,6 +8,7 @@ import * as fc from 'fast-check';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
 import {
   buildOutputSchema, buildSectionSchema, SECTION_KEYS, MODEL_PARTS, GENERATED_KEYS, ACTIONS_KEY, CATALOGUE_KEYS, FACT_SECTION_KEYS,
+  WHERE_TO_START_KEY, MAX_PICKS, pickCount, buildPicksSchema, buildReasonSchema,
 } from './schema.js';
 import { buildAssessmentFacts } from './facts.js';
 import { selectModelFacts } from './prompt.js';
@@ -96,5 +97,67 @@ describe('buildOutputSchema', () => {
         expect(part.properties.factIds.items.enum).toEqual(ids);
       }
     }), { numRuns: 100 });
+  });
+});
+
+// ─── Step 9: Where to start ───────────────────────────────────────────────────
+
+describe('Where to start schema (Step 9)', () => {
+  const IDS = ['ACT-IH-04', 'ACT-BC-08', 'ACT-L0-05', 'ACT-L0-08'];
+
+  it('its key is outside the headline/overview keys', () => {
+    expect(WHERE_TO_START_KEY).toBe('whereToStart');
+    expect(MODEL_PARTS).not.toContain(WHERE_TO_START_KEY);
+    expect(SECTION_KEYS).not.toContain(WHERE_TO_START_KEY);
+    expect(MAX_PICKS).toBe(3);
+  });
+
+  it('pickCount: min(3, n)', () => {
+    expect([0, 1, 2, 3, 4, 10].map(pickCount)).toEqual([0, 1, 2, 3, 3, 3]);
+  });
+
+  it('picks: exactly min(3, n), each an enum action ID before the reason', () => {
+    expect(buildPicksSchema(IDS)).toEqual({
+      type: 'object',
+      properties: {
+        picks: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              actionId: { type: 'string', enum: IDS },
+              reason: { type: 'string', minLength: 1 },
+            },
+            required: ['actionId', 'reason'],
+            additionalProperties: false,
+          },
+          minItems: 3,
+          maxItems: 3,
+        },
+      },
+      required: ['picks'],
+      additionalProperties: false,
+    });
+    const item = buildPicksSchema(IDS).properties.picks.items;
+    expect(Object.keys(item.properties)).toEqual(['actionId', 'reason']);
+    expect(item.required).toEqual(['actionId', 'reason']);
+    expect(buildPicksSchema(IDS.slice(0, 2)).properties.picks).toMatchObject({ minItems: 2, maxItems: 2 });
+    expect(buildPicksSchema(IDS.slice(0, 1)).properties.picks).toMatchObject({ minItems: 1, maxItems: 1 });
+  });
+
+  it('does not alias its input', () => {
+    const ids = [...IDS];
+    const schema = buildPicksSchema(ids);
+    ids.push('ACT-RM-02');
+    expect(schema.properties.picks.items.properties.actionId.enum).toEqual(IDS);
+  });
+
+  it('the repair schema is one reason', () => {
+    expect(buildReasonSchema()).toEqual({
+      type: 'object',
+      properties: { reason: { type: 'string', minLength: 1 } },
+      required: ['reason'],
+      additionalProperties: false,
+    });
   });
 });

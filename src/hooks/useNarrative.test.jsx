@@ -8,7 +8,8 @@ import { renderHook, act } from '@testing-library/react';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
 import { useNarrative } from './useNarrative.js';
 import { ProviderUnavailableError } from '../report/providers/ollama.js';
-import { loadScenario } from '../report/testSupport.js';
+import { loadScenario, scriptedResults } from '../report/testSupport.js';
+import { WHERE_TO_START_PROMPT } from '../report/prompt.js';
 
 const ASSESSMENT = loadScenario(baselineJson);
 
@@ -78,6 +79,21 @@ describe('useNarrative', () => {
     await vi.waitFor(() => expect(provider).toHaveBeenCalledTimes(1));
     await act(async () => { result.current.cancel(); await done; });
     expect(provider).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports which part is being drafted; Cancel during Where to start keeps the headline and overview (Step 9)', async () => {
+    const { VALID } = scriptedResults(ASSESSMENT);
+    const provider = vi.fn(({ system, signal }) => (system === WHERE_TO_START_PROMPT
+      ? new Promise((_, reject) => signal?.addEventListener('abort', () => reject(new ProviderUnavailableError('cancelled', 'Generation was cancelled.'))))
+      : Promise.resolve({ content: JSON.stringify(VALID), promptEvalCount: 1, evalCount: 1, doneReason: 'stop', durationMs: 1 })));
+    const { result } = renderHook(() => useNarrative({ provider }));
+    let done;
+    act(() => { done = result.current.generate(ASSESSMENT); });
+    await vi.waitFor(() => expect(result.current.attemptPart).toBe('whereToStart'));
+    expect(result.current.attempt).toBe(1);
+    await act(async () => { result.current.cancel(); await done; });
+    expect(result.current.result).toMatchObject({ status: 'ok', whereToStart: { status: 'unavailable', reason: 'cancelled' } });
+    expect(result.current.attemptPart).toBeNull();
   });
 
   it('unmounting aborts a running call', async () => {

@@ -13,11 +13,12 @@ import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?ra
 import followUpJson from '../../scenarios/Westmaas_2026-06-01_assessment.json?raw';
 import sparseJson from '../../scenarios/Oudendijk_2026-03-01_assessment.json?raw';
 import {
-  validateNarrative, splitSentences, splitClauses, extractNumbers, VALIDATOR_RULES,
+  validateNarrative, validatePicks, splitSentences, splitClauses, extractNumbers, VALIDATOR_RULES,
 } from './validator.js';
-import { buildAssessmentFacts } from './facts.js';
+import { buildAssessmentFacts, triggerFacts } from './facts.js';
+import { matchAssessmentActions } from '../engine/actions.js';
 import { SECTION_KEYS, CATALOGUE_KEYS, ACTIONS_KEY } from './schema.js';
-import { loadScenario, assessmentArb, echoNarrative } from './testSupport.js';
+import { loadScenario, assessmentArb, echoNarrative, echoPicks, WESTMAAS_PICKS } from './testSupport.js';
 import { ALL_INDICATOR_IDS, STATE } from '../data/indicatorDefinitions.js';
 import { LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
 import { displayName, DIMENSION_NAMES } from '../data/displayNames.js';
@@ -1222,5 +1223,288 @@ describe('Step 7: a target score is not the current score (check 8)', () => {
         if (f.data.target.score >= 2) expect(rulesOf(result)).toContain('attribution');
       }
     }), { numRuns: 100 });
+  });
+});
+
+// ─── Step 9: Where to start (validatePicks) ───────────────────────────────────
+
+describe('validatePicks (Step 9)', () => {
+  const BASELINE = loadScenario(baselineJson);
+  const ACTIONS = matchAssessmentActions(BASELINE);
+  const clone = value => JSON.parse(JSON.stringify(value));
+  const check = (draft, facts = FACTS, actions = ACTIONS) => validatePicks(draft, facts, actions);
+  const rules = draft => check(draft).errors.map(e => e.rule);
+
+  /** WESTMAAS_PICKS with one pick replaced (by action ID) or its reason changed. */
+  function withPick(actionId, reason, replacing = actionId) {
+    const draft = clone(WESTMAAS_PICKS);
+    const i = draft.picks.findIndex(p => p.actionId === replacing);
+    draft.picks[i] = { actionId, reason };
+    return draft;
+  }
+
+  it('the hand-written Westmaas picks pass', () => {
+    expect(check(WESTMAAS_PICKS)).toEqual({ ok: true, errors: [] });
+  });
+
+  it('the new rules are validator rules', () => {
+    for (const rule of ['pickSet', 'criticalPick', 'pickSubject', 'reasonSentences', 'urgency']) {
+      expect(VALIDATOR_RULES).toContain(rule);
+    }
+  });
+
+  it('errors: section whereToStart, the pick\'s action ID (null for the set), descriptive details', () => {
+    const { errors } = check(withPick('ACT-BC-08', 'RPO Achievement Rate failed.'));
+    expect(errors).toEqual([{
+      section: 'whereToStart',
+      pick: 'ACT-BC-08',
+      sentence: 'RPO Achievement Rate failed.',
+      rule: 'programmeGap',
+      detail: 'RPO Achievement Rate is a programme gap, not a measured failure; do not describe it as "failed".',
+    }]);
+  });
+
+  describe('shape', () => {
+    it('no list of picks: one set-level error', () => {
+      for (const draft of [null, 42, 'x', [], {}, { picks: 'x' }]) {
+        expect(check(draft).errors).toEqual([{
+          section: 'whereToStart', pick: null, sentence: null, rule: 'shape', detail: 'The reply has no list of picks.',
+        }]);
+      }
+    });
+
+    it('a pick without an action ID is a set-level error', () => {
+      const draft = clone(WESTMAAS_PICKS);
+      draft.picks[2] = { reason: 'No BC plan test was performed during the assessment period.' };
+      expect(check(draft).errors).toContainEqual(expect.objectContaining({
+        pick: null, rule: 'shape', detail: 'Pick 3 has no action ID.',
+      }));
+    });
+
+    it('a matched pick without a reason is a per-pick error', () => {
+      const draft = clone(WESTMAAS_PICKS);
+      draft.picks[2].reason = '  ';
+      expect(check(draft).errors).toEqual([expect.objectContaining({
+        pick: 'ACT-L0-08', rule: 'shape', detail: '"Test the BC plan" has no reason.',
+      })]);
+    });
+  });
+
+  describe('pickSet', () => {
+    it('an action that was not matched: by title, or generic when it is not in the catalogue', () => {
+      expect(check(withPick('ACT-BC-07', 'RPO Achievement Rate has no recovery point objective.', 'ACT-BC-08')).errors).toContainEqual(
+        expect.objectContaining({ pick: null, rule: 'pickSet',
+          detail: '"Meet recovery point objectives" was not matched for this assessment; pick only actions from the list.' }));
+      expect(check(withPick('ACT-XX-99', 'Something.', 'ACT-BC-08')).errors).toContainEqual(
+        expect.objectContaining({ pick: null, rule: 'pickSet',
+          detail: 'An action that is not in the list was picked; pick only actions from the list.' }));
+    });
+
+    it('an action picked twice', () => {
+      const draft = withPick('ACT-L0-05', WESTMAAS_PICKS.picks[0].reason, 'ACT-BC-08');
+      expect(check(draft).errors).toEqual([expect.objectContaining({ pick: null, rule: 'pickSet',
+        detail: '"Remove or control multi-homed devices" is picked more than once; pick each action at most once.' })]);
+    });
+
+    it('the wrong number of picks', () => {
+      const two = { picks: WESTMAAS_PICKS.picks.slice(0, 2) };
+      expect(check(two).errors).toEqual([expect.objectContaining({ pick: null, rule: 'pickSet',
+        detail: 'Pick exactly 3 actions; 2 were picked.' })]);
+      const four = { picks: [...WESTMAAS_PICKS.picks,
+        { actionId: 'ACT-L0-03', reason: 'Asset interdependency documentation is incomplete or outdated.' }] };
+      expect(check(four).errors).toEqual([expect.objectContaining({ rule: 'pickSet',
+        detail: 'Pick exactly 3 actions; 4 were picked.' })]);
+    });
+
+    it('three or fewer matched actions: every one must be picked', () => {
+      const sparse = loadScenario(sparseJson);
+      const facts = buildAssessmentFacts(sparse);
+      const actions = matchAssessmentActions(sparse);
+      expect(actions.map(a => a.id)).toEqual(['ACT-L0-03']);
+      expect(validatePicks({ picks: [] }, facts, actions).errors).toEqual([expect.objectContaining({
+        rule: 'pickSet', detail: 'Pick exactly 1 action; 0 were picked.' })]);
+      const one = { picks: [{ actionId: 'ACT-L0-03', reason: 'Asset interdependency documentation is incomplete or outdated.' }] };
+      expect(validatePicks(one, facts, actions)).toEqual({ ok: true, errors: [] });
+
+      const two = ACTIONS.filter(a => ['ACT-BC-08', 'ACT-L0-05'].includes(a.id));
+      expect(check({ picks: [WESTMAAS_PICKS.picks[0]] }, FACTS, two).errors.map(e => e.detail))
+        .toContain('Pick exactly 2 actions; 1 was picked.');
+      expect(check({ picks: WESTMAAS_PICKS.picks.slice(0, 2) }, FACTS, two)).toEqual({ ok: true, errors: [] });
+    });
+  });
+
+  describe('criticalPick', () => {
+    it('Westmaas: the multi-homed devices action (CRITICAL flag) must be picked', () => {
+      const draft = withPick('ACT-L0-03', 'Asset interdependency documentation is incomplete or outdated.', 'ACT-L0-05');
+      expect(check(draft).errors).toEqual([{
+        section: 'whereToStart', pick: null, sentence: null, rule: 'criticalPick',
+        detail: '"Remove or control multi-homed devices" addresses a CRITICAL flag and must be among the picks.',
+      }]);
+    });
+
+    it('June: no CRITICAL flag, so any three pass the rule', () => {
+      const june = loadScenario(followUpJson);
+      const facts = buildAssessmentFacts(june);
+      const actions = matchAssessmentActions(june);
+      expect(validatePicks(echoPicks(facts, actions), facts, actions)).toEqual({ ok: true, errors: [] });
+    });
+
+    it('more CRITICAL actions than picks: every pick must address one', () => {
+      // F14–F16 made CRITICAL: four CRITICAL actions for three picks.
+      const facts = clone(FACTS).map(f => (['F14', 'F15', 'F16'].includes(f.id)
+        ? { ...f, text: f.text.replace(/^(HIGH|MEDIUM NOTE)\./, 'CRITICAL.') } : f));
+      const draft = withPick('ACT-L0-03', 'Asset interdependency documentation is incomplete or outdated.', 'ACT-L0-08');
+      expect(check(draft, facts).errors).toEqual([expect.objectContaining({ pick: null, rule: 'criticalPick',
+        detail: 'More actions address a CRITICAL flag than can be picked, so pick only those; "Define recovery point objectives" does not address one.' })]);
+      const allCritical = withPick('ACT-L0-03', 'Asset interdependency documentation is incomplete or outdated.', 'ACT-BC-08');
+      allCritical.picks[2].reason = 'No BC plan test was performed during the assessment period.';
+      expect(check(allCritical, facts)).toEqual({ ok: true, errors: [] });
+    });
+  });
+
+  describe('pickSubject', () => {
+    it('a reason about another action\'s item fails, and so does one naming none of its items', () => {
+      const { errors } = check(withPick('ACT-L0-05', 'Zone Availability Rate was measured at 40%.'));
+      expect(errors).toEqual(expect.arrayContaining([
+        expect.objectContaining({ pick: 'ACT-L0-05', rule: 'pickSubject',
+          detail: 'Name what the reason is about: Zero uncontrolled multi-homed devices.' }),
+        expect.objectContaining({ pick: 'ACT-L0-05', rule: 'pickSubject',
+          detail: 'Zone Availability Rate is not in the facts of "Remove or control multi-homed devices"; write the reason from that action\'s own facts only.' }),
+      ]));
+      expect(rules(withPick('ACT-L0-05', 'The finding was recorded.'))).toEqual(['pickSubject']);
+    });
+
+    it('a second item that is not its own fails even next to its own item', () => {
+      expect(rules(withPick('ACT-L0-05', 'Uncontrolled multi-homed devices were identified, as was Zone Availability Rate.')))
+        .toEqual(['pickSubject']);
+    });
+
+    it('a dimension name passes', () => {
+      const draft = withPick('ACT-IH-06', 'Mean Time to Contain is not measurable, so Incident Handling has no score.', 'ACT-L0-08');
+      expect(check(draft)).toEqual({ ok: true, errors: [] });
+    });
+
+    it('a root cause named in its trigger fact passes', () => {
+      const rec = loadScenario(baselineJson);
+      rec.indicators['IH-08'] = { state: STATE.NOT_MEASURABLE, reason: { layer0ItemId: 'L0-asset-inventory', text: '' } };
+      const facts = buildAssessmentFacts(rec);
+      const actions = matchAssessmentActions(rec);
+      const draft = withPick('ACT-IH-06', 'Mean Time to Contain is not measurable, and its recorded root cause is Asset inventory maintained.', 'ACT-L0-08');
+      expect(validatePicks(draft, facts, actions)).toEqual({ ok: true, errors: [] });
+    });
+  });
+
+  it('reasonSentences: exactly one sentence', () => {
+    const draft = withPick('ACT-L0-05', 'Uncontrolled inter-zone multi-homed devices were identified. This is a CRITICAL flag.');
+    expect(check(draft).errors).toEqual([expect.objectContaining({ pick: 'ACT-L0-05', rule: 'reasonSentences',
+      detail: 'Write the reason as exactly one sentence.' })]);
+  });
+
+  describe('urgency', () => {
+    it.each([
+      ['urgent', 'Uncontrolled inter-zone multi-homed devices were identified and need urgent attention.'],
+      ['urgently', 'Uncontrolled inter-zone multi-homed devices were identified and must be removed urgently.'],
+      ['urgency', 'Uncontrolled inter-zone multi-homed devices were identified, which adds urgency.'],
+      ['immediate', 'Uncontrolled inter-zone multi-homed devices were identified and need immediate removal.'],
+      ['immediately', 'Uncontrolled inter-zone multi-homed devices were identified and should be removed immediately.'],
+      ['top priority', 'Uncontrolled inter-zone multi-homed devices were identified, a top priority.'],
+      ['highest priority', 'Uncontrolled inter-zone multi-homed devices were identified, the highest priority.'],
+      ['first priority', 'Uncontrolled inter-zone multi-homed devices were identified, the first priority.'],
+      ['most important', 'The most important finding is that uncontrolled inter-zone multi-homed devices were identified.'],
+    ])('"%s" fails', (word, reason) => {
+      const { errors } = check(withPick('ACT-L0-05', reason));
+      expect(errors).toContainEqual(expect.objectContaining({ pick: 'ACT-L0-05', rule: 'urgency',
+        detail: `Do not write "${word}": describe the finding, not its urgency or rank.` }));
+    });
+
+    it('the urgency rule does not apply to the headline or overview', () => {
+      const narrative = withPart('overview', OVERVIEW, `${GOOD.sections.overview.text} This is urgent.`);
+      expect(validate(narrative).errors.map(e => e.rule)).not.toContain('urgency');
+    });
+  });
+
+  it('an action ID in the reason is a leaked internal code', () => {
+    expect(rules(withPick('ACT-L0-05', 'Uncontrolled inter-zone multi-homed devices were identified (ACT-L0-05).')))
+      .toContain('leakedIds');
+    expect(rules(withPick('ACT-BC-08', 'RPO Achievement Rate has no objective yet, see ACT-BC-08.'))).toContain('leakedIds');
+  });
+
+  describe('the overview checks apply to each reason, against its trigger facts', () => {
+    const IH06 = reason => withPick('ACT-IH-06', reason, 'ACT-L0-08');
+    const BC02 = reason => withPick('ACT-BC-02', reason, 'ACT-L0-08');
+
+    it('"Mean Time to Contain is poor" (noScoreWording)', () => {
+      expect(rules(IH06('Mean Time to Contain is poor.'))).toEqual(['noScoreWording']);
+    });
+
+    it('"Zone Availability Rate scored 3" (attribution: 3 is the target score, not the current one)', () => {
+      expect(rules(BC02('Zone Availability Rate scored 3.'))).toEqual(['attribution']);
+    });
+
+    it('a target value (numbers: target sentences are not read here)', () => {
+      expect(rules(BC02('Zone Availability Rate reaches score 3 at 70% or more.'))).toContain('numbers');
+    });
+
+    it('a number from another action\'s fact (numbers)', () => {
+      expect(rules(withPick('ACT-L0-05', 'Uncontrolled inter-zone multi-homed devices were identified, with 40% zone availability.')))
+        .toContain('numbers');
+    });
+
+    it('"a missing indicator" (missing)', () => {
+      expect(rules(IH06('Mean Time to Contain is a missing indicator.'))).toEqual(['missing']);
+    });
+
+    it('a level label (levelLabel)', () => {
+      expect(rules(BC02('Zone Availability Rate was 40%, which is Developing.'))).toEqual(['levelLabel']);
+    });
+
+    it('its own fact\'s numbers pass', () => {
+      expect(check(BC02('Zone Availability Rate was measured at 40%, a score of 2.'))).toEqual({ ok: true, errors: [] });
+    });
+  });
+
+  describe('property-based tests (fast-check)', () => {
+    it('trigger-fact sentences that name their item always pass as reasons', () => {
+      fc.assert(fc.property(assessmentArb, a => {
+        const facts = buildAssessmentFacts(a);
+        const actions = matchAssessmentActions(a);
+        if (actions.length === 0) return;
+        const result = validatePicks(echoPicks(facts, actions), facts, actions);
+        expect(result.errors).toEqual([]);
+      }), { numRuns: 300 });
+    });
+
+    it('injected violations of checks 3–6 are always caught', () => {
+      fc.assert(fc.property(assessmentArb, a => {
+        const facts = buildAssessmentFacts(a);
+        const actions = matchAssessmentActions(a);
+        const draft = echoPicks(facts, actions);
+        if (draft === null) return;
+        draft.picks.forEach((pick, i) => {
+          const action = actions.find(x => x.id === pick.actionId);
+          const own = triggerFacts(facts, action.triggers);
+          const broken = text => {
+            const copy = clone(draft);
+            copy.picks[i].reason = text;
+            return validatePicks(copy, facts, actions).errors.filter(e => e.pick === pick.actionId).map(e => e.rule);
+          };
+          expect(broken(`${pick.reason.slice(0, -1)} (F1).`)).toContain('leakedIds');
+          for (const f of own) {
+            const name = displayName(f.refs[0]);
+            if (f.kind === 'no_score') expect(broken(`${name} is poor.`)).toContain('noScoreWording');
+            if (f.kind === 'no_score') expect(broken(`${name} scored 2.`)).toContain('unscoredScore');
+            if (f.kind === 'gap_zero') expect(broken(`${name} failed.`)).toContain('programmeGap');
+          }
+        });
+      }), { numRuns: 200 });
+    });
+
+    it('malformed input never throws', () => {
+      fc.assert(fc.property(fc.anything(), fc.anything(), (draft, actions) => {
+        expect(() => validatePicks(draft, FACTS, ACTIONS)).not.toThrow();
+        expect(() => validatePicks(WESTMAAS_PICKS, FACTS, actions)).not.toThrow();
+        expect(() => validatePicks(draft, draft, actions)).not.toThrow();
+      }), { numRuns: 300 });
+    });
   });
 });

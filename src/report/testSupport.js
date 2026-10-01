@@ -9,10 +9,11 @@ import * as fc from 'fast-check';
 import { parseAndValidateImport } from '../engine/persistence.js';
 import { INDICATORS, ALL_INDICATOR_IDS, STATE } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS, LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
-import { SECTION_KEYS, TARGETS_KEY } from './schema.js';
+import { SECTION_KEYS, TARGETS_KEY, pickCount } from './schema.js';
 import { splitSentences, CONTEXT_KINDS } from './validator.js';
-import { buildAssessmentFacts, stripTargetSentence } from './facts.js';
-import { selectModelFacts } from './prompt.js';
+import { buildAssessmentFacts, stripTargetSentence, triggerFacts } from './facts.js';
+import { selectModelFacts, WHERE_TO_START_PROMPT } from './prompt.js';
+import { matchAssessmentActions } from '../engine/actions.js';
 import { generateNarrative } from './generate.js';
 import { ProviderUnavailableError } from './providers/ollama.js';
 
@@ -81,9 +82,14 @@ export function echoNarrative(facts) {
  * docs/ai-report-spec.md, Step 6). The same drafts as the panel test: VALID
  * passes the validator; INVALID adds a judgement on a missing score (POOR)
  * and a MARKER sentence that must never leave generateNarrative.
+ *
+ * Where to start (Step 9): PICKS (echoPicks) pass; BAD_PICKS add the MARKER
+ * as a second sentence to every reason. `failed` and `unavailable` fail both
+ * parts; `failedWithPicks`, `picksFailed` and `picksUnavailable` fail one.
  */
 export function scriptedResults(assessment) {
-  const modelFacts = selectModelFacts(buildAssessmentFacts(assessment));
+  const facts = buildAssessmentFacts(assessment);
+  const modelFacts = selectModelFacts(facts);
   const asSentence = t => (/[.!?]$/.test(t) ? t : `${t}.`);
   const partOf = fs => ({ factIds: fs.map(f => f.id), text: fs.map(f => asSentence(f.text)).join(' ') });
   const headlineFacts = modelFacts.filter(f => f.id === 'F2');
@@ -97,11 +103,60 @@ export function scriptedResults(assessment) {
   const reply = value => ({
     content: JSON.stringify(value), promptEvalCount: 800, evalCount: 180, doneReason: 'stop', durationMs: 1000,
   });
-  const run = provider => generateNarrative(assessment, { provider });
+  const PICKS = echoPicks(facts, matchAssessmentActions(assessment));
+  const BAD_PICKS = PICKS && { picks: PICKS.picks.map(p => ({ ...p, reason: `${p.reason} ${MARKER}` })) };
+  const summaryOk = async () => reply(VALID);
+  const summaryFailed = async ({ user }) => (user.includes('Write only') ? reply(INVALID.overview) : reply(INVALID));
+  const picksOk = async () => reply(PICKS);
+  const picksFailed = async ({ user }) => (user.includes('Write only the reason') ? reply({ reason: `${PICKS.picks[0].reason} ${MARKER}` }) : reply(BAD_PICKS));
+  const run = (summary, picks) => generateNarrative(assessment, {
+    provider: async args => (args.system === WHERE_TO_START_PROMPT ? picks(args) : summary(args)),
+  });
+  const unavailable = (reason, message) => async () => { throw new ProviderUnavailableError(reason, message); };
   return {
-    VALID, INVALID, POOR, MARKER,
-    ok: () => run(async () => reply(VALID)),
-    failed: () => run(async ({ user }) => (user.includes('Write only') ? reply(INVALID.overview) : reply(INVALID))),
-    unavailable: (reason, message) => run(async () => { throw new ProviderUnavailableError(reason, message); }),
+    VALID, INVALID, POOR, MARKER, PICKS, BAD_PICKS,
+    ok: () => run(summaryOk, picksOk),
+    failed: () => run(summaryFailed, picksFailed),
+    unavailable: (reason, message) => run(unavailable(reason, message), unavailable(reason, message)),
+    failedWithPicks: () => run(summaryFailed, picksOk),
+    picksFailed: () => run(summaryOk, picksFailed),
+    picksUnavailable: (reason, message) => run(summaryOk, unavailable(reason, message)),
   };
 }
+
+/** The names an item may be written as (as the validator's name index has them). */
+function namesOf(id) {
+  const def = INDICATORS[id] ?? LAYER0_ITEMS[id];
+  return [def.name, def.shortName, ...(def.aliases ?? [])].filter(Boolean).map(n => n.toLowerCase());
+}
+
+/**
+ * Known-good "Where to start" picks made of the trigger facts' own text
+ * (Step 9): the CRITICAL actions first, then catalogue order, min(3, n) of
+ * them; each reason is the first sentence of the action's trigger facts
+ * (without target sentences) that names one of its triggering items. null
+ * when nothing matched.
+ */
+export function echoPicks(facts, actions) {
+  if (actions.length === 0) return null;
+  const isCritical = a => triggerFacts(facts, a.triggers).some(f => /^CRITICAL\./.test(f.text));
+  const chosen = [...actions.filter(isCritical), ...actions.filter(a => !isCritical(a))].slice(0, pickCount(actions.length));
+  const reasonOf = action => {
+    const names = action.triggers.flatMap(namesOf);
+    const sentences = triggerFacts(facts, action.triggers).flatMap(f => splitSentences(stripTargetSentence(f.text)));
+    return sentences.find(s => names.some(n => s.toLowerCase().includes(n))) ?? sentences[0];
+  };
+  return { picks: chosen.map(a => ({ actionId: a.id, reason: reasonOf(a) })) };
+}
+
+/**
+ * The hand-written Westmaas baseline picks (Step 9), in the model's order
+ * (not catalogue order): the CRITICAL flag, the programme gap, a HIGH flag.
+ */
+export const WESTMAAS_PICKS = {
+  picks: [
+    { actionId: 'ACT-L0-05', reason: 'Uncontrolled inter-zone multi-homed devices were identified, which is a CRITICAL flag.' },
+    { actionId: 'ACT-BC-08', reason: 'RPO Achievement Rate scores 0 as a programme gap because no recovery point objective has been established; this is not a measured failure.' },
+    { actionId: 'ACT-L0-08', reason: 'No BC plan test was performed during the assessment period, which is a HIGH flag.' },
+  ],
+};

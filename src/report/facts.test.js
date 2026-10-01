@@ -12,7 +12,8 @@ import * as fc from 'fast-check';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
 import followUpJson from '../../scenarios/Westmaas_2026-06-01_assessment.json?raw';
 import sparseJson from '../../scenarios/Oudendijk_2026-03-01_assessment.json?raw';
-import { buildAssessmentFacts, stripAssessorNote, FACT_KINDS } from './facts.js';
+import { buildAssessmentFacts, stripAssessorNote, FACT_KINDS, triggerFacts, TRIGGER_FACT_KINDS } from './facts.js';
+import { matchAssessmentActions } from '../engine/actions.js';
 import { loadScenario, assessmentArb } from './testSupport.js';
 import { computeAssessment, createBlankAssessment, scoreIndicator } from '../engine/scoring.js';
 import { computeGapAnalysis } from '../engine/projection.js';
@@ -739,6 +740,44 @@ describe('no-score group count', () => {
         const size = facts.filter(g => g.data.status === f.data.status).length;
         expect(f.data.groupCount).toBe(size >= 2 ? size : null);
         expect(stripAssessorNote(f.text).includes(`It is one of ${size} effectiveness indicators`)).toBe(size >= 2);
+      }
+    }), { numRuns: 200 });
+  });
+});
+
+// ─── Step 9: trigger facts ────────────────────────────────────────────────────
+
+describe('triggerFacts (Step 9)', () => {
+  const rec = loadScenario(baselineJson);
+  const facts = buildAssessmentFacts(rec);
+  const ids = triggers => triggerFacts(facts, triggers).map(f => f.id);
+
+  it('the own facts of the triggering items, in fact order', () => {
+    expect([...TRIGGER_FACT_KINDS].sort()).toEqual(['gap_zero', 'l0_flag', 'no_score', 'process', 'scored']);
+    expect(ids(['IH-07'])).toEqual(['F5']);
+    expect(ids(['IH-08'])).toEqual(['F6']);
+    expect(ids(['BC-09'])).toEqual(['F11']);
+    expect(ids(['L0-multi-homed'])).toEqual(['F13']);
+    expect(ids(['RM-04'])).toEqual(['F16']);
+    expect(ids(['L0-bc-plan-tested', 'IH-07'])).toEqual(['F5', 'F15']);
+    expect(ids([])).toEqual([]);
+  });
+
+  it('Westmaas: one fact per matched action', () => {
+    const perAction = Object.fromEntries(matchAssessmentActions(rec).map(a => [a.id, ids(a.triggers)]));
+    expect(perAction).toEqual({
+      'ACT-IH-04': ['F5'], 'ACT-IH-06': ['F6'], 'ACT-BC-02': ['F8'], 'ACT-BC-03': ['F9'], 'ACT-BC-05': ['F10'],
+      'ACT-BC-08': ['F11'], 'ACT-L0-03': ['F14'], 'ACT-L0-05': ['F13'], 'ACT-L0-08': ['F15'], 'ACT-RM-02': ['F16'],
+    });
+  });
+
+  it('property: every trigger of every matched action has exactly one own fact', () => {
+    fc.assert(fc.property(assessmentArb, a => {
+      const fs = buildAssessmentFacts(a);
+      for (const action of matchAssessmentActions(a)) {
+        for (const id of action.triggers) {
+          expect(triggerFacts(fs, [id])).toHaveLength(1);
+        }
       }
     }), { numRuns: 200 });
   });
