@@ -123,9 +123,9 @@ describe('Westmaas baseline', () => {
       { id: 'F15', kind: 'l0_flag', refs: ['L0-bc-plan-tested'],
         text: 'HIGH. No BC plan test was performed during the assessment period — a scheduled action was not completed.' },
       { id: 'F16', kind: 'process', refs: ['RM-04'],
-        text: 'MEDIUM NOTE. Vulnerability Remediation Rate: 60%. Vulnerability remediation rate is below target (50–69%) — moderate programme improvement warranted. Process evidence, not scored.' },
+        text: 'MEDIUM NOTE. Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted. Process evidence, not scored.' },
       { id: 'F17', kind: 'process', refs: ['RM-05'],
-        text: 'Mean Time to Remediate: 75 days. Mean time to remediate is satisfactory (31–90 days) — continue monitoring. Process evidence, not scored.' },
+        text: 'Mean Time to Remediate: 75 days, in the 31–90 days band, which is satisfactory — continue monitoring. Process evidence, not scored.' },
       { id: 'F18', kind: 'advisory', refs: ['L0-multi-homed', 'IH-08'],
         text: 'Zero uncontrolled multi-homed devices is in a weak state (Uncontrolled multi-homing found) and Mean Time to Contain is not measurable. Establishing the architecture foundation and the evidence needed to measure Mean Time to Contain are both measurement-readiness actions — address them together.' },
       { id: 'F19', kind: 'advisory', refs: ['L0-multi-homed', 'BC-02'],
@@ -780,5 +780,39 @@ describe('triggerFacts (Step 9)', () => {
         }
       }
     }), { numRuns: 200 });
+  });
+});
+
+// ─── Process facts in the band form (second Where to start manual check) ─────
+
+describe('process facts: the band form for a band with a range', () => {
+  it('June follow-up: the same band form', () => {
+    const facts = buildAssessmentFacts(loadScenario(followUpJson));
+    expect(facts.find(f => f.refs[0] === 'RM-04').text).toBe('MEDIUM NOTE. Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted. Process evidence, not scored.');
+    expect(facts.find(f => f.refs[0] === 'RM-05').text).toBe('Mean Time to Remediate: 75 days, in the 31–90 days band, which is satisfactory — continue monitoring. Process evidence, not scored.');
+  });
+
+  it('every band of both items; a band without a range keeps the engine message', () => {
+    const cases = [
+      ['RM-04', { numerator: '0', denominator: '10' }, 'CRITICAL. Vulnerability Remediation Rate: 0%. Vulnerability remediation rate: 0% — no vulnerabilities are being addressed. Process evidence, not scored.'],
+      ['RM-04', { numerator: '4', denominator: '10' }, 'HIGH. Vulnerability Remediation Rate: 40%, in the < 50% band, which is very low — remediation programme is largely ineffective. Process evidence, not scored.'],
+      ['RM-04', { numerator: '8', denominator: '10' }, 'Vulnerability Remediation Rate: 80%, in the 70–89% band, which is satisfactory — continue monitoring. Process evidence, not scored.'],
+      ['RM-05', { value: '400' }, 'CRITICAL. Mean Time to Remediate: 400 days. Mean time to remediate exceeds 1 year — vulnerabilities remain exposed for an unacceptably long period. Process evidence, not scored.'],
+      ['RM-05', { value: '200' }, 'HIGH. Mean Time to Remediate: 200 days, in the 181–365 days band, which is very slow — vulnerabilities remain exposed for an extended period. Process evidence, not scored.'],
+      ['RM-05', { value: '120' }, 'MEDIUM NOTE. Mean Time to Remediate: 120 days, in the 91–180 days band, which is below target — moderate improvement warranted. Process evidence, not scored.'],
+    ];
+    for (const [id, input, text] of cases) {
+      const rec = loadScenario(baselineJson);
+      rec.layer0[id] = { state: 'measured', ...input };
+      expect(buildAssessmentFacts(rec).find(f => f.kind === 'process' && f.refs[0] === id).text).toBe(text);
+    }
+  });
+
+  it('property: no process fact reads a band range as a target ("below target (…)")', () => {
+    fc.assert(fc.property(assessmentArb, a => {
+      for (const f of buildAssessmentFacts(a).filter(x => x.kind === 'process')) {
+        expect(f.text).not.toMatch(/\b(?:below target|satisfactory|very low|very slow) \(/);
+      }
+    }), { numRuns: 300 });
   });
 });

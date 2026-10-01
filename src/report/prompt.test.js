@@ -16,7 +16,7 @@ import {
 } from './prompt.js';
 import { matchAssessmentActions } from '../engine/actions.js';
 import { MODEL_PARTS } from './schema.js';
-import { buildAssessmentFacts, stripAssessorNote } from './facts.js';
+import { buildAssessmentFacts, stripAssessorNote, stripTargetSentence, triggerFacts } from './facts.js';
 import { loadScenario, assessmentArb } from './testSupport.js';
 
 const INTERNAL_ID = /\b(IH|BC|RM)-\d+\b|L0-/;
@@ -136,8 +136,8 @@ describe('buildUserMessage', () => {
       'F13: CRITICAL. Uncontrolled inter-zone multi-homed devices were identified.',
       'F14: HIGH. Asset interdependency documentation is incomplete or outdated.',
       'F15: HIGH. No BC plan test was performed during the assessment period — a scheduled action was not completed.',
-      'F16: MEDIUM NOTE. Vulnerability Remediation Rate: 60%. Vulnerability remediation rate is below target (50–69%) — moderate programme improvement warranted. Process evidence, not scored.',
-      'F17: Mean Time to Remediate: 75 days. Mean time to remediate is satisfactory (31–90 days) — continue monitoring. Process evidence, not scored.',
+      'F16: MEDIUM NOTE. Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted. Process evidence, not scored.',
+      'F17: Mean Time to Remediate: 75 days, in the 31–90 days band, which is satisfactory — continue monitoring. Process evidence, not scored.',
       'F18: Zero uncontrolled multi-homed devices is in a weak state (Uncontrolled multi-homing found) and Mean Time to Contain is not measurable. Establishing the architecture foundation and the evidence needed to measure Mean Time to Contain are both measurement-readiness actions — address them together.',
       'F19: Uncontrolled multi-homed devices were found while Zone Availability Rate is poor (score 2). A segmentation bypass of this kind can be directly implicated in this outcome — these may be related; review them together.',
       'F20: Only 7 of 8 effectiveness indicators have a score. Lowest effectiveness results: RPO Achievement Rate (programme gap, 0); then, at score 2 and of equal priority, listed in catalogue order: Mean Time to Respond, Zone Availability Rate, Operational Threshold Violation Rate, RTO Achievement Rate.',
@@ -226,58 +226,52 @@ describe('buildWhereToStartMessage (Step 9)', () => {
     return buildWhereToStartMessage(buildAssessmentFacts(rec), matchAssessmentActions(rec));
   };
 
-  it('Westmaas baseline: the trigger facts without targets, the candidates, the count', () => {
-    expect(messageOf(baselineJson)).toBe(`Facts:
-F5: Mean Time to Respond: measured at 30 hours (lower is better); score 2.
-F6: Mean Time to Contain: not measurable. Evidence to compute the value is absent or unreliable. No score. This says nothing about how Mean Time to Contain performs. No reason was recorded.
-F8: Zone Availability Rate: measured at 40%; score 2.
-F9: Operational Threshold Violation Rate: measured at 12.5% (lower is better); score 2.
-F10: RTO Achievement Rate: measured at 50%; score 2.
-F11: RPO Achievement Rate: recovery point objective not established. Scored 0 as a programme gap: the objective or capability does not exist yet. Not a measured failure.
-F13: CRITICAL. Uncontrolled inter-zone multi-homed devices were identified.
-F14: HIGH. Asset interdependency documentation is incomplete or outdated.
-F15: HIGH. No BC plan test was performed during the assessment period — a scheduled action was not completed.
-F16: MEDIUM NOTE. Vulnerability Remediation Rate: 60%. Vulnerability remediation rate is below target (50–69%) — moderate programme improvement warranted. Process evidence, not scored.
-
-Actions:
-ACT-L0-05 [CRITICAL flag]: Remove or control multi-homed devices (facts: F13)
-ACT-L0-03 [HIGH flag]: Document asset interdependencies (facts: F14)
-ACT-L0-08 [HIGH flag]: Test the BC plan (facts: F15)
-ACT-RM-02 [MEDIUM NOTE]: Improve the remediation rate (facts: F16)
-ACT-BC-08 [programme gap, score 0]: Define recovery point objectives (facts: F11)
-ACT-IH-04 [score 2]: Shorten response time (facts: F5)
-ACT-BC-02 [score 2]: Improve zone availability (facts: F8)
-ACT-BC-03 [score 2]: Reduce operational threshold violations (facts: F9)
-ACT-BC-05 [score 2]: Meet recovery time objectives (facts: F10)
-ACT-IH-06 [not measurable]: Make incident handling measurable (facts: F6)
+  it('Westmaas baseline: each tagged candidate with its own facts, indented, no fact IDs; the count', () => {
+    expect(messageOf(baselineJson)).toBe(`Actions:
+ACT-L0-05 [CRITICAL flag]: Remove or control multi-homed devices
+  CRITICAL. Uncontrolled inter-zone multi-homed devices were identified.
+ACT-L0-03 [HIGH flag]: Document asset interdependencies
+  HIGH. Asset interdependency documentation is incomplete or outdated.
+ACT-L0-08 [HIGH flag]: Test the BC plan
+  HIGH. No BC plan test was performed during the assessment period — a scheduled action was not completed.
+ACT-RM-02 [MEDIUM NOTE]: Improve the remediation rate
+  MEDIUM NOTE. Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted. Process evidence, not scored.
+ACT-BC-08 [programme gap, score 0]: Define recovery point objectives
+  RPO Achievement Rate: recovery point objective not established. Scored 0 as a programme gap: the objective or capability does not exist yet. Not a measured failure.
+ACT-IH-04 [score 2]: Shorten response time
+  Mean Time to Respond: measured at 30 hours (lower is better); score 2.
+ACT-BC-02 [score 2]: Improve zone availability
+  Zone Availability Rate: measured at 40%; score 2.
+ACT-BC-03 [score 2]: Reduce operational threshold violations
+  Operational Threshold Violation Rate: measured at 12.5% (lower is better); score 2.
+ACT-BC-05 [score 2]: Meet recovery time objectives
+  RTO Achievement Rate: measured at 50%; score 2.
+ACT-IH-06 [not measurable]: Make incident handling measurable
+  Mean Time to Contain: not measurable. Evidence to compute the value is absent or unreliable. No score. This says nothing about how Mean Time to Contain performs. No reason was recorded.
 
 Pick exactly 3 of the 10 actions.`);
   });
 
   it('June follow-up: five candidates', () => {
-    expect(messageOf(followUpJson)).toBe(`Facts:
-F5: Mean Time to Respond: measured at 30 hours (lower is better); score 2.
-F9: Operational Threshold Violation Rate: measured at 12.5% (lower is better); score 2.
-F10: RTO Achievement Rate: measured at 50%; score 2.
-F13: HIGH. Asset interdependency documentation is incomplete or outdated.
-F14: MEDIUM NOTE. Vulnerability Remediation Rate: 60%. Vulnerability remediation rate is below target (50–69%) — moderate programme improvement warranted. Process evidence, not scored.
-
-Actions:
-ACT-L0-03 [HIGH flag]: Document asset interdependencies (facts: F13)
-ACT-RM-02 [MEDIUM NOTE]: Improve the remediation rate (facts: F14)
-ACT-IH-04 [score 2]: Shorten response time (facts: F5)
-ACT-BC-03 [score 2]: Reduce operational threshold violations (facts: F9)
-ACT-BC-05 [score 2]: Meet recovery time objectives (facts: F10)
+    expect(messageOf(followUpJson)).toBe(`Actions:
+ACT-L0-03 [HIGH flag]: Document asset interdependencies
+  HIGH. Asset interdependency documentation is incomplete or outdated.
+ACT-RM-02 [MEDIUM NOTE]: Improve the remediation rate
+  MEDIUM NOTE. Vulnerability Remediation Rate: 60%, in the 50–69% band, which is below target — moderate programme improvement warranted. Process evidence, not scored.
+ACT-IH-04 [score 2]: Shorten response time
+  Mean Time to Respond: measured at 30 hours (lower is better); score 2.
+ACT-BC-03 [score 2]: Reduce operational threshold violations
+  Operational Threshold Violation Rate: measured at 12.5% (lower is better); score 2.
+ACT-BC-05 [score 2]: Meet recovery time objectives
+  RTO Achievement Rate: measured at 50%; score 2.
 
 Pick exactly 3 of the 5 actions.`);
   });
 
   it('Oudendijk: the only action', () => {
-    expect(messageOf(sparseJson)).toBe(`Facts:
-F13: HIGH. Asset interdependency documentation is incomplete or outdated.
-
-Actions:
-ACT-L0-03 [HIGH flag]: Document asset interdependencies (facts: F13)
+    expect(messageOf(sparseJson)).toBe(`Actions:
+ACT-L0-03 [HIGH flag]: Document asset interdependencies
+  HIGH. Asset interdependency documentation is incomplete or outdated.
 
 Pick the only action.`);
   });
@@ -291,28 +285,41 @@ Pick the only action.`);
     expect(buildWhereToStartMessage(facts, actions.slice(0, 4)).split('\n').at(-1)).toBe('Pick exactly 3 of the 4 actions.');
   });
 
-  it('buildPickMessage: one action\'s facts and line, without the count', () => {
+  it('a candidate with several triggers lists each of its facts, in fact order', () => {
+    const rec = loadScenario(baselineJson);
+    rec.indicators['IH-07'] = { state: 'capability_absent' };
+    rec.indicators['IH-08'] = { state: 'capability_absent' };
+    const facts = buildAssessmentFacts(rec);
+    const action = matchAssessmentActions(rec).find(a => a.id === 'ACT-IH-03');
+    const own = triggerFacts(facts, action.triggers);
+    expect(own).toHaveLength(2);
+    expect(buildPickMessage(facts, action).split('\n').slice(2)).toEqual(own.map(f => `  ${f.text}`));
+  });
+
+  it('buildPickMessage: one candidate block, without the count', () => {
     const rec = loadScenario(baselineJson);
     const facts = buildAssessmentFacts(rec);
     const action = matchAssessmentActions(rec).find(a => a.id === 'ACT-L0-05');
-    expect(buildPickMessage(facts, action)).toBe(`Facts:
-F13: CRITICAL. Uncontrolled inter-zone multi-homed devices were identified.
-
-Action:
-ACT-L0-05 [CRITICAL flag]: Remove or control multi-homed devices (facts: F13)`);
+    expect(buildPickMessage(facts, action)).toBe(`Action:
+ACT-L0-05 [CRITICAL flag]: Remove or control multi-homed devices
+  CRITICAL. Uncontrolled inter-zone multi-homed devices were identified.`);
   });
 
-  it('property: no target sentence, raw enum or internal ID other than the ACT- candidates', () => {
+  it('property: no fact ID, target sentence, raw enum or internal ID other than the ACT- candidates', () => {
     fc.assert(fc.property(assessmentArb, a => {
       const facts = buildAssessmentFacts(a);
       const actions = matchAssessmentActions(a);
       if (actions.length === 0) return;
       const message = buildWhereToStartMessage(facts, actions);
-      const outsideNotes = stripAssessorNote(message).replace(/\bACT-(?:IH|BC|L0|RM)-\d\d\b/g, '');
+      const outsideNotes = message.split('\n').map(stripAssessorNote).join('\n').replace(/\bACT-(?:IH|BC|L0|RM)-\d\d\b/g, '');
       expect(message).not.toContain('Next level:');
+      expect(outsideNotes).not.toMatch(/\b[CF]\d+\b/);
       expect(outsideNotes).not.toMatch(INTERNAL_ID);
       expect(outsideNotes).not.toMatch(RAW_ENUM);
       expect(message.split('\n').filter(l => l.startsWith('ACT-'))).toHaveLength(actions.length);
+      for (const action of actions) {
+        for (const f of triggerFacts(facts, action.triggers)) expect(message).toContain(`\n  ${stripTargetSentence(f.text)}`);
+      }
     }), { numRuns: 200 });
   });
 });
