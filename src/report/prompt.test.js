@@ -12,7 +12,7 @@ import followUpJson from '../../scenarios/Westmaas_2026-06-01_assessment.json?ra
 import sparseJson from '../../scenarios/Oudendijk_2026-03-01_assessment.json?raw';
 import {
   SYSTEM_PROMPT, SECTION_DESCRIPTIONS, buildUserMessage, selectModelFacts,
-  WHERE_TO_START_PROMPT, buildWhereToStartMessage, buildPickMessage,
+  WHERE_TO_START_PROMPT, buildWhereToStartMessage, buildPickMessage, candidateTag,
 } from './prompt.js';
 import { matchAssessmentActions } from '../engine/actions.js';
 import { MODEL_PARTS } from './schema.js';
@@ -183,8 +183,9 @@ based on. The facts are complete and correct.
 
 Pick the number of actions the message asks for. For each pick, write one
 sentence stating the finding in that action's facts which the action
-addresses. Prefer actions that address the most severe flags and the
-lowest results in the facts.
+addresses. Each action is tagged with the strongest finding in its facts,
+and the actions are listed from the strongest down. Prefer actions that
+address the most severe flags and the lowest results in the facts.
 
 Rules:
 1. Pick only actions from the list, by their ID, each at most once.
@@ -239,16 +240,16 @@ F15: HIGH. No BC plan test was performed during the assessment period — a sche
 F16: MEDIUM NOTE. Vulnerability Remediation Rate: 60%. Vulnerability remediation rate is below target (50–69%) — moderate programme improvement warranted. Process evidence, not scored.
 
 Actions:
-ACT-IH-04: Shorten response time (facts: F5)
-ACT-IH-06: Make incident handling measurable (facts: F6)
-ACT-BC-02: Improve zone availability (facts: F8)
-ACT-BC-03: Reduce operational threshold violations (facts: F9)
-ACT-BC-05: Meet recovery time objectives (facts: F10)
-ACT-BC-08: Define recovery point objectives (facts: F11)
-ACT-L0-03: Document asset interdependencies (facts: F14)
-ACT-L0-05: Remove or control multi-homed devices (facts: F13)
-ACT-L0-08: Test the BC plan (facts: F15)
-ACT-RM-02: Improve the remediation rate (facts: F16)
+ACT-L0-05 [CRITICAL flag]: Remove or control multi-homed devices (facts: F13)
+ACT-L0-03 [HIGH flag]: Document asset interdependencies (facts: F14)
+ACT-L0-08 [HIGH flag]: Test the BC plan (facts: F15)
+ACT-RM-02 [MEDIUM NOTE]: Improve the remediation rate (facts: F16)
+ACT-BC-08 [programme gap, score 0]: Define recovery point objectives (facts: F11)
+ACT-IH-04 [score 2]: Shorten response time (facts: F5)
+ACT-BC-02 [score 2]: Improve zone availability (facts: F8)
+ACT-BC-03 [score 2]: Reduce operational threshold violations (facts: F9)
+ACT-BC-05 [score 2]: Meet recovery time objectives (facts: F10)
+ACT-IH-06 [not measurable]: Make incident handling measurable (facts: F6)
 
 Pick exactly 3 of the 10 actions.`);
   });
@@ -262,11 +263,11 @@ F13: HIGH. Asset interdependency documentation is incomplete or outdated.
 F14: MEDIUM NOTE. Vulnerability Remediation Rate: 60%. Vulnerability remediation rate is below target (50–69%) — moderate programme improvement warranted. Process evidence, not scored.
 
 Actions:
-ACT-IH-04: Shorten response time (facts: F5)
-ACT-BC-03: Reduce operational threshold violations (facts: F9)
-ACT-BC-05: Meet recovery time objectives (facts: F10)
-ACT-L0-03: Document asset interdependencies (facts: F13)
-ACT-RM-02: Improve the remediation rate (facts: F14)
+ACT-L0-03 [HIGH flag]: Document asset interdependencies (facts: F13)
+ACT-RM-02 [MEDIUM NOTE]: Improve the remediation rate (facts: F14)
+ACT-IH-04 [score 2]: Shorten response time (facts: F5)
+ACT-BC-03 [score 2]: Reduce operational threshold violations (facts: F9)
+ACT-BC-05 [score 2]: Meet recovery time objectives (facts: F10)
 
 Pick exactly 3 of the 5 actions.`);
   });
@@ -276,7 +277,7 @@ Pick exactly 3 of the 5 actions.`);
 F13: HIGH. Asset interdependency documentation is incomplete or outdated.
 
 Actions:
-ACT-L0-03: Document asset interdependencies (facts: F13)
+ACT-L0-03 [HIGH flag]: Document asset interdependencies (facts: F13)
 
 Pick the only action.`);
   });
@@ -298,7 +299,7 @@ Pick the only action.`);
 F13: CRITICAL. Uncontrolled inter-zone multi-homed devices were identified.
 
 Action:
-ACT-L0-05: Remove or control multi-homed devices (facts: F13)`);
+ACT-L0-05 [CRITICAL flag]: Remove or control multi-homed devices (facts: F13)`);
   });
 
   it('property: no target sentence, raw enum or internal ID other than the ACT- candidates', () => {
@@ -312,6 +313,59 @@ ACT-L0-05: Remove or control multi-homed devices (facts: F13)`);
       expect(outsideNotes).not.toMatch(INTERNAL_ID);
       expect(outsideNotes).not.toMatch(RAW_ENUM);
       expect(message.split('\n').filter(l => l.startsWith('ACT-'))).toHaveLength(actions.length);
+    }), { numRuns: 200 });
+  });
+});
+
+describe('candidateTag (Step 9): the strongest trigger, from the facts\' data', () => {
+  const TAG_LINE = /^(ACT-[A-Z0-9]+-\d+) \[(CRITICAL flag|HIGH flag|MEDIUM NOTE|programme gap, score 0|score [0-4]|not measurable)\]: /;
+
+  it('Westmaas: every tag and rank', () => {
+    const rec = loadScenario(baselineJson);
+    const facts = buildAssessmentFacts(rec);
+    const tags = Object.fromEntries(matchAssessmentActions(rec).map(a => [a.id, candidateTag(facts, a)]));
+    expect(tags).toEqual({
+      'ACT-IH-04': { tag: '[score 2]', rank: 7 },
+      'ACT-IH-06': { tag: '[not measurable]', rank: 10 },
+      'ACT-BC-02': { tag: '[score 2]', rank: 7 },
+      'ACT-BC-03': { tag: '[score 2]', rank: 7 },
+      'ACT-BC-05': { tag: '[score 2]', rank: 7 },
+      'ACT-BC-08': { tag: '[programme gap, score 0]', rank: 4 },
+      'ACT-L0-03': { tag: '[HIGH flag]', rank: 2 },
+      'ACT-L0-05': { tag: '[CRITICAL flag]', rank: 1 },
+      'ACT-L0-08': { tag: '[HIGH flag]', rank: 2 },
+      'ACT-RM-02': { tag: '[MEDIUM NOTE]', rank: 3 },
+    });
+  });
+
+  it('a measured 0 is [score 0]; a CRITICAL process flag is a CRITICAL flag; the strongest of several triggers wins', () => {
+    const rec = loadScenario(baselineJson);
+    rec.indicators['IH-07'] = { state: 'measured', value: '5000' };
+    rec.indicators['IH-08'] = { state: 'capability_absent' };
+    rec.layer0['RM-04'] = { state: 'measured', numerator: '0', denominator: '10' };
+    const facts = buildAssessmentFacts(rec);
+    const byId = Object.fromEntries(matchAssessmentActions(rec).map(a => [a.id, candidateTag(facts, a)]));
+    expect(byId['ACT-IH-04']).toEqual({ tag: '[score 0]', rank: 5 });
+    expect(byId['ACT-IH-03']).toEqual({ tag: '[programme gap, score 0]', rank: 4 });
+    expect(byId['ACT-RM-02']).toEqual({ tag: '[CRITICAL flag]', rank: 1 });
+    // ACT-IH-06 is triggered only by not-measurable indicators.
+    expect(candidateTag(facts, { id: 'ACT-X', triggers: ['IH-07', 'L0-multi-homed'] })).toEqual({ tag: '[CRITICAL flag]', rank: 1 });
+  });
+
+  it('property: every candidate line is tagged, ranks never decrease, ties keep catalogue order', () => {
+    fc.assert(fc.property(assessmentArb, a => {
+      const facts = buildAssessmentFacts(a);
+      const actions = matchAssessmentActions(a);
+      if (actions.length === 0) return;
+      const lines = buildWhereToStartMessage(facts, actions).split('\n').filter(l => l.startsWith('ACT-'));
+      const ids = lines.map(l => l.match(TAG_LINE)?.[1]);
+      expect(ids.every(Boolean)).toBe(true);
+      const ranks = ids.map(id => candidateTag(facts, actions.find(x => x.id === id)).rank);
+      const catalogue = id => actions.findIndex(x => x.id === id);
+      for (let i = 1; i < ids.length; i++) {
+        expect(ranks[i]).toBeGreaterThanOrEqual(ranks[i - 1]);
+        if (ranks[i] === ranks[i - 1]) expect(catalogue(ids[i])).toBeGreaterThan(catalogue(ids[i - 1]));
+      }
     }), { numRuns: 200 });
   });
 });

@@ -1411,10 +1411,12 @@ describe('validatePicks (Step 9)', () => {
       ['highest priority', 'Uncontrolled inter-zone multi-homed devices were identified, the highest priority.'],
       ['first priority', 'Uncontrolled inter-zone multi-homed devices were identified, the first priority.'],
       ['most important', 'The most important finding is that uncontrolled inter-zone multi-homed devices were identified.'],
+      ['risk', 'Uncontrolled inter-zone multi-homed devices were identified, posing a CRITICAL risk.'],
+      ['risks', 'Uncontrolled inter-zone multi-homed devices were identified, which risks zone separation.'],
     ])('"%s" fails', (word, reason) => {
       const { errors } = check(withPick('ACT-L0-05', reason));
       expect(errors).toContainEqual(expect.objectContaining({ pick: 'ACT-L0-05', rule: 'urgency',
-        detail: `Do not write "${word}": describe the finding, not its urgency or rank.` }));
+        detail: `Do not write "${word}": describe the finding, not its risk, urgency or rank.` }));
     });
 
     it('the urgency rule does not apply to the headline or overview', () => {
@@ -1506,5 +1508,93 @@ describe('validatePicks (Step 9)', () => {
         expect(() => validatePicks(draft, draft, actions)).not.toThrow();
       }), { numRuns: 300 });
     });
+  });
+});
+
+// ─── Step 9, after the first Where to start manual check ──────────────────────
+
+describe('first Where to start manual check: "critical" for a named HIGH flag (check 9, per sentence)', () => {
+  const BASELINE = loadScenario(baselineJson);
+  const ACTIONS = matchAssessmentActions(BASELINE);
+  const overview = text => validate(withPart('overview', [...OVERVIEW, 'F13', 'F14', 'F15'], text)).errors
+    .filter(e => e.section === 'overview');
+  const LOGGED = 'Asset interdependency documentation is incomplete or outdated, posing a critical risk.';
+  const DETAIL = 'Asset interdependency documentation is not marked CRITICAL in its fact; do not call it critical.';
+
+  it('the logged reason fails `severity` (and `urgency`) in Where to start', () => {
+    const draft = { picks: [
+      WESTMAAS_PICKS.picks[0],
+      { actionId: 'ACT-L0-03', reason: LOGGED },
+      WESTMAAS_PICKS.picks[2],
+    ] };
+    const errors = validatePicks(draft, FACTS, ACTIONS).errors;
+    expect(errors).toContainEqual(expect.objectContaining({ pick: 'ACT-L0-03', rule: 'severity', detail: DETAIL }));
+    expect(errors.map(e => e.rule)).toContain('urgency');
+  });
+
+  it('the same sentence fails in the overview, once', () => {
+    expect(overview(`${GOOD.sections.overview.text} ${LOGGED}`).filter(e => e.rule === 'severity'))
+      .toEqual([expect.objectContaining({ sentence: LOGGED, detail: DETAIL })]);
+  });
+
+  it('passes: a CRITICAL item named; a CRITICAL and a HIGH item named together; a negated "critical"', () => {
+    for (const text of [
+      'Uncontrolled inter-zone multi-homed devices were identified, a critical finding.',
+      'The assessment identifies critical and high severity issues, including uncontrolled inter-zone multi-homed devices and incomplete asset interdependency documentation.',
+      'Asset interdependency documentation is incomplete or outdated, which is not critical but HIGH.',
+    ]) {
+      expect(overview(`${GOOD.sections.overview.text} ${text}`).filter(e => e.rule === 'severity')).toEqual([]);
+    }
+  });
+
+  it('the clause rule still reports a clause that names the item itself, once', () => {
+    const text = 'Critical asset interdependency documentation is incomplete.';
+    expect(overview(`${GOOD.sections.overview.text} ${text}`).filter(e => e.rule === 'severity')).toHaveLength(1);
+  });
+});
+
+describe('first Where to start manual check: a dimension count is not a score (check 5)', () => {
+  const sparse = buildAssessmentFacts(loadScenario(sparseJson));
+  const run = text => validateNarrative({ sections: { overview: { factIds: ['C2', 'F1', 'F2', 'F3'], text } } }, sparse,
+    { parts: ['overview'] }).errors.map(e => e.rule);
+
+  it('the logged sentence passes', () => {
+    expect(run('The assessment covered Incident Handling and Business Continuity in two dimensions.')).toEqual([]);
+  });
+
+  it('a score and a wrong dimension count still fail', () => {
+    expect(run('Business Continuity scored 2.')).toContain('unscoredScore');
+    expect(run('The assessment covered Incident Handling and Business Continuity in three dimensions.')).toContain('dimensionCount');
+  });
+});
+
+describe('first Where to start manual check: unsupported judgements in reasons (judgement)', () => {
+  const BASELINE = loadScenario(baselineJson);
+  const ACTIONS = matchAssessmentActions(BASELINE);
+  const withIH04 = reason => ({ picks: [WESTMAAS_PICKS.picks[0], WESTMAAS_PICKS.picks[1], { actionId: 'ACT-IH-04', reason }] });
+
+  it.each([
+    ['than desired', 'Mean Time to Respond is measured at 30 hours, which is higher than desired.'],
+    ['than expected', 'Mean Time to Respond is measured at 30 hours, longer than expected.'],
+    ['than acceptable', 'Mean Time to Respond is measured at 30 hours, longer than acceptable.'],
+    ['need for improvement', 'Mean Time to Respond is measured at 30 hours, indicating a need for improvement.'],
+    ['need to reduce', 'Mean Time to Respond is measured at 30 hours, indicating a need to reduce it.'],
+    ['need for reduction', 'Mean Time to Respond is measured at 30 hours, indicating a need for reduction.'],
+    ['needs improvement', 'Mean Time to Respond is measured at 30 hours and needs improvement.'],
+  ])('"%s" fails', (phrase, reason) => {
+    expect(validatePicks(withIH04(reason), FACTS, ACTIONS).errors).toContainEqual(expect.objectContaining({
+      pick: 'ACT-IH-04', rule: 'judgement',
+      detail: `Do not write "${phrase}": no fact says this; state the finding as its fact does.`,
+    }));
+  });
+
+  it('the fact\'s own wording passes', () => {
+    expect(validatePicks(withIH04('Mean Time to Respond is measured at 30 hours (score 2).'), FACTS, ACTIONS))
+      .toEqual({ ok: true, errors: [] });
+  });
+
+  it('the overview list is unchanged', () => {
+    const narrative = withPart('overview', OVERVIEW, `${GOOD.sections.overview.text} Incident Handling needs improvement.`);
+    expect(validate(narrative).errors.map(e => e.rule)).not.toContain('judgement');
   });
 });
