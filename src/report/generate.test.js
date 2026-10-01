@@ -560,7 +560,7 @@ describe('Where to start (Step 9)', () => {
     const result = await generateNarrative(ASSESSMENT, { provider });
 
     expect(picksCalls(provider).slice(1).map(([args]) => args.user.split('\n').find(l => l.startsWith('ACT-'))))
-      .toEqual([buildPickMessage(FACTS, BC08).split('\n').at(-1), buildPickMessage(FACTS, L005).split('\n').at(-1)]);
+      .toEqual([BC08, L005].map(a => buildPickMessage(FACTS, a).split('\n').find(l => l.startsWith('ACT-'))));
     expect(result.whereToStart.status).toBe('ok');
     expect(result.whereToStart.picks.map(p => p.reason)).toEqual([WESTMAAS_PICKS.picks[1].reason, fixed, WESTMAAS_PICKS.picks[2].reason]);
     expect(picksAttempts(result).map(a => [a.attempt, a.pick])).toEqual([[1, null], [2, 'ACT-BC-08'], [2, 'ACT-L0-05']]);

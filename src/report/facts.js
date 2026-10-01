@@ -371,15 +371,23 @@ function layer0Facts(assessment, layer0) {
     const valid = result.state === L0_STATE.MEASURED && !result.invalidInput;
     const value = valid ? withUnit(measuredValue(def, assessment?.layer0?.[id] ?? {}, result), def.valueUnit) : null;
     const message = result.message ? withDisplayNames(result.message) : null;
+    const band = valid ? (def.processBands[result.processScore] ?? null) : null;
     const parts = [];
 
     if (flag) parts.push(severityPrefix(flag.severity));
-    if (result.state === L0_STATE.MEASURED) {
-      parts.push(valid ? `${displayName(id)}: ${value}.` : `${displayName(id)}: invalid value entered.`);
+    if (band?.band) {
+      // The band form of the generated section, instead of the engine's
+      // "below target (50–69%)", which was read as a target the value missed.
+      const advice = band.advice ? ` — ${band.advice}` : '';
+      parts.push(`${displayName(id)}: ${value}, in the ${band.band} band, which is ${band.verdict}${advice}.`);
     } else {
-      parts.push(`${displayName(id)}: ${lowerFirst(L0_STATE_LABELS[result.state])}.`);
+      if (result.state === L0_STATE.MEASURED) {
+        parts.push(valid ? `${displayName(id)}: ${value}.` : `${displayName(id)}: invalid value entered.`);
+      } else {
+        parts.push(`${displayName(id)}: ${lowerFirst(L0_STATE_LABELS[result.state])}.`);
+      }
+      if (message) parts.push(message);
     }
-    if (message) parts.push(message);
     parts.push('Process evidence, not scored.');
 
     facts.push(fact('process', parts.join(' '), [id], {
@@ -387,7 +395,7 @@ function layer0Facts(assessment, layer0) {
       state: result.state,
       value,
       severity: flag?.severity ?? null,
-      band: valid ? (def.processBands[result.processScore] ?? null) : null,
+      band,
       message,
     }));
   }
