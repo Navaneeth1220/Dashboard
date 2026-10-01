@@ -115,7 +115,7 @@ export const LAYER0_ITEMS = {
     baseDisplayGroup: 2,   // core scope-definition
     // The ONLY item with a contextual note (§6.2 no-auto-rank rule).
     // This is a per-item note, not a ranking rule.
-    contextualNote: 'This foundation underpins most other Layer 0 items; consider addressing first.',
+    contextualNote: 'This foundation underpins most other foundational controls; consider addressing first.',
     allowedStates: [
       L0_STATE.PRESENT,
       L0_STATE.MISSING,
@@ -380,7 +380,7 @@ export const LAYER0_ITEMS = {
         severity: null,   // context-only: neutral non-event, not flagged
         label: 'No remediated vulnerabilities',
         // Deliberately neutral; does not imply "all clear" — must be read alongside RM-04
-        message: 'No vulnerabilities were remediated this period — interpret alongside RM-04.',
+        message: 'No vulnerabilities were remediated this period — interpret alongside Vulnerability Remediation Rate.',
       },
     },
   },

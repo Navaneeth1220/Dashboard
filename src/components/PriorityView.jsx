@@ -16,7 +16,7 @@
 
 import { INDICATORS, STATE, STATE_PRIORITY_LABELS } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS } from '../data/layer0Definitions.js';
-import { displayName, formatScore } from '../data/displayNames.js';
+import { displayName, formatScore, DIMENSION_NAMES } from '../data/displayNames.js';
 import { NOTHING_TO_ASSESS, NOT_YET_ASSESSED } from '../data/reportWording.js';
 
 // ── Palette ──────────────────────────────────────────────────────────────────
@@ -234,8 +234,8 @@ function Lane2({ lane2 }) {
         subtitle="The relevant NIS2 obligation cannot currently be demonstrated"
         right={
           <div style={{ textAlign: 'right', fontSize: '11px' }}>
-            <div>IH <SeverityBadge severity={lane2.ih.severity} />{!lane2.ih.severity && <span style={{ opacity: 0.6 }}>—</span>}</div>
-            <div style={{ marginTop: '2px' }}>BC <SeverityBadge severity={lane2.bc.severity} />{!lane2.bc.severity && <span style={{ opacity: 0.6 }}>—</span>}</div>
+            <div>{DIMENSION_NAMES.IH} <SeverityBadge severity={lane2.ih.severity} />{!lane2.ih.severity && <span style={{ opacity: 0.6 }}>—</span>}</div>
+            <div style={{ marginTop: '2px' }}>{DIMENSION_NAMES.BC} <SeverityBadge severity={lane2.bc.severity} />{!lane2.bc.severity && <span style={{ opacity: 0.6 }}>—</span>}</div>
           </div>
         }
       />

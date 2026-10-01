@@ -24,6 +24,7 @@
 import { STATE } from '../data/indicatorDefinitions.js';
 import { INDICATORS } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS, L0_STATE } from '../data/layer0Definitions.js';
+import { displayName, DIMENSION_NAMES } from '../data/displayNames.js';
 
 // ---------------------------------------------------------------------------
 // Threshold constants (single source of truth — documented in §5)
@@ -85,11 +86,11 @@ export function generateIHDependencyNotes(l1) {
   if (ih06 !== null && ih06 < IH06_HARD_THRESHOLD) {
     notes.push({
       rule: 'A', target: 'IH-07', source: 'IH-06', severity: 'hard',
-      message: `Detection is slow (IH-06 score ${ih06} < ${IH06_HARD_THRESHOLD}). Improving response speed (IH-07) has limited value while detection remains slow.`,
+      message: `Detection is slow (${displayName('IH-06')} score ${ih06} < ${IH06_HARD_THRESHOLD}). Improving response speed (${displayName('IH-07')}) has limited value while detection remains slow.`,
     });
     notes.push({
       rule: 'A', target: 'IH-08', source: 'IH-06', severity: 'hard',
-      message: `Detection is slow (IH-06 score ${ih06} < ${IH06_HARD_THRESHOLD}). Improving containment speed (IH-08) has limited value while detection remains slow.`,
+      message: `Detection is slow (${displayName('IH-06')} score ${ih06} < ${IH06_HARD_THRESHOLD}). Improving containment speed (${displayName('IH-08')}) has limited value while detection remains slow.`,
     });
   }
 
@@ -97,7 +98,7 @@ export function generateIHDependencyNotes(l1) {
   if (ih07 !== null && ih07 < IH07_SOFT_THRESHOLD) {
     notes.push({
       rule: 'A', target: 'IH-08', source: 'IH-07', severity: 'soft',
-      message: `Response is slow (IH-07 score ${ih07} < ${IH07_SOFT_THRESHOLD}). Verify that containment timing (IH-08) is interpreted correctly given the slow response.`,
+      message: `Response is slow (${displayName('IH-07')} score ${ih07} < ${IH07_SOFT_THRESHOLD}). Verify that containment timing (${displayName('IH-08')}) is interpreted correctly given the slow response.`,
     });
   }
 
@@ -140,7 +141,7 @@ export function generateInterpretivePairs(l1, bcAggregate) {
       if (ih08High && bcLow) {
         autoSentence = {
           severity: 'interpretive',
-          message: `Containment was fast (IH-08 score ${ih08} ≥ ${IH08_HIGH_THRESHOLD}) but Business Continuity is low (BC ${bcAggregate.score.toFixed(2)} < ${BC_LOW_THRESHOLD}). In OT, rapid containment can itself cause operational disruption: the incident was stopped quickly, but the containment action appears to have been operationally costly.`,
+          message: `Containment was fast (${displayName('IH-08')} score ${ih08} ≥ ${IH08_HIGH_THRESHOLD}) but Business Continuity is low (${DIMENSION_NAMES.BC} score ${bcAggregate.score.toFixed(2)} < ${BC_LOW_THRESHOLD}). In OT, rapid containment can itself cause operational disruption: the incident was stopped quickly, but the containment action appears to have been operationally costly.`,
         };
       }
     }
@@ -318,17 +319,17 @@ function buildBCPlanHint(planState, targetIndicatorId, objective) {
     case L0_STATE.MISSING:
       return {
         severity: 'strong',
-        message: `BC plan is missing. If no separate ${objective} evidence exists, the assessor may select "No ${objective} defined" for ${targetIndicatorId} — but this is a hint only; confirm explicitly, because a missing plan does not by itself prove a missing objective.`,
+        message: `BC plan is missing. If no separate ${objective} evidence exists, the assessor may select "No ${objective} defined" for ${displayName(targetIndicatorId)} — but this is a hint only; confirm explicitly, because a missing plan does not by itself prove a missing objective.`,
       };
     case L0_STATE.INCOMPLETE_OUTDATED:
       return {
         severity: 'softer',
-        message: `BC plan is incomplete or outdated. Verify whether the relevant ${objective} is defined and current before scoring ${targetIndicatorId}.`,
+        message: `BC plan is incomplete or outdated. Verify whether the relevant ${objective} is defined and current before scoring ${displayName(targetIndicatorId)}.`,
       };
     case L0_STATE.NOT_VERIFIABLE:
       return {
         severity: 'evidence',
-        message: `BC plan status could not be verified. Confirm ${objective} status from available evidence before scoring ${targetIndicatorId}.`,
+        message: `BC plan status could not be verified. Confirm ${objective} status from available evidence before scoring ${displayName(targetIndicatorId)}.`,
       };
     default:
       // Present, unset, or any other state → no hint

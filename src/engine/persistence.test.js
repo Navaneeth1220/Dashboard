@@ -187,7 +187,7 @@ describe('import validation', () => {
     rec.assessment.indicators['IH-99'] = { state: 'measured', value: '1' };
     const res = parseAndValidateImport(JSON.stringify(rec));
     expect(res.ok).toBe(false);
-    expect(res.error).toMatch(/Unknown indicator id: IH-99/);
+    expect(res.error).toBe('Unknown indicator in the file: "IH-99".');
   });
 
   it('indicator in a state not in its allowed set → rejected', () => {
@@ -195,23 +195,23 @@ describe('import validation', () => {
     rec.assessment.indicators['BC-01'] = { state: 'no_rto_defined' };   // BC-01 has no such state
     const res = parseAndValidateImport(JSON.stringify(rec));
     expect(res.ok).toBe(false);
-    expect(res.error).toMatch(/BC-01 has a state not in its allowed set/);
+    expect(res.error).toBe('Network Operability Under Disruption has a state that is not allowed: "no_rto_defined".');
   });
 
-  it('unknown Layer 0 item id → rejected', () => {
+  it('unknown foundational control key → rejected, the key quoted', () => {
     const rec = buildExportRecord(richInputs());
     rec.assessment.layer0['L0-bogus'] = { state: 'present' };
     const res = parseAndValidateImport(JSON.stringify(rec));
     expect(res.ok).toBe(false);
-    expect(res.error).toMatch(/Unknown Layer 0 item id/);
+    expect(res.error).toBe('Unknown foundational control in the file: "L0-bogus".');
   });
 
-  it('Layer 0 item invalid state → rejected', () => {
+  it('foundational control invalid state → rejected, by name', () => {
     const rec = buildExportRecord(richInputs());
     rec.assessment.layer0['L0-multi-homed'] = { state: 'present' };   // not in multi-homed vocab
     const res = parseAndValidateImport(JSON.stringify(rec));
     expect(res.ok).toBe(false);
-    expect(res.error).toMatch(/L0-multi-homed has a state not in its allowed set/);
+    expect(res.error).toBe('Zero uncontrolled multi-homed devices has a state that is not allowed: "present".');
   });
 
   it('invalid target (out of range / unknown id) → rejected', () => {

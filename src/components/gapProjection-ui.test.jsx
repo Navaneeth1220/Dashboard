@@ -132,7 +132,7 @@ describe('completeness cases render distinctly', () => {
     renderPanel(record(completeBC));
     const bc = document.querySelector('[data-proj-dim="BC"]');
     expect(bc.getAttribute('data-proj-kind')).toBe('complete');
-    expect(within(bc).getByText(/Projected BC/i)).toBeInTheDocument();
+    expect(within(bc).getByText(/Projected Business Continuity/i)).toBeInTheDocument();
   });
 
   it('partial dimension renders as a labelled planning scenario, NOT a complete score', () => {
@@ -145,11 +145,11 @@ describe('completeness cases render distinctly', () => {
     expect(bc.getAttribute('data-proj-kind')).toBe('partial');
     // explicit subset framing + coverage + exclusions visible
     expect(within(bc).getByText(/Planning scenario/i)).toBeInTheDocument();
-    expect(within(bc).getByText(/projected average of 4 of 5 BC indicators/i)).toBeInTheDocument();
-    expect(within(bc).getByText(/not a complete BC score/i)).toBeInTheDocument();
+    expect(within(bc).getByText(/projected average of 4 of 5 Business Continuity indicators/i)).toBeInTheDocument();
+    expect(within(bc).getByText(/not a complete Business Continuity score/i)).toBeInTheDocument();
     expect(within(bc).getByText(/Excluded:/i)).toBeInTheDocument();
     // structurally distinct: it is NOT the complete presentation
-    expect(within(bc).queryByText(/Projected BC$/)).toBeNull();
+    expect(within(bc).queryByText(/Projected Business Continuity$/)).toBeNull();
   });
 
   it('partial and complete presentations differ structurally (different data-proj-kind)', () => {
@@ -173,7 +173,7 @@ describe('completeness cases render distinctly', () => {
     renderPanel(rec);
     const ih = document.querySelector('[data-proj-dim="IH"]');
     expect(ih.getAttribute('data-proj-kind')).toBe('unscoreable');
-    expect(within(ih).getByText(/Cannot project IH/i)).toBeInTheDocument();
+    expect(within(ih).getByText(/Cannot project Incident Handling/i)).toBeInTheDocument();
     expect(within(ih).getByText(/Resolve first/i)).toBeInTheDocument();
   });
 });

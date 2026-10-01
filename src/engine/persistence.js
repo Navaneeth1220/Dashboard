@@ -11,6 +11,7 @@
 
 import { INDICATORS, ALL_INDICATOR_IDS } from '../data/indicatorDefinitions.js';
 import { LAYER0_ITEMS, LAYER0_ALL_IDS } from '../data/layer0Definitions.js';
+import { displayName } from '../data/displayNames.js';
 import { createBlankAssessment } from './scoring.js';
 import { createBlankLayer0 } from './layer0.js';
 
@@ -125,38 +126,38 @@ export function parseAndValidateImport(jsonString) {
   // Validate Layer 1 indicators
   for (const [id, entry] of Object.entries(rawIndicators)) {
     if (!ALL_INDICATOR_IDS.includes(id)) {
-      return { ok: false, error: `Unknown indicator id: ${id}.` };
+      return { ok: false, error: `Unknown indicator in the file: "${id}".` };
     }
     if (!isPlainObject(entry)) {
-      return { ok: false, error: `Invalid entry for indicator ${id}.` };
+      return { ok: false, error: `Invalid entry for ${displayName(id)}.` };
     }
     const state = entry.state ?? null;
     if (state !== null && !INDICATORS[id].allowedStates.includes(state)) {
-      return { ok: false, error: `Indicator ${id} has a state not in its allowed set: ${state}.` };
+      return { ok: false, error: `${displayName(id)} has a state that is not allowed: "${state}".` };
     }
   }
 
   // Validate Layer 0 items
   for (const [id, entry] of Object.entries(rawLayer0)) {
     if (!LAYER0_ALL_IDS.includes(id)) {
-      return { ok: false, error: `Unknown Layer 0 item id: ${id}.` };
+      return { ok: false, error: `Unknown foundational control in the file: "${id}".` };
     }
     if (!isPlainObject(entry)) {
-      return { ok: false, error: `Invalid entry for Layer 0 item ${id}.` };
+      return { ok: false, error: `Invalid entry for ${displayName(id)}.` };
     }
     const state = entry.state ?? null;
     if (state !== null && !LAYER0_ITEMS[id].allowedStates.includes(state)) {
-      return { ok: false, error: `Layer 0 item ${id} has a state not in its allowed set: ${state}.` };
+      return { ok: false, error: `${displayName(id)} has a state that is not allowed: "${state}".` };
     }
   }
 
   // Validate projection targets
   for (const [id, val] of Object.entries(rawTargets)) {
     if (!ALL_INDICATOR_IDS.includes(id)) {
-      return { ok: false, error: `Unknown target indicator id: ${id}.` };
+      return { ok: false, error: `Unknown target indicator in the file: "${id}".` };
     }
     if (!Number.isInteger(val) || val < 0 || val > 4) {
-      return { ok: false, error: `Invalid target for ${id}: ${val} (expected integer 0–4).` };
+      return { ok: false, error: `Invalid target for ${displayName(id)}: ${val} (expected integer 0–4).` };
     }
   }
 

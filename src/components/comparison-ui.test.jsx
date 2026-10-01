@@ -236,7 +236,7 @@ describe('dimension hierarchy and mixed movement', () => {
     expect(ids).toEqual(expect.arrayContaining(['IH', 'BC']));
     const overall = container.querySelector('[data-dim="Overall"][data-score-role="secondary"]');
     expect(overall).not.toBeNull();
-    expect(overall.textContent).toMatch(/secondary summary of IH and BC/i);
+    expect(overall.textContent).toMatch(/secondary summary of Incident Handling and Business Continuity/i);
   });
 
   it('mixed (IH improved, BC regressed) → labelled "Mixed", leads with BOTH dimension deltas', () => {
@@ -249,8 +249,8 @@ describe('dimension hierarchy and mixed movement', () => {
     expect(overall.textContent).toMatch(/Mixed — dimensions moved in opposite directions/i);
     // leads with both dimension deltas, each direction-aware
     const dims = overall.querySelector('[data-mixed-dimensions]');
-    expect(dims.textContent).toMatch(/IH improved/i);
-    expect(dims.textContent).toMatch(/BC regressed/i);
+    expect(dims.textContent).toMatch(/Incident Handling improved/i);
+    expect(dims.textContent).toMatch(/Business Continuity regressed/i);
     // net Overall present but clearly secondary (the caveat text)
     expect(overall.textContent).toMatch(/can mask this divergence/i);
   });
