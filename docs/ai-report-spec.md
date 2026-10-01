@@ -515,11 +515,15 @@ assessment.
    followed within three words by a number; `<number> score`;
    `<number> out of <number>`; or, for dimensions, the dimension name
    followed within two words by a number ("Overall score: 2.40"), unless
-   the number is followed by "indicator(s)" or "effectiveness
-   indicator(s)": a count, not a score ("Business Continuity has five
-   effectiveness indicators", "Incident Handling and Business Continuity
-   across 8 effectiveness indicators" pass; in the sparse re-run after the
-   final fix round, two of four failed runs failed on this alone).
+   the number is followed by "indicator(s)", "effectiveness
+   indicator(s)" or "dimension(s)": a count, not a score ("Business
+   Continuity has five effectiveness indicators", "Incident Handling and
+   Business Continuity across 8 effectiveness indicators" pass; in the
+   sparse re-run after the final fix round, two of four failed runs failed
+   on this alone). "dimension(s)" was added after the first Where to start
+   manual check (Oudendijk run 2: "covered Incident Handling and Business
+   Continuity in two dimensions" failed); check 11 still holds the count
+   itself to C2.
 6. **Programme gap**: a clause whose subject is a `gap_zero` item fails if
    it contains `fail*`, `missed` or `poor`, unless the word is negated
    (`not`, `no`, `never`, `rather than`, `instead of` within the three
@@ -584,7 +588,19 @@ assessment.
    clause rule already failed that sentence, and not when "critical" is
    negated as in check 6 ("no critical or high flags" states an absence). Found in the June re-run:
    "equal priority critical issues with response times and recovery
-   rates" (no item named, no CRITICAL flag cited).
+   rates" (no item named, no CRITICAL flag cited). And a sentence
+   containing "critical" that names flagged items fails unless one of
+   them is CRITICAL ("<name> is not marked CRITICAL in its fact; do not
+   call it critical.", the first such item named), with the same
+   exceptions. Found in the first Where to start manual check (June):
+   "Asset interdependency documentation is incomplete or outdated,
+   posing a critical risk." passed, because "critical" stood in a clause
+   that names no item and the sentence named a (HIGH) flagged item. It
+   applies to every model part. A sentence that names a CRITICAL item and
+   a HIGH one ("critical and high severity issues, including uncontrolled
+   inter-zone multi-homed devices and incomplete asset interdependency
+   documentation") still passes: pairing labels with items is not
+   reliable, as with "respectively".
 10. **Respectively** (`respectively`): a sentence containing "respectively"
     fails with one error ("Give each item its own number or label; do not
     write "respectively"."), and its clauses are left out of checks 8 and
@@ -1686,8 +1702,9 @@ based on. The facts are complete and correct.
 
 Pick the number of actions the message asks for. For each pick, write one
 sentence stating the finding in that action's facts which the action
-addresses. Prefer actions that address the most severe flags and the
-lowest results in the facts.
+addresses. Each action is tagged with the strongest finding in its facts,
+and the actions are listed from the strongest down. Prefer actions that
+address the most severe flags and the lowest results in the facts.
 
 Rules:
 1. Pick only actions from the list, by their ID, each at most once.
@@ -1717,8 +1734,8 @@ Rules:
 ```
 
 User message (`buildWhereToStartMessage(facts, actions)`): the trigger facts
-of all matched actions, then the candidates with their catalogue titles and
-fact IDs, then the count. Fact text is sent without the "Next level" target
+of all matched actions (fact order), then the candidates with their tag,
+catalogue title and fact IDs, then the count. Fact text is sent without the "Next level" target
 sentence (`stripTargetSentence`), as the validator reads it outside Targets.
 The catalogue's "Why it matters" is not sent: it describes consequences
 (rule 9) and no fact states it. Advisory facts are not sent (they would
@@ -1731,19 +1748,41 @@ F6: Mean Time to Contain: not measurable. …
 F8: …  F9: …  F10: …  F11: …  F13: …  F14: …  F15: …  F16: …   (one line each)
 
 Actions:
-ACT-IH-04: Shorten response time (facts: F5)
-ACT-IH-06: Make incident handling measurable (facts: F6)
-ACT-BC-02: Improve zone availability (facts: F8)
-ACT-BC-03: Reduce operational threshold violations (facts: F9)
-ACT-BC-05: Meet recovery time objectives (facts: F10)
-ACT-BC-08: Define recovery point objectives (facts: F11)
-ACT-L0-03: Document asset interdependencies (facts: F14)
-ACT-L0-05: Remove or control multi-homed devices (facts: F13)
-ACT-L0-08: Test the BC plan (facts: F15)
-ACT-RM-02: Improve the remediation rate (facts: F16)
+ACT-L0-05 [CRITICAL flag]: Remove or control multi-homed devices (facts: F13)
+ACT-L0-03 [HIGH flag]: Document asset interdependencies (facts: F14)
+ACT-L0-08 [HIGH flag]: Test the BC plan (facts: F15)
+ACT-RM-02 [MEDIUM NOTE]: Improve the remediation rate (facts: F16)
+ACT-BC-08 [programme gap, score 0]: Define recovery point objectives (facts: F11)
+ACT-IH-04 [score 2]: Shorten response time (facts: F5)
+ACT-BC-02 [score 2]: Improve zone availability (facts: F8)
+ACT-BC-03 [score 2]: Reduce operational threshold violations (facts: F9)
+ACT-BC-05 [score 2]: Meet recovery time objectives (facts: F10)
+ACT-IH-06 [not measurable]: Make incident handling measurable (facts: F6)
 
 Pick exactly 3 of the 10 actions.
 ```
+
+Candidate tags and order (`candidateTag(facts, action)` in `prompt.js`),
+added after the first manual check, where the Westmaas baseline picks
+were the same in all five runs (two score-2 actions next to the CRITICAL
+one; never the HIGH flags or the programme gap at 0). Each candidate gets
+the strongest finding among its trigger facts, read from the facts' data
+(the engine's flag severity, programme gap, score, state), never from
+their text:
+
+| tag | from a trigger fact | rank |
+|---|---|---|
+| `[CRITICAL flag]` | `l0_flag` or `process` with severity critical | 1 |
+| `[HIGH flag]` | … severity high | 2 |
+| `[MEDIUM NOTE]` | … severity medium note | 3 |
+| `[programme gap, score 0]` | `gap_zero` | 4 |
+| `[score N]` | `scored`, N its score (a measured 0 is `[score 0]`) | 5 + N |
+| `[not measurable]` | `no_score` | 10 |
+
+The candidates are listed by rank, ties in catalogue order. Only the
+message changes: the picks are still validated and shown in catalogue
+order, and there is no validator rule for the choice; the model still
+picks. Repair messages (`buildPickMessage`) carry the same tagged line.
 
 The last line: "Pick exactly K of the N actions." when N > 3; "Pick all N
 actions." for N = 2 or 3; "Pick the only action." for N = 1.
@@ -1798,10 +1837,19 @@ Per pick (each matched action picked once), the reason is checked as a part
   is neither a trigger nor named in its trigger facts (a root cause named
   in a not-measurable fact is allowed). Dimension names are allowed.
 - `urgency`: "urgent", "urgently", "urgency", "immediate", "immediately",
-  "top priority", "highest priority", "first priority", "most important"
-  ("Do not write "…": describe the finding, not its urgency or rank.").
-  Prompt rule 14 of the headline/overview has never been validated; this
-  part invites exactly these words.
+  "top priority", "highest priority", "first priority", "most important",
+  "risk", "risks" ("Do not write "…": describe the finding, not its risk,
+  urgency or rank."). Prompt rule 14 of the headline/overview has never
+  been validated; this part invites exactly these words. "risk" was added
+  after the first manual check (June: "posing a critical risk", "posing a
+  HIGH severity risk").
+- `judgement` (also for reasons): "than desired", "than expected", "than
+  acceptable", "need/needs for/to improve…/reduc…", "needs improvement"
+  ("Do not write "…": no fact says this; state the finding as its fact
+  does."). Found in the first manual check (June: "which is higher than
+  desired", "indicating a need for improvement", "a need to reduce
+  violations"). Only in reasons: the headline/overview list (check 16) is
+  unchanged.
 
 Action IDs are internal IDs: `ACT-…` in a reason fails `leakedIds` ("An
 action ID appears in the text. Never write action IDs."; matched before the
