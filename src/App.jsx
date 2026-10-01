@@ -363,6 +363,7 @@ function App() {
             phase={narrative.phase}
             attempt={narrative.attempt}
             maxAttempts={narrative.maxAttempts}
+            attemptPart={narrative.attemptPart}
             result={narrative.result}
             generatedAt={narrative.generatedAt}
             model={DEFAULT_MODEL}

@@ -128,6 +128,19 @@ export function stripTargetSentence(text) {
   return i === -1 ? text : text.slice(0, i);
 }
 
+/** The kinds of an item's own fact: the facts that can explain why an action matched. */
+export const TRIGGER_FACT_KINDS = new Set(['scored', 'gap_zero', 'no_score', 'l0_flag', 'process']);
+
+/**
+ * triggerFacts(facts, triggers) → the own facts of the triggering indicators
+ * and items, in fact order (Step 9). Recommended actions cites these for all
+ * matched triggers; Where to start, per action.
+ */
+export function triggerFacts(facts, triggers) {
+  const ids = new Set(triggers);
+  return facts.filter(f => TRIGGER_FACT_KINDS.has(f.kind) && f.refs.some(id => ids.has(id)));
+}
+
 const CLIENT_PATTERN = /^Assessment of "(.*)", (?:dated .*|undated)\.$/;
 
 /**

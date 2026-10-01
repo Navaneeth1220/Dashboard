@@ -9,11 +9,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import baselineJson from '../../scenarios/Westmaas_2026-01-01_assessment.json?raw';
 import NarrativePanel from './NarrativePanel.jsx';
-import { generateNarrative, DEFAULT_MODEL } from '../report/generate.js';
+import { DEFAULT_MODEL } from '../report/generate.js';
 import { buildAssessmentFacts } from '../report/facts.js';
 import { selectModelFacts } from '../report/prompt.js';
 import { GENERATED_KEYS } from '../report/schema.js';
-import { ProviderUnavailableError } from '../report/providers/ollama.js';
 import { loadScenario, scriptedResults } from '../report/testSupport.js';
 import { SECTION_TITLES, NARRATIVE_WORDING as W, WHERE_TO_START_WORDING as WTS } from '../data/reportWording.js';
 import { downloadReportPdf } from '../report/pdf/download.js';
@@ -35,15 +34,7 @@ const VALID = {
 };
 const POOR = 'Mean Time to Contain is poor.';
 const MARKER = 'This sentence only exists in the rejected draft.';
-const INVALID = { ...VALID, overview: { ...VALID.overview, text: `${VALID.overview.text} ${POOR} ${MARKER}` } };
 
-const reply = value => ({
-  content: JSON.stringify(value), promptEvalCount: 800, evalCount: 180, doneReason: 'stop', durationMs: 1000,
-});
-
-async function resultWith(provider) {
-  return generateNarrative(ASSESSMENT, { provider });
-}
 // The same drafts as above; Where to start (Step 9) passes with `ok` and
 // fails with `failed` (both parts fail), so `failed` still shows no AI part.
 const S = scriptedResults(ASSESSMENT);

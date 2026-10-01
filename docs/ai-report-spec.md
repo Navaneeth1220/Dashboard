@@ -444,6 +444,11 @@ assessment.
   boundary separation; multi-homed devices, multi-homing; documented BC
   plan, BC plan documentation; BC plan test, BC plan testing. Bare "BC
   plan" is not an alias: it is ambiguous between the two BC plan items.
+  Step 9 added "multi-homed device" and "BC plan for critical processes",
+  the engine's own flag wording ("Multi-homed device controls could not be
+  verified…", "BC plan for critical processes is not documented."): the
+  property test for Where to start found reasons copied from those facts
+  naming no item.
 - **Sentences**: split after `.` `!` `?` followed by whitespace and an
   uppercase letter, digit, or opening quote/bracket. Decimals (`1.80`) and
   "e.g. the" do not split.
@@ -1787,17 +1792,21 @@ Per pick (each matched action picked once), the reason is checked as a part
 - `shape`: the reason is not a non-blank string.
 - `reasonSentences`: the reason is not exactly one sentence.
 - `pickSubject`: the reason names none of its trigger items ("Name what
-  the reason is about: …"), or names an indicator, foundational item or
-  process item that is neither a trigger nor named in its trigger facts
-  (a root cause named in a not-measurable fact is allowed). Dimension names
-  are allowed.
+  the reason is about: …"), unless it appears verbatim in its trigger
+  facts ("BC plan is incomplete or outdated.": bare "BC plan" is no
+  alias); or it names an indicator, foundational item or process item that
+  is neither a trigger nor named in its trigger facts (a root cause named
+  in a not-measurable fact is allowed). Dimension names are allowed.
 - `urgency`: "urgent", "urgently", "urgency", "immediate", "immediately",
   "top priority", "highest priority", "first priority", "most important"
   ("Do not write "…": describe the finding, not its urgency or rank.").
   Prompt rule 14 of the headline/overview has never been validated; this
   part invites exactly these words.
 
-Action IDs are internal IDs: `ACT-…` in a reason fails `leakedIds`.
+Action IDs are internal IDs: `ACT-…` in a reason fails `leakedIds` ("An
+action ID appears in the text. Never write action IDs."; matched before the
+indicator-ID pattern, which would otherwise read "ACT-BC-08" as RTO
+Achievement Rate). The headline and overview get the same check.
 
 ### Generation and repair (`generate.js`)
 
