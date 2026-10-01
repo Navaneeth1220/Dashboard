@@ -301,3 +301,18 @@ describe('per-lane empty states', () => {
     expect(screen.queryByText(/Not yet in a lane/i)).toBeNull();
   });
 });
+
+// ─── Regression (found by the no-IDs property test) ──────────────────────────
+
+describe('a not-measurable reason linked to an item with a MEDIUM NOTE flag', () => {
+  it('renders the linked flag badge instead of crashing', () => {
+    const a = {
+      meta: { clientId: 'Acme', assessmentDate: '2026-03-01' },
+      indicators: { ...createBlankAssessment().indicators, 'BC-02': { state: 'not_measurable', reason: { layer0ItemId: 'RM-04', text: '' } } },
+      layer0: { ...createBlankLayer0(), 'RM-04': { state: 'measured', numerator: '3', denominator: '5' } },
+    };
+    const results = computeAssessment(a);
+    const { container } = render(<PriorityView priorityResult={computePriorityView(a, results, computeLayer0(a))} />);
+    expect(container.textContent).toContain('Medium note');
+  });
+});
